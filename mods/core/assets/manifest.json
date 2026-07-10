@@ -14,5 +14,6 @@
     "type": "spritesheet",
     "frameWidth": 128,
     "frameHeight": 128
-  }
+  },
+  "tilesets/cave_floor": { "file": "sprites/tilesets/cave_floor.png", "type": "image" }
 }
