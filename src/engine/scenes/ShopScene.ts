@@ -2,23 +2,43 @@ import { eventBus, type EventGroup } from '../core/EventBus';
 import { registry } from '../core/ContentRegistry';
 import type { UpgradeDef } from '../schemas/upgrade.schema';
 import { UpgradeSystem } from '../systems/UpgradeSystem';
+import type { StatSheet } from '../stats/StatSheet';
 
 const PANEL_PCT = 0.15;
-const CARD_W = 220;
-const CARD_H = 160;
-const CARD_GAP = 20;
-const COLS = 3;
+const CARD_W = 260;
+const CARD_H = 210;
+const CARD_GAP = 24;
+const COLS = 2;
 
-/** Full-screen overlay shop for browsing and buying upgrades. */
+const STAT_LABELS: Record<string, string> = {
+  moveSpeed: 'Move Speed',
+  pickupRadius: 'Pickup Radius',
+  maxHealth: 'Max Health',
+  damage: 'Damage',
+  attackSpeed: 'Attack Speed',
+  carryCapacity: 'Carry Capacity',
+  luck: 'Luck',
+  glowRadius: 'Lamp Radius',
+  fuelBurnRate: 'Fuel Burn Rate',
+};
+
+/** Formats a stat name into a readable label. */
+function statLabel(stat: string): string {
+  return STAT_LABELS[stat] ?? stat.replace(/([A-Z])/g, ' $1').replace(/^./, (s) => s.toUpperCase());
+}
+
+/** Overlay shop for browsing and buying upgrades, with a live stats panel. */
 export class ShopScene extends Phaser.Scene {
   private eventGroup!: EventGroup;
   private upgradeSystem!: UpgradeSystem;
-  private backdrop!: Phaser.GameObjects.Graphics;
-  private panel!: Phaser.GameObjects.Graphics;
-  private titleText!: Phaser.GameObjects.Text;
-  private closeHint!: Phaser.GameObjects.Text;
   private cardContainers: Phaser.GameObjects.Container[] = [];
+  private statTexts: Phaser.GameObjects.Text[] = [];
+  private statsContainer!: Phaser.GameObjects.Container;
   private escKey!: Phaser.Input.Keyboard.Key;
+  private panelX = 0;
+  private panelY = 0;
+  private panelW = 0;
+  private panelH = 0;
 
   constructor() {
     super({ key: 'ShopScene', active: false });
@@ -28,54 +48,54 @@ export class ShopScene extends Phaser.Scene {
     this.eventGroup = eventBus.createGroup();
     this.upgradeSystem = new UpgradeSystem(eventBus);
     this.cardContainers = [];
+    this.statTexts = [];
 
     const w = this.cameras.main.width;
     const h = this.cameras.main.height;
 
-    this.backdrop = this.add.graphics();
-    this.backdrop.fillStyle(0x000000, 0.7);
-    this.backdrop.fillRect(0, 0, w, h);
-    this.backdrop.setDepth(0);
+    const backdrop = this.add.graphics();
+    backdrop.fillStyle(0x000000, 0.7);
+    backdrop.fillRect(0, 0, w, h);
+    backdrop.setDepth(0);
 
     const marginX = Math.round(w * PANEL_PCT);
     const marginY = Math.round(h * PANEL_PCT);
-    const panelX = marginX;
-    const panelY = marginY;
-    const panelW = w - marginX * 2;
-    const panelH = h - marginY * 2;
+    this.panelX = marginX;
+    this.panelY = marginY;
+    this.panelW = w - marginX * 2;
+    this.panelH = h - marginY * 2;
 
-    this.panel = this.add.graphics();
-    this.panel.fillStyle(0x1a1a2e, 0.95);
-    this.panel.fillRoundedRect(panelX, panelY, panelW, panelH, 16);
-    this.panel.lineStyle(2, 0x444466, 1);
-    this.panel.strokeRoundedRect(panelX, panelY, panelW, panelH, 16);
-    this.panel.setDepth(1);
+    const panelGfx = this.add.graphics();
+    panelGfx.fillStyle(0x1a1a2e, 0.95);
+    panelGfx.fillRoundedRect(this.panelX, this.panelY, this.panelW, this.panelH, 16);
+    panelGfx.lineStyle(2, 0x444466, 1);
+    panelGfx.strokeRoundedRect(this.panelX, this.panelY, this.panelW, this.panelH, 16);
+    panelGfx.setDepth(1);
 
-    this.titleText = this.add.text(w / 2, panelY + 28, 'UPGRADES', {
+    const title = this.add.text(w / 2, this.panelY + 24, 'UPGRADES', {
       fontFamily: '"Courier New", monospace',
-      fontSize: '40px',
+      fontSize: '36px',
       color: '#ffcc44',
       fontStyle: 'bold',
       stroke: '#000000',
       strokeThickness: 3,
     });
-    this.titleText.setOrigin(0.5, 0);
-    this.titleText.setDepth(2);
+    title.setOrigin(0.5, 0).setDepth(2);
 
-    this.closeHint = this.add.text(w / 2, panelY + panelH - 30, '[ESC] Close', {
+    const closeHint = this.add.text(w / 2, this.panelY + this.panelH - 28, '[ESC] Close', {
       fontFamily: '"Courier New", monospace',
-      fontSize: '20px',
+      fontSize: '18px',
       color: '#888888',
     });
-    this.closeHint.setOrigin(0.5, 0.5);
-    this.closeHint.setDepth(2);
+    closeHint.setOrigin(0.5, 0.5).setDepth(2);
 
+    this.buildStatsPanel();
     this.buildCards();
 
     this.escKey = this.input.keyboard!.addKey(Phaser.Input.Keyboard.KeyCodes.ESC);
 
     this.eventGroup.on('upgrade:acquired', () => {
-      this.refreshCards();
+      this.refreshAll();
     });
 
     eventBus.emit('shop:opened', {});
@@ -92,33 +112,127 @@ export class ShopScene extends Phaser.Scene {
     this.scene.stop('ShopScene');
   }
 
+  private buildStatsPanel(): void {
+    const statsX = this.panelX + 28;
+    const statsY = this.panelY + 76;
+    const statsW = 220;
+
+    this.statsContainer = this.add.container(0, 0).setDepth(3);
+
+    const statsBg = this.add.graphics();
+    statsBg.fillStyle(0x0a0a18, 0.8);
+    statsBg.fillRoundedRect(statsX, statsY, statsW, this.panelH - 130, 10);
+    statsBg.lineStyle(1, 0x333355, 1);
+    statsBg.strokeRoundedRect(statsX, statsY, statsW, this.panelH - 130, 10);
+    this.statsContainer.add(statsBg);
+
+    const header = this.add.text(statsX + statsW / 2, statsY + 14, 'YOUR STATS', {
+      fontFamily: '"Courier New", monospace',
+      fontSize: '16px',
+      color: '#88ff88',
+      fontStyle: 'bold',
+    });
+    header.setOrigin(0.5, 0);
+    this.statsContainer.add(header);
+
+    const divider = this.add.graphics();
+    divider.lineStyle(1, 0x335533, 0.6);
+    divider.lineBetween(statsX + 16, statsY + 38, statsX + statsW - 16, statsY + 38);
+    this.statsContainer.add(divider);
+
+    this.refreshStats(statsX, statsY + 48, statsW);
+  }
+
+  private refreshStats(x: number, startY: number, w: number): void {
+    for (const t of this.statTexts) t.destroy();
+    this.statTexts = [];
+
+    let stats: StatSheet;
+    try {
+      stats = this.getPlayerStats();
+    } catch {
+      return;
+    }
+
+    const allStats = stats.allStats();
+    const pad = 12;
+    let y = startY;
+
+    for (const stat of allStats) {
+      const base = stats.getBase(stat);
+      const final = stats.get(stat);
+      const label = statLabel(stat);
+
+      const changed = Math.abs(final - base) > 0.001;
+      const color = changed ? '#88ccff' : '#aaaaaa';
+      const valueStr = Number.isInteger(final) ? String(final) : final.toFixed(1);
+
+      const nameText = this.add.text(x + pad, y, label, {
+        fontFamily: '"Courier New", monospace',
+        fontSize: '14px',
+        color: '#cccccc',
+      });
+      this.statsContainer.add(nameText);
+      this.statTexts.push(nameText);
+
+      const valText = this.add.text(x + w - pad, y, valueStr, {
+        fontFamily: '"Courier New", monospace',
+        fontSize: '14px',
+        color,
+        fontStyle: changed ? 'bold' : 'normal',
+      });
+      valText.setOrigin(1, 0);
+      this.statsContainer.add(valText);
+      this.statTexts.push(valText);
+
+      if (changed) {
+        const diff = final - base;
+        const sign = diff > 0 ? '+' : '';
+        const diffStr = Number.isInteger(diff) ? `${sign}${diff}` : `${sign}${diff.toFixed(1)}`;
+        const diffText = this.add.text(x + w - pad, y + 16, diffStr, {
+          fontFamily: '"Courier New", monospace',
+          fontSize: '11px',
+          color: diff > 0 ? '#66cc66' : '#cc6666',
+        });
+        diffText.setOrigin(1, 0);
+        this.statsContainer.add(diffText);
+        this.statTexts.push(diffText);
+        y += 14;
+      }
+
+      y += 24;
+    }
+  }
+
   private buildCards(): void {
     const upgrades = registry.getAll('upgrade') as UpgradeDef[];
     if (upgrades.length === 0) return;
 
-    const w = this.cameras.main.width;
-    const h = this.cameras.main.height;
-    const panelTop = Math.round(h * PANEL_PCT) + 80;
+    const cardsAreaX = this.panelX + 270;
+    const cardsAreaW = this.panelW - 290;
+    const cardsTop = this.panelY + 80;
 
-    const totalW = COLS * CARD_W + (COLS - 1) * CARD_GAP;
-    const startX = (w - totalW) / 2;
+    const totalW =
+      Math.min(COLS, upgrades.length) * CARD_W + (Math.min(COLS, upgrades.length) - 1) * CARD_GAP;
+    const startX = cardsAreaX + (cardsAreaW - totalW) / 2;
 
     for (let i = 0; i < upgrades.length; i++) {
       const col = i % COLS;
       const row = Math.floor(i / COLS);
       const cx = startX + col * (CARD_W + CARD_GAP);
-      const cy = panelTop + row * (CARD_H + CARD_GAP);
+      const cy = cardsTop + row * (CARD_H + CARD_GAP);
       const card = this.buildCard(upgrades[i], cx, cy);
       this.cardContainers.push(card);
     }
   }
 
-  private refreshCards(): void {
-    for (const c of this.cardContainers) {
-      c.destroy();
-    }
+  private refreshAll(): void {
+    for (const c of this.cardContainers) c.destroy();
     this.cardContainers = [];
     this.buildCards();
+
+    const statsX = this.panelX + 28;
+    this.refreshStats(statsX, this.panelY + 76 + 48, 220);
   }
 
   private buildCard(upg: UpgradeDef, x: number, y: number): Phaser.GameObjects.Container {
@@ -152,41 +266,73 @@ export class ShopScene extends Phaser.Scene {
     container.add(bg);
 
     const rarityLabel = upg.rarity.charAt(0).toUpperCase() + upg.rarity.slice(1);
-    const rarityText = this.add.text(CARD_W / 2, 10, rarityLabel, {
+    const rarityText = this.add.text(CARD_W / 2, 12, rarityLabel, {
       fontFamily: '"Courier New", monospace',
-      fontSize: '11px',
+      fontSize: '12px',
       color: '#' + (rarityGlow[upg.rarity] ?? 0x888888).toString(16).padStart(6, '0'),
     });
     rarityText.setOrigin(0.5, 0);
     container.add(rarityText);
 
     const nameColor = owned ? '#66aa66' : '#ffffff';
-    const nameText = this.add.text(CARD_W / 2, 26, upg.name, {
+    const nameText = this.add.text(CARD_W / 2, 30, upg.name, {
       fontFamily: '"Courier New", monospace',
-      fontSize: '18px',
+      fontSize: '22px',
       color: nameColor,
       fontStyle: 'bold',
     });
     nameText.setOrigin(0.5, 0);
     container.add(nameText);
 
-    const effectParts: string[] = [];
+    const divider = this.add.graphics();
+    divider.lineStyle(1, 0x333355, 0.5);
+    divider.lineBetween(20, 60, CARD_W - 20, 60);
+    container.add(divider);
+
+    let effectY = 70;
     for (const eff of upg.effects) {
       if (eff.kind === 'stat') {
         const sign = eff.value >= 0 ? '+' : '';
         const pct = eff.mod === 'flat' ? '' : '%';
         const val = eff.mod === 'flat' ? eff.value : Math.round(eff.value * 100);
-        effectParts.push(`${sign}${val}${pct} ${eff.stat}`);
+        const valueColor = eff.value >= 0 ? '#66ee66' : '#ee6666';
+
+        const label = statLabel(eff.stat);
+
+        const statNameText = this.add.text(CARD_W / 2, effectY, label, {
+          fontFamily: '"Courier New", monospace',
+          fontSize: '14px',
+          color: '#aaaacc',
+        });
+        statNameText.setOrigin(0.5, 0);
+        container.add(statNameText);
+
+        const valueText = this.add.text(CARD_W / 2, effectY + 18, `${sign}${val}${pct}`, {
+          fontFamily: '"Courier New", monospace',
+          fontSize: '20px',
+          color: valueColor,
+          fontStyle: 'bold',
+        });
+        valueText.setOrigin(0.5, 0);
+        container.add(valueText);
+
+        effectY += 48;
       }
     }
-    const effectText = this.add.text(CARD_W / 2, 52, effectParts.join('\n'), {
-      fontFamily: '"Courier New", monospace',
-      fontSize: '13px',
-      color: '#88ccff',
-      align: 'center',
-    });
-    effectText.setOrigin(0.5, 0);
-    container.add(effectText);
+
+    if (upg.requires.length > 0 && !canBuy && !owned) {
+      const reqNames = upg.requires.map((r) => {
+        const def = registry.get('upgrade', r);
+        return def?.name ?? r.split(':')[1];
+      });
+      const reqText = this.add.text(CARD_W / 2, effectY + 4, `Requires: ${reqNames.join(', ')}`, {
+        fontFamily: '"Courier New", monospace',
+        fontSize: '12px',
+        color: '#ff6666',
+      });
+      reqText.setOrigin(0.5, 0);
+      container.add(reqText);
+    }
 
     const costParts: string[] = [];
     for (const [itemId, qty] of Object.entries(upg.cost)) {
@@ -196,38 +342,29 @@ export class ShopScene extends Phaser.Scene {
     }
     const costStr = costParts.length > 0 ? costParts.join(', ') : 'Free';
 
-    if (upg.requires.length > 0 && !canBuy && !owned) {
-      const reqNames = upg.requires.map((r) => {
-        const def = registry.get('upgrade', r);
-        return def?.name ?? r.split(':')[1];
-      });
-      const reqText = this.add.text(CARD_W / 2, 86, `Requires: ${reqNames.join(', ')}`, {
-        fontFamily: '"Courier New", monospace',
-        fontSize: '11px',
-        color: '#ff6666',
-      });
-      reqText.setOrigin(0.5, 0);
-      container.add(reqText);
-    }
-
     if (owned) {
-      const ownedText = this.add.text(CARD_W / 2, CARD_H - 30, 'OWNED', {
+      const ownedBadge = this.add.graphics();
+      ownedBadge.fillStyle(0x224422, 0.8);
+      ownedBadge.fillRoundedRect(20, CARD_H - 44, CARD_W - 40, 32, 6);
+      container.add(ownedBadge);
+
+      const ownedText = this.add.text(CARD_W / 2, CARD_H - 28, 'OWNED', {
         fontFamily: '"Courier New", monospace',
-        fontSize: '16px',
-        color: '#66aa66',
+        fontSize: '18px',
+        color: '#66cc66',
         fontStyle: 'bold',
       });
       ownedText.setOrigin(0.5, 0.5);
       container.add(ownedText);
     } else {
-      const btnY = CARD_H - 36;
+      const btnY = CARD_H - 48;
       const btnW = CARD_W - 30;
-      const btnH = 28;
+      const btnH = 36;
       const btnX = (CARD_W - btnW) / 2;
 
-      const btnColor = canBuy ? 0x335533 : 0x333333;
-      const btnBorder = canBuy ? 0x55aa55 : 0x555555;
-      const btnTextColor = canBuy ? '#aaffaa' : '#666666';
+      const btnColor = canBuy ? 0x335533 : 0x2a2a2a;
+      const btnBorder = canBuy ? 0x55aa55 : 0x444444;
+      const btnTextColor = canBuy ? '#aaffaa' : '#555555';
 
       const btnGfx = this.add.graphics();
       btnGfx.fillStyle(btnColor, 1);
@@ -238,7 +375,7 @@ export class ShopScene extends Phaser.Scene {
 
       const btnLabel = this.add.text(CARD_W / 2, btnY + btnH / 2, costStr, {
         fontFamily: '"Courier New", monospace',
-        fontSize: '12px',
+        fontSize: '14px',
         color: btnTextColor,
         fontStyle: 'bold',
       });
@@ -278,9 +415,9 @@ export class ShopScene extends Phaser.Scene {
   }
 
   /** Reach into the running GameScene to get the player's StatSheet. */
-  private getPlayerStats(): import('../stats/StatSheet').StatSheet {
+  private getPlayerStats(): StatSheet {
     const gameScene = this.scene.get('GameScene') as Phaser.Scene & {
-      getPlayerStats?: () => import('../stats/StatSheet').StatSheet;
+      getPlayerStats?: () => StatSheet;
     };
     if (gameScene.getPlayerStats) {
       return gameScene.getPlayerStats();
