@@ -1,9 +1,9 @@
 import { eventBus, type EventGroup } from '../core/EventBus';
 import { configManager } from '../core/ConfigManager';
 
-const BAR_WIDTH = 120;
-const BAR_HEIGHT = 10;
-const HUD_PADDING = 12;
+const BAR_WIDTH = 360;
+const BAR_HEIGHT = 28;
+const HUD_PADDING = 32;
 
 /** HUD overlay: lamp fuel bar, trash counter, status messages. Driven entirely by events. */
 export class UIScene extends Phaser.Scene {
@@ -60,13 +60,13 @@ export class UIScene extends Phaser.Scene {
 
     this.hudBg = this.add.graphics();
     this.hudBg.fillStyle(0x000000, 0.5);
-    this.hudBg.fillRoundedRect(HUD_PADDING - 4, HUD_PADDING - 4, 180, 58, 6);
+    this.hudBg.fillRoundedRect(HUD_PADDING - 8, HUD_PADDING - 8, BAR_WIDTH + 100, 140, 12);
     this.hudBg.setScrollFactor(0).setDepth(100);
 
     this.fuelLabel = this.add
       .text(HUD_PADDING, HUD_PADDING, 'LAMP', {
         fontFamily: '"Courier New", monospace',
-        fontSize: '10px',
+        fontSize: '28px',
         color: '#ffcc44',
         fontStyle: 'bold',
       })
@@ -80,9 +80,9 @@ export class UIScene extends Phaser.Scene {
     this.fuelBarFill.setScrollFactor(0).setDepth(102);
 
     this.fuelValueText = this.add
-      .text(HUD_PADDING + BAR_WIDTH + 8, HUD_PADDING + 14, '100%', {
+      .text(HUD_PADDING + BAR_WIDTH + 12, HUD_PADDING + 40, '100%', {
         fontFamily: '"Courier New", monospace',
-        fontSize: '9px',
+        fontSize: '24px',
         color: '#aaa',
       })
       .setScrollFactor(0)
@@ -90,19 +90,19 @@ export class UIScene extends Phaser.Scene {
 
     this.drawFuelBar();
 
-    const trashY = HUD_PADDING + 34;
+    const trashY = HUD_PADDING + 84;
 
     this.trashIcon = this.add
       .text(HUD_PADDING, trashY, '\u{1F5D1}', {
-        fontSize: '14px',
+        fontSize: '36px',
       })
       .setScrollFactor(0)
       .setDepth(101);
 
     this.trashText = this.add
-      .text(HUD_PADDING + 20, trashY + 2, '0', {
+      .text(HUD_PADDING + 48, trashY + 4, '0', {
         fontFamily: '"Courier New", monospace',
-        fontSize: '12px',
+        fontSize: '32px',
         color: '#ffffff',
         fontStyle: 'bold',
       })
@@ -110,12 +110,12 @@ export class UIScene extends Phaser.Scene {
       .setDepth(101);
 
     this.statusText = this.add
-      .text(w / 2, 50, '', {
+      .text(w / 2, 140, '', {
         fontFamily: '"Courier New", monospace',
-        fontSize: '12px',
+        fontSize: '32px',
         color: '#ffcc44',
         stroke: '#000000',
-        strokeThickness: 3,
+        strokeThickness: 6,
         align: 'center',
       })
       .setOrigin(0.5, 0.5)
@@ -123,13 +123,13 @@ export class UIScene extends Phaser.Scene {
       .setDepth(103);
 
     this.lampWarning = this.add
-      .text(HUD_PADDING + BAR_WIDTH / 2, HUD_PADDING + 14 + BAR_HEIGHT / 2, 'LOW FUEL', {
+      .text(HUD_PADDING + BAR_WIDTH / 2, HUD_PADDING + 40 + BAR_HEIGHT / 2, 'LOW FUEL', {
         fontFamily: '"Courier New", monospace',
-        fontSize: '8px',
+        fontSize: '20px',
         color: '#ff3333',
         fontStyle: 'bold',
         stroke: '#000000',
-        strokeThickness: 2,
+        strokeThickness: 4,
       })
       .setOrigin(0.5, 0.5)
       .setScrollFactor(0)
@@ -139,18 +139,18 @@ export class UIScene extends Phaser.Scene {
 
   private drawFuelBar(): void {
     const barX = HUD_PADDING;
-    const barY = HUD_PADDING + 14;
+    const barY = HUD_PADDING + 38;
     const ratio = Math.max(0, Math.min(1, this.displayedFuelRatio));
 
     this.fuelBarBg.clear();
     this.fuelBarBg.fillStyle(0x222222, 1);
-    this.fuelBarBg.fillRoundedRect(barX, barY, BAR_WIDTH, BAR_HEIGHT, 3);
-    this.fuelBarBg.lineStyle(1, 0x555555, 1);
-    this.fuelBarBg.strokeRoundedRect(barX, barY, BAR_WIDTH, BAR_HEIGHT, 3);
+    this.fuelBarBg.fillRoundedRect(barX, barY, BAR_WIDTH, BAR_HEIGHT, 6);
+    this.fuelBarBg.lineStyle(2, 0x555555, 1);
+    this.fuelBarBg.strokeRoundedRect(barX, barY, BAR_WIDTH, BAR_HEIGHT, 6);
 
     this.fuelBarFill.clear();
     if (ratio > 0.01) {
-      const fillW = Math.max(4, ratio * (BAR_WIDTH - 2));
+      const fillW = Math.max(8, ratio * (BAR_WIDTH - 4));
       let color: number;
       if (ratio > 0.5) {
         color = 0xffaa22;
@@ -160,7 +160,7 @@ export class UIScene extends Phaser.Scene {
         color = 0xff2222;
       }
       this.fuelBarFill.fillStyle(color, 1);
-      this.fuelBarFill.fillRoundedRect(barX + 1, barY + 1, fillW, BAR_HEIGHT - 2, 2);
+      this.fuelBarFill.fillRoundedRect(barX + 2, barY + 2, fillW, BAR_HEIGHT - 4, 4);
     }
 
     const pct = Math.round(ratio * 100);

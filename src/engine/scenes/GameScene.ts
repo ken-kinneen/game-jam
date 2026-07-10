@@ -25,9 +25,9 @@ export class GameScene extends Phaser.Scene {
   private wallLayer: Phaser.Tilemaps.TilemapLayer | null = null;
   private unsubConfig: (() => void) | null = null;
   private unsubFuel: (() => void) | null = null;
-  private darkness!: Phaser.GameObjects.RenderTexture;
-  private lightGfx!: Phaser.GameObjects.Graphics;
   private displayedRadius = 120;
+  private lampLight!: Phaser.GameObjects.Sprite;
+  private warmGlow!: Phaser.GameObjects.Sprite;
 
   constructor() {
     super({ key: 'GameScene' });
@@ -55,7 +55,8 @@ export class GameScene extends Phaser.Scene {
     this.spawnGroundItems();
     this.spawnFuelItems();
     this.setupCollisions();
-    this.createLighting();
+    this.createLampLight();
+    this.displayedRadius = configManager.get<number>('lamp', 'glowRadiusMax');
 
     this.unsubFuel = eventBus.on('item:picked_up', ({ itemId }) => {
       const def = registry.get('item', itemId);
@@ -95,7 +96,7 @@ export class GameScene extends Phaser.Scene {
     this.movementSystem.update(this.player, move.x, move.y, dt);
     this.pickupSystem.update(this.player);
 
-    this.updateLighting();
+    this.updateLampLight();
   }
 
   shutdown() {
@@ -312,80 +313,112 @@ export class GameScene extends Phaser.Scene {
     }
   }
 
-  private createLighting(): void {
-    const cam = this.cameras.main;
-    const w = cam.width;
-    const h = cam.height;
+  private static readonly DARK_TEX_SIZE = 512;
+  private static readonly GLOW_TEX_SIZE = 256;
 
-    this.darkness = this.add.renderTexture(cam.centerX, cam.centerY, w, h);
-    this.darkness.setOrigin(0.5, 0.5);
-    this.darkness.setScrollFactor(0);
-    this.darkness.setDepth(900);
-    this.darkness.setBlendMode(Phaser.BlendModes.MULTIPLY);
+  private createLampLight(): void {
+    const DS = GameScene.DARK_TEX_SIZE;
+    const GS = GameScene.GLOW_TEX_SIZE;
 
-    this.lightGfx = new Phaser.GameObjects.Graphics(this);
+    if (!this.textures.exists('__lamp_dark')) {
+      const c = document.createElement('canvas');
+      c.width = DS;
+      c.height = DS;
+      const ctx = c.getContext('2d')!;
+      const half = DS / 2;
+      const g = ctx.createRadialGradient(half, half, 0, half, half, half);
+      g.addColorStop(0, 'rgba(0,0,0,0)');
+      g.addColorStop(0.28, 'rgba(0,0,0,0)');
+      g.addColorStop(0.45, 'rgba(0,0,0,0.15)');
+      g.addColorStop(0.6, 'rgba(0,0,0,0.55)');
+      g.addColorStop(0.75, 'rgba(0,0,0,0.88)');
+      g.addColorStop(0.88, 'rgba(0,0,0,0.98)');
+      g.addColorStop(1, 'rgba(0,0,0,1)');
+      ctx.fillStyle = g;
+      ctx.fillRect(0, 0, DS, DS);
+      this.textures.addCanvas('__lamp_dark', c);
+    }
 
-    this.displayedRadius = configManager.get<number>('lamp', 'glowRadiusMax');
+    if (!this.textures.exists('__lamp_glow')) {
+      const c = document.createElement('canvas');
+      c.width = GS;
+      c.height = GS;
+      const ctx = c.getContext('2d')!;
+      const half = GS / 2;
+      const g = ctx.createRadialGradient(half, half, 0, half, half, half);
+      g.addColorStop(0, 'rgba(255,200,100,0.45)');
+      g.addColorStop(0.2, 'rgba(255,180,80,0.3)');
+      g.addColorStop(0.5, 'rgba(255,150,50,0.1)');
+      g.addColorStop(1, 'rgba(255,120,30,0)');
+      ctx.fillStyle = g;
+      ctx.fillRect(0, 0, GS, GS);
+      this.textures.addCanvas('__lamp_glow', c);
+    }
+
+    this.warmGlow = this.add.sprite(0, 0, '__lamp_glow');
+    this.warmGlow.setBlendMode(Phaser.BlendModes.ADD);
+    this.warmGlow.setDepth(799);
+    this.warmGlow.setOrigin(0.5, 0.5);
+
+    this.lampLight = this.add.sprite(0, 0, '__lamp_dark');
+    this.lampLight.setDepth(800);
+    this.lampLight.setOrigin(0.5, 0.5);
   }
 
-  private updateLighting(): void {
+  private updateLampLight(): void {
     const ratio = this.lampSystem.ratio;
     const critical = configManager.get<number>('lamp', 'criticalThreshold');
     const rMax = configManager.get<number>('lamp', 'glowRadiusMax');
     const rMin = configManager.get<number>('lamp', 'glowRadiusMin');
-    const warmth = configManager.get<number>('lamp', 'glowColor');
-    const darkAlpha = configManager.get<number>('lamp', 'darknessAlpha');
+    const t = this.time.now;
 
-    let targetRadius = rMin + (rMax - rMin) * ratio;
+    // Power curve: light shrinks slowly at first, then collapses fast below ~33%
+    const curved = Math.pow(ratio, 2.5);
+    let targetRadius = rMin + (rMax - rMin) * curved;
+
+    // Constant gentle flicker even at full fuel, stronger when critical
+    const baseFlicker =
+      Math.sin(t * 0.005) * 1.5 + Math.sin(t * 0.013) * 1.0 + Math.sin(t * 0.029) * 0.5;
 
     if (ratio > 0 && ratio < critical) {
-      const flicker = Math.sin(this.time.now * 0.012) * 4 + Math.sin(this.time.now * 0.031) * 2;
-      targetRadius += flicker;
-    }
-    if (ratio <= 0) {
-      targetRadius = 0;
+      const panicFlicker =
+        Math.sin(t * 0.04) * 5 + Math.sin(t * 0.071) * 3 + (Math.random() - 0.5) * 4;
+      targetRadius += panicFlicker;
+    } else if (ratio > 0) {
+      targetRadius += baseFlicker;
     }
 
-    this.displayedRadius = Phaser.Math.Linear(this.displayedRadius, targetRadius, 0.08);
+    if (ratio <= 0) targetRadius = 0;
 
+    const lerpSpeed = ratio < 0.33 ? 0.25 : 0.12;
+    this.displayedRadius = Phaser.Math.Linear(this.displayedRadius, targetRadius, lerpSpeed);
+
+    const px = this.player.sprite.x;
+    const py = this.player.sprite.y;
+
+    this.lampLight.setPosition(px, py);
+    this.warmGlow.setPosition(px, py);
+
+    // Dark sprite: the clear zone is ~28% of the texture radius.
+    // We want that clear zone to equal displayedRadius in world units.
+    const clearFraction = 0.28;
+    const darkScale = this.displayedRadius / (GameScene.DARK_TEX_SIZE * clearFraction * 0.5);
+
+    // Ensure the opaque black edges cover the full camera viewport.
+    // Camera sees (width/zoom) x (height/zoom) world units.
+    // Sprite half-extent in world = darkScale * DARK_TEX_SIZE / 2
+    // Needs to reach every corner from player (player is ~centered by camera follow).
     const cam = this.cameras.main;
-    const w = cam.width;
-    const h = cam.height;
-    const cx = w / 2;
-    const cy = h / 2;
-    const r = Math.max(0, this.displayedRadius);
+    const viewW = cam.width / cam.zoom;
+    const viewH = cam.height / cam.zoom;
+    const minDarkScale = (Math.max(viewW, viewH) * 1.5) / GameScene.DARK_TEX_SIZE;
+    this.lampLight.setScale(Math.max(darkScale, minDarkScale));
 
-    this.lightGfx.clear();
-
-    const darkR = Math.round(darkAlpha * 255);
-    const darkG = Math.round(darkAlpha * 255 * (1 - warmth * 0.15));
-    const darkB = Math.round(darkAlpha * 255 * (1 - warmth * 0.3));
-    const darkColor = (darkR << 16) | (darkG << 8) | darkB;
-
-    this.lightGfx.fillStyle(darkColor, 1);
-    this.lightGfx.fillRect(0, 0, w, h);
-
-    if (r > 1) {
-      const steps = 20;
-      for (let i = steps; i >= 0; i--) {
-        const t = i / steps;
-        const stepR = r * (1 - t * 0.7);
-
-        const falloff = 1 - t;
-        const brightness = falloff * falloff;
-
-        const lr = Math.min(255, Math.round(255 * brightness + warmth * 40 * brightness));
-        const lg = Math.min(255, Math.round(255 * brightness + warmth * 20 * brightness));
-        const lb = Math.round(255 * brightness * (1 - warmth * 0.3));
-        const lc = (lr << 16) | (lg << 8) | lb;
-
-        this.lightGfx.fillStyle(lc, 1);
-        this.lightGfx.fillCircle(cx, cy, stepR);
-      }
-    }
-
-    this.darkness.clear();
-    this.darkness.draw(this.lightGfx, 0, 0);
+    // Warm glow: slightly smaller than the light, with gentle flicker in alpha
+    const glowAlphaFlicker = 0.7 + Math.sin(t * 0.006) * 0.1 + Math.sin(t * 0.017) * 0.08;
+    const glowScale = this.displayedRadius / (GameScene.GLOW_TEX_SIZE * 0.3);
+    this.warmGlow.setScale(glowScale);
+    this.warmGlow.setAlpha(ratio > 0 ? glowAlphaFlicker : 0);
   }
 
   private handleLampOut(): void {
