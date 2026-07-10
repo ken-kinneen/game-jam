@@ -12,6 +12,7 @@ import { eventBus } from '../core/EventBus';
 import { registry } from '../core/ContentRegistry';
 import { configManager } from '../core/ConfigManager';
 import { inventoryManager } from '../core/InventoryManager';
+import { generateCave, type CaveMap } from '../generation/caveGenerator';
 import type { StatSheet } from '../stats/StatSheet';
 import type { SceneDef } from '../schemas/scene.schema';
 
@@ -47,6 +48,9 @@ export class GameScene extends Phaser.Scene {
   private sceneDefId = 'core:home';
   private sceneDef: SceneDef | undefined;
   private wallLayer: Phaser.Tilemaps.TilemapLayer | null = null;
+  private wallGroup: Phaser.Physics.Arcade.StaticGroup | null = null;
+  private proceduralCaveMap: CaveMap | null = null;
+  private proceduralEntry: { x: number; y: number } | null = null;
   private unsubConfig: (() => void) | null = null;
   private unsubFuel: (() => void) | null = null;
   private unsubInventory: (() => void) | null = null;
@@ -92,10 +96,16 @@ export class GameScene extends Phaser.Scene {
     this.activeInteract = null;
     this.shopOpen = false;
 
+    this.proceduralCaveMap = null;
+    this.proceduralEntry = null;
+    this.wallGroup = null;
+
     if (this.sceneDef?.generation.method === 'tilemap') {
       this.buildTilemap(this.sceneDef);
     } else if (this.sceneDef?.generation.method === 'background') {
       this.buildBackgroundRoom(this.sceneDef);
+    } else if (this.sceneDef?.generation.method === 'rooms') {
+      this.buildProceduralCave(this.sceneDef);
     } else {
       this.buildFallbackRoom();
     }
@@ -103,8 +113,12 @@ export class GameScene extends Phaser.Scene {
     this.spawnPlayer(this.sceneDef);
 
     if (this.isCave) {
-      this.spawnGroundItems();
-      this.spawnFuelItems();
+      if (this.proceduralCaveMap) {
+        this.spawnProceduralItems();
+      } else {
+        this.spawnGroundItems();
+        this.spawnFuelItems();
+      }
     }
 
     this.setupCollisions();
@@ -534,10 +548,125 @@ export class GameScene extends Phaser.Scene {
     );
   }
 
+  private static readonly CAVE_TILE_PX = 16;
+
+  /**
+   * Builds a room from the procedural cave generator (generation/caveGenerator.ts)
+   * — the "walkable path" mechanic: an organic, guaranteed-connected floor shape
+   * instead of a plain rectangle. `roomCount` (already authored on every scene using
+   * this method) loosely scales the generated grid so existing content needs no
+   * changes; see scene.schema.ts's RoomsGenerationSchema for the tuning knobs.
+   *
+   * Visuals here are a checkerboard shade matching buildFallbackRoom's existing
+   * style, NOT the illustrated art from the asset-pipeline admin tool's cave preview
+   * — that tool renders a preview image, it doesn't feed real per-tile art into the
+   * engine. Swapping this for a real tileset is a separate, later step.
+   */
+  private buildProceduralCave(sceneDef: SceneDef): void {
+    const gen = sceneDef.generation;
+    if (gen.method !== 'rooms') return;
+
+    const TILE = GameScene.CAVE_TILE_PX;
+    const width = Phaser.Math.Clamp(gen.roomCount[1] * 8, 24, 70);
+    const height = Phaser.Math.Clamp(gen.roomCount[0] * 8, 24, 70);
+
+    const map = generateCave({
+      seed: gen.seed,
+      width,
+      height,
+      fillRatio: gen.fillRatio,
+      smoothIterations: gen.smoothIterations,
+      widenPasses: gen.widenPasses,
+      exitCount: gen.exitCount,
+      openItemCount: gen.openItemCount,
+      behindWallItemCount: gen.behindWallItemCount,
+    });
+    this.proceduralCaveMap = map;
+    this.proceduralEntry = {
+      x: map.entry.x * TILE + TILE / 2,
+      y: map.entry.y * TILE + TILE / 2,
+    };
+
+    const gfx = this.add.graphics();
+    const wallDark = 0x2a2a32;
+    const wallLight = 0x24242a;
+    const floorDark = 0x2a2a2a;
+    const floorLight = 0x252525;
+
+    for (let gy = 0; gy < map.height; gy++) {
+      for (let gx = 0; gx < map.width; gx++) {
+        const isWall = map.grid[gy][gx] === 0;
+        const even = (gx + gy) % 2 === 0;
+        gfx.fillStyle(isWall ? (even ? wallDark : wallLight) : even ? floorDark : floorLight, 1);
+        gfx.fillRect(gx * TILE, gy * TILE, TILE, TILE);
+      }
+    }
+    gfx.setDepth(-1);
+
+    // One static physics body per wall tile that borders at least one floor tile —
+    // interior fully-enclosed rock is unreachable anyway (pruned to wall by the
+    // generator's connectivity pass), so skipping it keeps the body count
+    // proportional to the walkable area's perimeter, not the whole grid.
+    this.wallGroup = this.physics.add.staticGroup();
+    for (let gy = 0; gy < map.height; gy++) {
+      for (let gx = 0; gx < map.width; gx++) {
+        if (map.grid[gy][gx] !== 0) continue;
+        const bordersFloor = [
+          [1, 0],
+          [-1, 0],
+          [0, 1],
+          [0, -1],
+        ].some(([dx, dy]) => map.grid[gy + dy]?.[gx + dx] === 1);
+        if (!bordersFloor) continue;
+
+        const rect = this.add.rectangle(gx * TILE + TILE / 2, gy * TILE + TILE / 2, TILE, TILE);
+        rect.setVisible(false);
+        this.wallGroup.add(rect);
+      }
+    }
+
+    this.physics.world.setBounds(0, 0, map.width * TILE, map.height * TILE);
+  }
+
+  /**
+   * Spawns real pickups at the procedural cave's generated item positions.
+   * Only "open" placements are spawned — "behind_wall" items are generated in the
+   * data (caveGenerator.ts marks the blocking wall via breaksWall) but there is no
+   * break-wall interaction in this engine yet, so spawning them would place an
+   * unreachable pickup. Left for when that system exists rather than faked here.
+   */
+  private spawnProceduralItems(): void {
+    const map = this.proceduralCaveMap;
+    if (!map) return;
+    const TILE = GameScene.CAVE_TILE_PX;
+
+    const trashItems = registry.getByTag('item', 'trash');
+    const fuelItems = registry.getByTag('item', 'fuel');
+    let trashIdx = 0;
+    let fuelIdx = 0;
+
+    for (const item of map.items) {
+      if (item.placement !== 'open') continue;
+
+      const pool = item.kind === 'fuel' ? fuelItems : trashItems;
+      if (pool.length === 0) continue;
+      const itemDef =
+        item.kind === 'fuel' ? pool[fuelIdx++ % pool.length] : pool[trashIdx++ % pool.length];
+
+      const x = item.x * TILE + TILE / 2;
+      const y = item.y * TILE + TILE / 2;
+      const sprite = this.createItemSprite(x, y, itemDef);
+      this.pickupSystem.addGroundItem(sprite, itemDef.id, 1);
+    }
+  }
+
   private spawnPlayer(sceneDef: SceneDef | undefined): void {
     const playerDef = registry.getOrThrow('entity', 'core:player');
-    const spawnX = sceneDef?.playerSpawn?.x ?? 320;
-    const spawnY = sceneDef?.playerSpawn?.y ?? 240;
+    // A procedurally generated cave's entry point takes priority over any authored
+    // playerSpawn — a fixed coordinate can't be guaranteed walkable across different
+    // seeds, but the generator's entry point always is (see caveGenerator.ts §4).
+    const spawnX = this.proceduralEntry?.x ?? sceneDef?.playerSpawn?.x ?? 320;
+    const spawnY = this.proceduralEntry?.y ?? sceneDef?.playerSpawn?.y ?? 240;
 
     this.player = EntityFactory.create(this, playerDef, spawnX, spawnY);
     this.player.setComponent('playerControlled', true);
@@ -858,6 +987,9 @@ export class GameScene extends Phaser.Scene {
   private setupCollisions(): void {
     if (this.wallLayer && this.player) {
       this.physics.add.collider(this.player.sprite, this.wallLayer);
+    }
+    if (this.wallGroup && this.player) {
+      this.physics.add.collider(this.player.sprite, this.wallGroup);
     }
   }
 }
