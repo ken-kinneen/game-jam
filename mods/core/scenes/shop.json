@@ -1,0 +1,21 @@
+{
+  "id": "core:shop",
+  "type": "scene",
+  "kind": "shop",
+  "generation": {
+    "method": "background",
+    "image": "backgrounds/shop",
+    "scale": 0.5,
+    "wallInset": 32
+  },
+  "exits": [
+    {
+      "to": "core:home",
+      "condition": "always",
+      "label": "Leave Shop",
+      "position": { "x": 256, "y": 480 }
+    }
+  ],
+  "shops": [{ "label": "Upgrades", "position": { "x": 384, "y": 280 } }],
+  "playerSpawn": { "x": 256, "y": 400 }
+}

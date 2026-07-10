@@ -9,6 +9,7 @@ export const ItemDefSchema = z.object({
   stackSize: z.number().int().positive().default(99),
   tags: z.array(z.string()).default([]),
   value: z.number().nonnegative().default(0),
+  displayScale: z.number().positive().default(1),
 });
 
 export type ItemDef = z.infer<typeof ItemDefSchema>;

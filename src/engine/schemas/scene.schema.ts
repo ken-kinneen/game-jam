@@ -16,9 +16,17 @@ const RoomsGenerationSchema = z.object({
     .optional(),
 });
 
+const BackgroundGenerationSchema = z.object({
+  method: z.literal('background'),
+  image: z.string(),
+  wallInset: z.number().nonnegative().default(32),
+  scale: z.number().positive().default(1),
+});
+
 const GenerationSchema = z.discriminatedUnion('method', [
   TilemapGenerationSchema,
   RoomsGenerationSchema,
+  BackgroundGenerationSchema,
 ]);
 
 const ExitSchema = z.object({

@@ -5,5 +5,7 @@
   "items/plastic_bag": { "file": "sprites/items/plastic_bag.png", "type": "image" },
   "items/oil_can": { "file": "sprites/items/oil_can.png", "type": "image" },
   "items/fuel_bottle": { "file": "sprites/items/fuel_bottle.png", "type": "image" },
+  "items/battery": { "file": "sprites/items/battery.png", "type": "image" },
+  "backgrounds/shop": { "file": "sprites/backgrounds/shop.png", "type": "image" },
   "tilesets/home": { "file": "tilesets/home.png", "type": "image" }
 }

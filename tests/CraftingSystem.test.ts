@@ -17,6 +17,7 @@ describe('CraftingSystem', () => {
     stackSize: 99,
     tags: ['metal'],
     value: 1,
+    displayScale: 1,
   };
 
   const outputItem: ItemDef = {
@@ -27,6 +28,7 @@ describe('CraftingSystem', () => {
     stackSize: 99,
     tags: ['crafted'],
     value: 5,
+    displayScale: 1,
   };
 
   const exactRecipe: RecipeDef = {

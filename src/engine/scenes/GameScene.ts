@@ -89,6 +89,8 @@ export class GameScene extends Phaser.Scene {
 
     if (this.sceneDef?.generation.method === 'tilemap') {
       this.buildTilemap(this.sceneDef);
+    } else if (this.sceneDef?.generation.method === 'background') {
+      this.buildBackgroundRoom(this.sceneDef);
     } else {
       this.buildFallbackRoom();
     }
@@ -341,7 +343,15 @@ export class GameScene extends Phaser.Scene {
 
   private handleInteraction(zone: InteractZone): void {
     if (zone.action === 'shop') {
-      this.scene.launch('ShopScene');
+      if (this.sceneDef?.kind === 'shop') {
+        this.scene.launch('ShopScene');
+      } else {
+        this.cameras.main.fade(500, 0, 0, 0, false, (_cam: unknown, progress: number) => {
+          if (progress >= 1) {
+            this.director.transitionTo('core:shop', this);
+          }
+        });
+      }
     }
   }
 
@@ -481,6 +491,38 @@ export class GameScene extends Phaser.Scene {
     );
   }
 
+  /** Builds a room from a background image asset, scaled and bounded. */
+  private buildBackgroundRoom(sceneDef: SceneDef): void {
+    const gen = sceneDef.generation;
+    if (gen.method !== 'background') return;
+
+    const imageKey = gen.image;
+    const scale = gen.scale ?? 1;
+    const wallInset = gen.wallInset ?? 32;
+
+    if (!this.textures.exists(imageKey)) {
+      console.warn(`Background image "${imageKey}" not found, falling back`);
+      this.buildFallbackRoom();
+      return;
+    }
+
+    const tex = this.textures.get(imageKey);
+    const frame = tex.getSourceImage();
+    const width = frame.width * scale;
+    const height = frame.height * scale;
+
+    const bg = this.add.image(width / 2, height / 2, imageKey);
+    bg.setScale(scale);
+    bg.setDepth(-1);
+
+    this.physics.world.setBounds(
+      wallInset,
+      wallInset,
+      width - wallInset * 2,
+      height - wallInset * 2,
+    );
+  }
+
   private spawnPlayer(sceneDef: SceneDef | undefined): void {
     const playerDef = registry.getOrThrow('entity', 'core:player');
     const spawnX = sceneDef?.playerSpawn?.x ?? 320;
@@ -559,6 +601,8 @@ export class GameScene extends Phaser.Scene {
     }
   }
 
+  private static readonly ITEM_DISPLAY_SIZE = 16;
+
   private spawnGroundItems(): void {
     const trashItems = registry.getByTag('item', 'trash');
     if (trashItems.length === 0) return;
@@ -572,17 +616,7 @@ export class GameScene extends Phaser.Scene {
       const x = Phaser.Math.Between(bounds.x + margin, bounds.right - margin);
       const y = Phaser.Math.Between(bounds.y + margin, bounds.bottom - margin);
 
-      const textureKey =
-        itemDef.sprite !== 'placeholder' && this.textures.exists(itemDef.sprite)
-          ? itemDef.sprite
-          : '__placeholder';
-
-      const sprite = this.physics.add.sprite(x, y, textureKey);
-      sprite.setDepth(2);
-      const itemBody = sprite.body as Phaser.Physics.Arcade.Body;
-      itemBody.setImmovable(true);
-      itemBody.setAllowGravity(false);
-
+      const sprite = this.createItemSprite(x, y, itemDef);
       this.pickupSystem.addGroundItem(sprite, itemDef.id, 1);
     }
   }
@@ -600,19 +634,31 @@ export class GameScene extends Phaser.Scene {
       const x = Phaser.Math.Between(bounds.x + margin, bounds.right - margin);
       const y = Phaser.Math.Between(bounds.y + margin, bounds.bottom - margin);
 
-      const textureKey =
-        itemDef.sprite !== 'placeholder' && this.textures.exists(itemDef.sprite)
-          ? itemDef.sprite
-          : '__placeholder';
-
-      const sprite = this.physics.add.sprite(x, y, textureKey);
-      sprite.setDepth(2);
-      const itemBody = sprite.body as Phaser.Physics.Arcade.Body;
-      itemBody.setImmovable(true);
-      itemBody.setAllowGravity(false);
-
+      const sprite = this.createItemSprite(x, y, itemDef);
       this.pickupSystem.addGroundItem(sprite, itemDef.id, 1);
     }
+  }
+
+  /** Creates a ground-item sprite scaled by the def's displayScale. */
+  private createItemSprite(
+    x: number,
+    y: number,
+    itemDef: { sprite: string; displayScale?: number },
+  ): Phaser.Physics.Arcade.Sprite {
+    const textureKey =
+      itemDef.sprite !== 'placeholder' && this.textures.exists(itemDef.sprite)
+        ? itemDef.sprite
+        : '__placeholder';
+
+    const sprite = this.physics.add.sprite(x, y, textureKey);
+    const sz = GameScene.ITEM_DISPLAY_SIZE * (itemDef.displayScale ?? 1);
+    sprite.setDisplaySize(sz, sz);
+    sprite.setDepth(2);
+    const body = sprite.body as Phaser.Physics.Arcade.Body;
+    body.setImmovable(true);
+    body.setAllowGravity(false);
+    body.setSize(sz, sz);
+    return sprite;
   }
 
   private static readonly VISION_TEX_SIZE = 256;

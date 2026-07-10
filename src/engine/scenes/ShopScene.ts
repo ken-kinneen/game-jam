@@ -5,10 +5,10 @@ import { UpgradeSystem } from '../systems/UpgradeSystem';
 import type { StatSheet } from '../stats/StatSheet';
 
 const PANEL_PCT = 0.15;
-const CARD_W = 260;
+const CARD_W = 220;
 const CARD_H = 210;
-const CARD_GAP = 24;
-const COLS = 2;
+const CARD_GAP = 18;
+const COLS = 3;
 
 const STAT_LABELS: Record<string, string> = {
   moveSpeed: 'Move Speed',
@@ -41,6 +41,7 @@ export class ShopScene extends Phaser.Scene {
   private statTexts: Phaser.GameObjects.Text[] = [];
   private statsContainer!: Phaser.GameObjects.Container;
   private escKey!: Phaser.Input.Keyboard.Key;
+  private eKey!: Phaser.Input.Keyboard.Key;
   private panelX = 0;
   private panelY = 0;
   private panelW = 0;
@@ -88,17 +89,37 @@ export class ShopScene extends Phaser.Scene {
     });
     title.setOrigin(0.5, 0).setDepth(2);
 
-    const closeHint = this.add.text(w / 2, this.panelY + this.panelH - 28, '[ESC] Close', {
+    const closeBtnGfx = this.add.graphics();
+    const closeBtnW = 200;
+    const closeBtnH = 40;
+    const closeBtnX = w / 2 - closeBtnW / 2;
+    const closeBtnY = this.panelY + this.panelH - 52;
+    closeBtnGfx.fillStyle(0x442222, 0.9);
+    closeBtnGfx.fillRoundedRect(closeBtnX, closeBtnY, closeBtnW, closeBtnH, 8);
+    closeBtnGfx.lineStyle(2, 0xaa4444, 1);
+    closeBtnGfx.strokeRoundedRect(closeBtnX, closeBtnY, closeBtnW, closeBtnH, 8);
+    closeBtnGfx.setDepth(2);
+
+    const closeHint = this.add.text(w / 2, closeBtnY + closeBtnH / 2, '[ESC / E]  Close', {
       fontFamily: '"Courier New", monospace',
-      fontSize: '18px',
-      color: '#888888',
+      fontSize: '20px',
+      color: '#ff8888',
+      fontStyle: 'bold',
     });
-    closeHint.setOrigin(0.5, 0.5).setDepth(2);
+    closeHint.setOrigin(0.5, 0.5).setDepth(3);
+
+    const closeZone = this.add
+      .zone(closeBtnX, closeBtnY, closeBtnW, closeBtnH)
+      .setOrigin(0, 0)
+      .setInteractive()
+      .setDepth(3);
+    closeZone.on('pointerdown', () => this.closeShop());
 
     this.buildStatsPanel();
     this.buildCards();
 
     this.escKey = this.input.keyboard!.addKey(Phaser.Input.Keyboard.KeyCodes.ESC);
+    this.eKey = this.input.keyboard!.addKey(Phaser.Input.Keyboard.KeyCodes.E);
 
     this.eventGroup.on('upgrade:acquired', () => {
       this.refreshAll();
@@ -108,7 +129,7 @@ export class ShopScene extends Phaser.Scene {
   }
 
   update() {
-    if (Phaser.Input.Keyboard.JustDown(this.escKey)) {
+    if (Phaser.Input.Keyboard.JustDown(this.escKey) || Phaser.Input.Keyboard.JustDown(this.eKey)) {
       this.closeShop();
     }
   }
