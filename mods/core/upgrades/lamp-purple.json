@@ -1,0 +1,16 @@
+{
+  "id": "core:lamp_purple",
+  "type": "upgrade",
+  "name": "Violet Glow",
+  "sprite": "placeholder",
+  "rarity": "rare",
+  "cost": { "core:rusty_can": 6 },
+  "effects": [
+    {
+      "kind": "behavior",
+      "behavior": "lamp_color_purple",
+      "description": "Changes lamp glow to mystic purple"
+    }
+  ],
+  "requires": []
+}

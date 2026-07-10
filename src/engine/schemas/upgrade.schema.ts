@@ -10,6 +10,7 @@ const StatEffectSchema = z.object({
 const BehaviorEffectSchema = z.object({
   kind: z.literal('behavior'),
   behavior: z.string(),
+  description: z.string().optional(),
 });
 
 const EffectSchema = z.discriminatedUnion('kind', [StatEffectSchema, BehaviorEffectSchema]);

@@ -1,0 +1,16 @@
+{
+  "id": "core:lamp_orange",
+  "type": "upgrade",
+  "name": "Ember Light",
+  "sprite": "placeholder",
+  "rarity": "rare",
+  "cost": { "core:rusty_can": 6 },
+  "effects": [
+    {
+      "kind": "behavior",
+      "behavior": "lamp_color_orange",
+      "description": "Changes lamp glow to fiery orange"
+    }
+  ],
+  "requires": []
+}

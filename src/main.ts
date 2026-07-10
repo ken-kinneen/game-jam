@@ -30,6 +30,14 @@ import quickFeet from '../mods/core/upgrades/quick-feet.json';
 import brightLamp from '../mods/core/upgrades/bright-lamp.json';
 import deepPockets from '../mods/core/upgrades/deep-pockets.json';
 import fuelEfficiency from '../mods/core/upgrades/fuel-efficiency.json';
+import lampBlue from '../mods/core/upgrades/lamp-blue.json';
+import lampPurple from '../mods/core/upgrades/lamp-purple.json';
+import lampOrange from '../mods/core/upgrades/lamp-orange.json';
+import sndItemPickup from '../mods/core/sounds/item-pickup.json';
+import sndUpgradeAcquired from '../mods/core/sounds/upgrade-acquired.json';
+import sndCaveEnter from '../mods/core/sounds/cave-enter.json';
+import sndCaveExit from '../mods/core/sounds/cave-exit.json';
+import sndPlayerDeath from '../mods/core/sounds/player-death.json';
 
 async function boot() {
   const loader = new ModLoader();
@@ -50,6 +58,14 @@ async function boot() {
     { filename: 'upgrades/bright-lamp.json', data: brightLamp },
     { filename: 'upgrades/deep-pockets.json', data: deepPockets },
     { filename: 'upgrades/fuel-efficiency.json', data: fuelEfficiency },
+    { filename: 'upgrades/lamp-blue.json', data: lampBlue },
+    { filename: 'upgrades/lamp-purple.json', data: lampPurple },
+    { filename: 'upgrades/lamp-orange.json', data: lampOrange },
+    { filename: 'sounds/item-pickup.json', data: sndItemPickup },
+    { filename: 'sounds/upgrade-acquired.json', data: sndUpgradeAcquired },
+    { filename: 'sounds/cave-enter.json', data: sndCaveEnter },
+    { filename: 'sounds/cave-exit.json', data: sndCaveExit },
+    { filename: 'sounds/player-death.json', data: sndPlayerDeath },
   ];
 
   const { errors } = loader.loadMod(coreMod, defFiles, coreManifest, 'mods/core/assets', registry);

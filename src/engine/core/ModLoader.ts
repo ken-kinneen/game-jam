@@ -6,6 +6,7 @@ import { UpgradeDefSchema } from '../schemas/upgrade.schema';
 import { RecipeDefSchema } from '../schemas/recipe.schema';
 import { SceneDefSchema } from '../schemas/scene.schema';
 import { LootTableDefSchema } from '../schemas/loot-table.schema';
+import { SoundDefSchema } from '../schemas/sound.schema';
 import { type ContentRegistry, type DefType } from './ContentRegistry';
 
 /** Maps def type strings to their Zod validation schemas. */
@@ -16,6 +17,7 @@ const SCHEMA_MAP: Record<string, { type: DefType; schema: ZodSchema }> = {
   recipe: { type: 'recipe', schema: RecipeDefSchema },
   scene: { type: 'scene', schema: SceneDefSchema },
   'loot-table': { type: 'loot-table', schema: LootTableDefSchema },
+  sound: { type: 'sound', schema: SoundDefSchema },
 };
 
 export interface ManifestEntry {

@@ -1,0 +1,10 @@
+{
+  "id": "core:player_death",
+  "type": "sound",
+  "name": "Player Death",
+  "asset": "sfx/player_death",
+  "volume": 1,
+  "pitchRange": [1, 1],
+  "cooldown": 1000,
+  "triggers": [{ "event": "lamp:extinguished" }]
+}

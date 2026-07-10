@@ -1,0 +1,10 @@
+{
+  "id": "core:cave_exit",
+  "type": "sound",
+  "name": "Cave Exit",
+  "asset": "sfx/cave_exit",
+  "volume": 0.8,
+  "pitchRange": [1, 1],
+  "cooldown": 500,
+  "triggers": [{ "event": "scene:enter", "filter": { "sceneId": "core:home" } }]
+}

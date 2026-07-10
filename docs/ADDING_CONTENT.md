@@ -147,6 +147,48 @@ Location: `mods/core/loot-tables/`
 
 ---
 
+## Sounds
+
+Location: `mods/core/sounds/`
+
+```json
+{
+  "id": "core:your_sound",
+  "type": "sound",
+  "name": "Your Sound",
+  "asset": "sfx/your_sound",
+  "volume": 0.8,
+  "pitchRange": [0.9, 1.1],
+  "cooldown": 100,
+  "triggers": [
+    { "event": "item:picked_up" },
+    { "event": "scene:enter", "filter": { "sceneId": "core:cave_1" } }
+  ]
+}
+```
+
+**Fields:**
+
+- `id` — Globally unique, namespaced.
+- `type` — Always `"sound"`.
+- `name` — Human-readable label.
+- `asset` — Key matching the audio asset in `assets/manifest.json`. If no real file exists, the engine generates a procedural placeholder.
+- `volume` — Base volume (0–1), multiplied by master and SFX channel volumes.
+- `pitchRange` — `[min, max]` playback rate range for randomized pitch variation.
+- `cooldown` — Minimum milliseconds between plays (prevents sound spam).
+- `triggers` — Array of events that play this sound. Each trigger has:
+  - `event` — An EventBus event name (see `src/engine/core/EventBus.ts` for the full list).
+  - `filter` (optional) — Object of key/value pairs that must match the event data.
+
+**Tips:**
+
+- Multiple triggers on one sound = plays on any matching event.
+- Use `filter` to scope sounds to specific scenes, items, or entities.
+- A `pitchRange` like `[0.9, 1.1]` adds subtle variation so repeated plays don't sound robotic.
+- Set `cooldown` > 0 for frequently-fired events (e.g., item pickups) to avoid stacking.
+
+---
+
 ## Assets
 
 Every sprite/sound must be registered in `mods/core/assets/manifest.json`:

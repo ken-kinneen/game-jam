@@ -1,4 +1,5 @@
 import type { AssetManifest, ManifestEntry } from '../core/ModLoader';
+import { generatePlaceholderSounds } from '../audio/generatePlaceholderSounds';
 
 /**
  * First scene: loads all assets from mod manifests.
@@ -26,8 +27,9 @@ export class BootScene extends Phaser.Scene {
     }
   }
 
-  create() {
+  async create() {
     this.validateLoads();
+    await generatePlaceholderSounds(this);
     this.scene.start('GameScene', { sceneId: 'core:home' });
   }
 

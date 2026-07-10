@@ -22,6 +22,12 @@ const STAT_LABELS: Record<string, string> = {
   fuelBurnRate: 'Fuel Burn Rate',
 };
 
+const BEHAVIOR_COLORS: Record<string, number> = {
+  lamp_color_blue: 0x66aaff,
+  lamp_color_purple: 0xcc66ff,
+  lamp_color_orange: 0xff8822,
+};
+
 /** Formats a stat name into a readable label. */
 function statLabel(stat: string): string {
   return STAT_LABELS[stat] ?? stat.replace(/([A-Z])/g, ' $1').replace(/^./, (s) => s.toUpperCase());
@@ -317,6 +323,31 @@ export class ShopScene extends Phaser.Scene {
         container.add(valueText);
 
         effectY += 48;
+      } else if (eff.kind === 'behavior') {
+        const desc = eff.description ?? eff.behavior;
+        const colorHex = BEHAVIOR_COLORS[eff.behavior];
+
+        if (colorHex !== undefined) {
+          const swatch = this.add.graphics();
+          swatch.fillStyle(colorHex, 1);
+          swatch.fillCircle(CARD_W / 2, effectY + 14, 12);
+          swatch.lineStyle(2, 0xffffff, 0.3);
+          swatch.strokeCircle(CARD_W / 2, effectY + 14, 12);
+          container.add(swatch);
+          effectY += 34;
+        }
+
+        const descText = this.add.text(CARD_W / 2, effectY, desc, {
+          fontFamily: '"Courier New", monospace',
+          fontSize: '14px',
+          color: '#ddaaff',
+          align: 'center',
+          wordWrap: { width: CARD_W - 30 },
+        });
+        descText.setOrigin(0.5, 0);
+        container.add(descText);
+
+        effectY += descText.height + 12;
       }
     }
 

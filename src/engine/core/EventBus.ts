@@ -20,6 +20,7 @@ export interface GameEvents {
   'upgrade:available': { upgradeIds: string[] };
   'shop:opened': Record<string, never>;
   'shop:closed': Record<string, never>;
+  'lamp:color_changed': { color: string };
 }
 
 type EventCallback<T> = (data: T) => void;

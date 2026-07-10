@@ -78,6 +78,18 @@ export const lampConfig: ConfigSection = {
       defaultValue: 0.3,
     },
     {
+      key: 'glowColorName',
+      label: 'Lamp Color',
+      type: 'choice',
+      options: [
+        { value: 'default', label: 'Default (Amber)' },
+        { value: 'blue', label: 'Blue' },
+        { value: 'purple', label: 'Purple' },
+        { value: 'orange', label: 'Orange' },
+      ],
+      defaultValue: 'default',
+    },
+    {
       key: 'darknessAlpha',
       label: 'Darkness Opacity',
       type: 'number',

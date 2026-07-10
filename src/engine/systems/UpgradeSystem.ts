@@ -32,10 +32,20 @@ export class UpgradeSystem {
           value: effect.value,
           source: upgrade.id,
         });
+      } else if (effect.kind === 'behavior') {
+        this.applyBehavior(effect.behavior);
       }
     }
 
     this.eventBus.emit('upgrade:acquired', { upgradeId: upgrade.id });
+  }
+
+  /** Dispatch a behavior effect via the event bus. */
+  private applyBehavior(behavior: string): void {
+    if (behavior.startsWith('lamp_color_')) {
+      const color = behavior.replace('lamp_color_', '');
+      this.eventBus.emit('lamp:color_changed', { color });
+    }
   }
 
   /** Remove an upgrade's effects. */

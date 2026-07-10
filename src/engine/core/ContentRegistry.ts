@@ -4,9 +4,11 @@ import type { UpgradeDef } from '../schemas/upgrade.schema';
 import type { RecipeDef } from '../schemas/recipe.schema';
 import type { SceneDef } from '../schemas/scene.schema';
 import type { LootTableDef } from '../schemas/loot-table.schema';
+import type { SoundDef } from '../schemas/sound.schema';
 
 /** Union of all def types the registry stores. */
-export type AnyDef = ItemDef | EntityDef | UpgradeDef | RecipeDef | SceneDef | LootTableDef;
+export type AnyDef =
+  ItemDef | EntityDef | UpgradeDef | RecipeDef | SceneDef | LootTableDef | SoundDef;
 
 /** Map from def type string to its TypeScript type. */
 export interface DefTypeMap {
@@ -16,6 +18,7 @@ export interface DefTypeMap {
   recipe: RecipeDef;
   scene: SceneDef;
   'loot-table': LootTableDef;
+  sound: SoundDef;
 }
 
 export type DefType = keyof DefTypeMap;
@@ -25,7 +28,15 @@ export class ContentRegistry {
   private store = new Map<DefType, Map<string, AnyDef>>();
 
   constructor() {
-    const types: DefType[] = ['item', 'entity', 'upgrade', 'recipe', 'scene', 'loot-table'];
+    const types: DefType[] = [
+      'item',
+      'entity',
+      'upgrade',
+      'recipe',
+      'scene',
+      'loot-table',
+      'sound',
+    ];
     for (const t of types) {
       this.store.set(t, new Map());
     }

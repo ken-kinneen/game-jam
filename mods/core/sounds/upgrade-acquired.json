@@ -1,0 +1,10 @@
+{
+  "id": "core:upgrade_acquired",
+  "type": "sound",
+  "name": "Upgrade Acquired",
+  "asset": "sfx/upgrade_acquired",
+  "volume": 0.9,
+  "pitchRange": [1, 1],
+  "cooldown": 200,
+  "triggers": [{ "event": "upgrade:acquired" }]
+}

@@ -1,0 +1,16 @@
+{
+  "id": "core:lamp_blue",
+  "type": "upgrade",
+  "name": "Blue Flame",
+  "sprite": "placeholder",
+  "rarity": "rare",
+  "cost": { "core:rusty_can": 6 },
+  "effects": [
+    {
+      "kind": "behavior",
+      "behavior": "lamp_color_blue",
+      "description": "Changes lamp glow to icy blue"
+    }
+  ],
+  "requires": []
+}

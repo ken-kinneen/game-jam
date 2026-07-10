@@ -4,6 +4,7 @@ import { Movement } from '../entities/components/Movement';
 import { MovementSystem } from '../systems/MovementSystem';
 import { PickupSystem } from '../systems/PickupSystem';
 import { LampSystem } from '../systems/LampSystem';
+import { SoundSystem } from '../systems/SoundSystem';
 import { InputMap } from '../input/InputMap';
 import { SceneDirector } from './SceneDirector';
 import { eventBus } from '../core/EventBus';
@@ -37,6 +38,7 @@ export class GameScene extends Phaser.Scene {
   private movementSystem!: MovementSystem;
   private pickupSystem!: PickupSystem;
   private lampSystem!: LampSystem;
+  private soundSystem!: SoundSystem;
   private inputMap!: InputMap;
   private director!: SceneDirector;
   private sceneDefId = 'core:home';
@@ -56,6 +58,7 @@ export class GameScene extends Phaser.Scene {
   private promptText!: Phaser.GameObjects.Text;
   private shopOpen = false;
   private unsubShop: (() => void)[] = [];
+  private lampColor = 'default';
 
   private isCave = false;
 
@@ -71,6 +74,7 @@ export class GameScene extends Phaser.Scene {
     this.movementSystem = new MovementSystem();
     this.pickupSystem = new PickupSystem(registry, eventBus);
     this.lampSystem = new LampSystem(eventBus, configManager);
+    this.soundSystem = new SoundSystem(this, eventBus, configManager, registry);
     this.inputMap = new InputMap(this);
     this.director = new SceneDirector(registry, eventBus);
 
@@ -126,16 +130,29 @@ export class GameScene extends Phaser.Scene {
       eventBus.on('shop:closed', () => {
         this.shopOpen = false;
       }),
+      eventBus.on('lamp:color_changed', ({ color }) => {
+        this.setLampColor(color);
+      }),
     ];
 
     this.applyCameraConfig();
     this.applyPlayerConfig();
     this.applyAudioConfig();
 
-    this.unsubConfig = configManager.onChange((sectionId) => {
+    if (this.isCave) {
+      const savedColor = configManager.get<string>('lamp', 'glowColorName');
+      if (savedColor && savedColor !== 'default') {
+        this.setLampColor(savedColor);
+      }
+    }
+
+    this.unsubConfig = configManager.onChange((sectionId, key) => {
       if (sectionId === 'camera') this.applyCameraConfig();
       if (sectionId === 'player') this.applyPlayerConfig();
       if (sectionId === 'audio') this.applyAudioConfig();
+      if (sectionId === 'lamp' && key === 'glowColorName') {
+        this.setLampColor(configManager.get<string>('lamp', 'glowColorName'));
+      }
     });
 
     if (!this.scene.isActive('UIScene')) {
@@ -182,6 +199,7 @@ export class GameScene extends Phaser.Scene {
   shutdown() {
     this.unsubConfig?.();
     this.unsubFuel?.();
+    this.soundSystem?.destroy();
     for (const unsub of this.unsubShop) unsub();
     this.unsubShop = [];
   }
@@ -664,6 +682,71 @@ export class GameScene extends Phaser.Scene {
     this.warmGlow.setBlendMode(Phaser.BlendModes.ADD);
     this.warmGlow.setDepth(799);
     this.warmGlow.setOrigin(0.5, 0.5);
+  }
+
+  private static readonly GLOW_COLORS: Record<string, [string, string, string, string]> = {
+    default: [
+      'rgba(255,200,100,0.4)',
+      'rgba(255,180,80,0.25)',
+      'rgba(255,150,50,0.08)',
+      'rgba(255,120,30,0)',
+    ],
+    blue: [
+      'rgba(100,180,255,0.4)',
+      'rgba(80,150,255,0.25)',
+      'rgba(50,120,255,0.08)',
+      'rgba(30,80,255,0)',
+    ],
+    purple: [
+      'rgba(200,100,255,0.4)',
+      'rgba(170,80,255,0.25)',
+      'rgba(140,50,220,0.08)',
+      'rgba(100,30,180,0)',
+    ],
+    orange: [
+      'rgba(255,140,40,0.45)',
+      'rgba(255,110,20,0.3)',
+      'rgba(255,80,10,0.1)',
+      'rgba(200,50,0,0)',
+    ],
+  };
+
+  private setLampColor(color: string): void {
+    if (this.lampColor === color) return;
+    this.lampColor = color;
+
+    // Keep debug panel in sync when changed via upgrade
+    if (configManager.get<string>('lamp', 'glowColorName') !== color) {
+      configManager.set('lamp', 'glowColorName', color);
+    }
+
+    this.rebuildGlowTexture();
+    if (this.warmGlow) {
+      this.warmGlow.setTexture('__lamp_glow');
+    }
+  }
+
+  private rebuildGlowTexture(): void {
+    const GS = GameScene.GLOW_TEX_SIZE;
+    const stops = GameScene.GLOW_COLORS[this.lampColor] ?? GameScene.GLOW_COLORS['default'];
+
+    if (this.textures.exists('__lamp_glow')) {
+      this.textures.remove('__lamp_glow');
+    }
+
+    const c = document.createElement('canvas');
+    c.width = GS;
+    c.height = GS;
+    const ctx = c.getContext('2d')!;
+    const half = GS / 2;
+    const g = ctx.createRadialGradient(half, half, 0, half, half, half);
+    g.addColorStop(0, stops[0]);
+    g.addColorStop(0.3, stops[1]);
+    g.addColorStop(0.6, stops[2]);
+    g.addColorStop(1, stops[3]);
+    ctx.fillStyle = g;
+    ctx.fillRect(0, 0, GS, GS);
+    this.textures.addCanvas('__lamp_glow', c);
   }
 
   private updateLampLight(): void {

@@ -1,0 +1,59 @@
+---
+description: How to add sounds to the game via the SoundSystem
+globs: mods/**/sounds/*.json, src/engine/systems/SoundSystem.ts, src/engine/schemas/sound.schema.ts, src/engine/audio/**
+alwaysApply: false
+---
+
+# Sound System
+
+Sounds are **data-driven** — add a JSON file in `mods/core/sounds/`, never hardcode audio in engine code.
+
+## Adding a new sound
+
+1. Create `mods/core/sounds/your-sound.json`:
+```json
+{
+  "id": "core:your_sound",
+  "type": "sound",
+  "name": "Your Sound",
+  "asset": "sfx/your_sound",
+  "volume": 0.8,
+  "pitchRange": [0.9, 1.1],
+  "cooldown": 100,
+  "triggers": [
+    { "event": "item:picked_up", "filter": { "itemId": "core:rusty_can" } }
+  ]
+}
+```
+
+2. Import it in `src/main.ts` and add to the `defFiles` array.
+
+3. (Optional) Add a real audio file to `mods/core/assets/sfx/` and register in `manifest.json`:
+```json
+{ "sfx/your_sound": { "file": "sfx/your_sound.wav", "type": "audio" } }
+```
+If no manifest entry exists, the engine generates a procedural placeholder at boot.
+
+## Key rules
+
+- **Never reference content IDs in SoundSystem.ts** — sounds bind to events generically via their def's `triggers` array.
+- **Use `filter`** to scope sounds to specific scenes, items, or entities without engine changes.
+- **`pitchRange: [min, max]`** randomizes playback rate — use `[0.9, 1.1]` for natural variation.
+- **`cooldown`** prevents sound spam on rapid-fire events (ms between plays).
+- Volume is `def.volume * masterVolume * sfxVolume` — never set volume in engine code.
+
+## Architecture
+
+```
+mods/core/sounds/*.json  →  validated by SoundDefSchema (Zod)
+                         →  registered in ContentRegistry as type "sound"
+                         →  SoundSystem subscribes to EventBus events from each def's triggers
+                         →  Phaser scene.sound.play() with computed volume + pitch
+```
+
+## Adding a new event trigger
+
+If you need sounds for a new game event:
+1. Add the event type to `GameEvents` in `src/engine/core/EventBus.ts`
+2. Emit it from the relevant system
+3. Create a sound def JSON with that event name in `triggers` — no SoundSystem changes needed
