@@ -8,5 +8,5 @@
     "map": "maps/home"
   },
   "exits": [],
-  "playerSpawn": { "x": 160, "y": 120 }
+  "playerSpawn": { "x": 320, "y": 240 }
 }

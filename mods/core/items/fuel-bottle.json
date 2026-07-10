@@ -1,0 +1,9 @@
+{
+  "id": "core:fuel_bottle",
+  "type": "item",
+  "name": "Lamp Oil",
+  "sprite": "items/fuel_bottle",
+  "stackSize": 10,
+  "tags": ["fuel"],
+  "value": 8
+}

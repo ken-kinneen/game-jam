@@ -12,14 +12,12 @@ export interface GameEvents {
   'inventory:changed': { entityId: string };
   'inventory:full': { entityId: string; itemId: string };
   'stat:changed': { entityId: string; stat: string; value: number };
+  'lamp:fuel_changed': { fuel: number; maxFuel: number; ratio: number };
+  'lamp:refueled': { amount: number; fuel: number };
+  'lamp:extinguished': Record<string, never>;
 }
 
 type EventCallback<T> = (data: T) => void;
-
-interface Subscription {
-  event: string;
-  callback: EventCallback<unknown>;
-}
 
 export class EventBus {
   private listeners = new Map<string, Set<EventCallback<unknown>>>();
@@ -72,10 +70,7 @@ export class EventGroup {
 
   constructor(private bus: EventBus) {}
 
-  on<K extends keyof GameEvents>(
-    event: K,
-    callback: EventCallback<GameEvents[K]>,
-  ): void {
+  on<K extends keyof GameEvents>(event: K, callback: EventCallback<GameEvents[K]>): void {
     this.subscriptions.push(this.bus.on(event, callback));
   }
 

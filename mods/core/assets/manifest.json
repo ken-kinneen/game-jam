@@ -3,5 +3,7 @@
   "items/rusty_can": { "file": "sprites/items/rusty_can.png", "type": "image" },
   "items/banana_peel": { "file": "sprites/items/banana_peel.png", "type": "image" },
   "items/plastic_bag": { "file": "sprites/items/plastic_bag.png", "type": "image" },
+  "items/oil_can": { "file": "sprites/items/oil_can.png", "type": "image" },
+  "items/fuel_bottle": { "file": "sprites/items/fuel_bottle.png", "type": "image" },
   "tilesets/home": { "file": "tilesets/home.png", "type": "image" }
 }

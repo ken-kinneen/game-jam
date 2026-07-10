@@ -1,0 +1,9 @@
+{
+  "id": "core:oil_can",
+  "type": "item",
+  "name": "Oil Can",
+  "sprite": "items/oil_can",
+  "stackSize": 10,
+  "tags": ["fuel"],
+  "value": 5
+}
