@@ -1,7 +1,6 @@
 import { eventBus, type EventGroup } from '../core/EventBus';
 import { registry } from '../core/ContentRegistry';
 import { configManager } from '../core/ConfigManager';
-import type { UpgradeDef } from '../schemas/upgrade.schema';
 
 const BAR_WIDTH = 360;
 const BAR_HEIGHT = 28;
@@ -21,6 +20,7 @@ export class UIScene extends Phaser.Scene {
   private trashText!: Phaser.GameObjects.Text;
   private statusText!: Phaser.GameObjects.Text;
   private lampWarning!: Phaser.GameObjects.Text;
+  private homeTitle!: Phaser.GameObjects.Text;
 
   private currentFuelRatio = 1;
   private displayedFuelRatio = 1;
@@ -28,10 +28,6 @@ export class UIScene extends Phaser.Scene {
 
   private isCave = false;
   private initialSceneId: string | undefined;
-
-  private homeTitle!: Phaser.GameObjects.Text;
-  private upgradeContainer!: Phaser.GameObjects.Container;
-  private upgradeCards: Phaser.GameObjects.Container[] = [];
 
   constructor() {
     super({ key: 'UIScene', active: false });
@@ -46,13 +42,10 @@ export class UIScene extends Phaser.Scene {
     this.trashCount = 0;
     this.currentFuelRatio = 1;
     this.displayedFuelRatio = 1;
-    this.upgradeCards = [];
 
     this.buildHUD();
-    this.buildHomeUI();
     this.bindEvents();
 
-    // On first launch we won't catch the scene:enter event, so check directly
     const activeSceneId = this.initialSceneId ?? 'core:home';
     const sceneDef = registry.get('scene', activeSceneId);
     this.setMode(sceneDef?.kind === 'cave');
@@ -88,11 +81,6 @@ export class UIScene extends Phaser.Scene {
     this.lampWarning.setVisible(false);
 
     this.homeTitle.setVisible(!cave);
-    this.upgradeContainer.setVisible(!cave);
-
-    if (!cave) {
-      this.refreshUpgradeCards();
-    }
   }
 
   private buildHUD(): void {
@@ -175,10 +163,6 @@ export class UIScene extends Phaser.Scene {
       .setScrollFactor(0)
       .setDepth(103)
       .setVisible(false);
-  }
-
-  private buildHomeUI(): void {
-    const w = this.cameras.main.width;
 
     this.homeTitle = this.add
       .text(w / 2, HUD_PADDING, 'HOME BASE', {
@@ -191,126 +175,8 @@ export class UIScene extends Phaser.Scene {
       })
       .setOrigin(0.5, 0)
       .setScrollFactor(0)
-      .setDepth(101);
-
-    this.upgradeContainer = this.add.container(0, 0);
-    this.upgradeContainer.setScrollFactor(0);
-    this.upgradeContainer.setDepth(101);
-
-    this.homeTitle.setVisible(false);
-    this.upgradeContainer.setVisible(false);
-  }
-
-  private refreshUpgradeCards(): void {
-    for (const card of this.upgradeCards) {
-      card.destroy();
-    }
-    this.upgradeCards = [];
-    this.upgradeContainer.removeAll();
-
-    const upgrades = registry.getAll('upgrade') as UpgradeDef[];
-    if (upgrades.length === 0) return;
-
-    const w = this.cameras.main.width;
-    const cardW = 200;
-    const cardH = 100;
-    const gap = 16;
-    const startX = w / 2 - (upgrades.length * (cardW + gap) - gap) / 2;
-    const startY = 90;
-
-    for (let i = 0; i < upgrades.length; i++) {
-      const upg = upgrades[i];
-      const cx = startX + i * (cardW + gap);
-      const card = this.buildUpgradeCard(upg, cx, startY, cardW, cardH);
-      this.upgradeCards.push(card);
-      this.upgradeContainer.add(card);
-    }
-  }
-
-  private buildUpgradeCard(
-    upg: UpgradeDef,
-    x: number,
-    y: number,
-    w: number,
-    h: number,
-  ): Phaser.GameObjects.Container {
-    const container = this.add.container(x, y);
-
-    const rarityColors: Record<string, number> = {
-      common: 0x555555,
-      uncommon: 0x336633,
-      rare: 0x333366,
-      legendary: 0x663333,
-    };
-    const borderColor = rarityColors[upg.rarity] ?? 0x555555;
-
-    const bg = this.add.graphics();
-    bg.fillStyle(0x111111, 0.85);
-    bg.fillRoundedRect(0, 0, w, h, 8);
-    bg.lineStyle(2, borderColor, 1);
-    bg.strokeRoundedRect(0, 0, w, h, 8);
-    container.add(bg);
-
-    const nameText = this.add.text(w / 2, 12, upg.name, {
-      fontFamily: '"Courier New", monospace',
-      fontSize: '16px',
-      color: '#ffffff',
-      fontStyle: 'bold',
-    });
-    nameText.setOrigin(0.5, 0);
-    container.add(nameText);
-
-    const costParts: string[] = [];
-    for (const [itemId, qty] of Object.entries(upg.cost)) {
-      const itemDef = registry.get('item', itemId);
-      const name = itemDef?.name ?? itemId.split(':')[1];
-      costParts.push(`${qty} ${name}`);
-    }
-    const costStr = costParts.length > 0 ? costParts.join(', ') : 'Free';
-
-    const costText = this.add.text(w / 2, 36, costStr, {
-      fontFamily: '"Courier New", monospace',
-      fontSize: '12px',
-      color: '#aaaaaa',
-    });
-    costText.setOrigin(0.5, 0);
-    container.add(costText);
-
-    const effectParts: string[] = [];
-    for (const eff of upg.effects) {
-      if (eff.kind === 'stat') {
-        const sign = eff.value >= 0 ? '+' : '';
-        const pct = eff.mod === 'flat' ? '' : '%';
-        const val = eff.mod === 'flat' ? eff.value : Math.round(eff.value * 100);
-        effectParts.push(`${sign}${val}${pct} ${eff.stat}`);
-      }
-    }
-
-    const effectText = this.add.text(w / 2, 56, effectParts.join('\n'), {
-      fontFamily: '"Courier New", monospace',
-      fontSize: '11px',
-      color: '#88ccff',
-      align: 'center',
-    });
-    effectText.setOrigin(0.5, 0);
-    container.add(effectText);
-
-    if (upg.requires.length > 0) {
-      const reqText = this.add.text(
-        w / 2,
-        h - 14,
-        `Requires: ${upg.requires.map((r) => r.split(':')[1]).join(', ')}`,
-        {
-          fontFamily: '"Courier New", monospace',
-          fontSize: '10px',
-          color: '#ff8888',
-        },
-      );
-      reqText.setOrigin(0.5, 0.5);
-      container.add(reqText);
-    }
-
-    return container;
+      .setDepth(101)
+      .setVisible(false);
   }
 
   private drawFuelBar(): void {

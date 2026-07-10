@@ -21,5 +21,6 @@
       "position": { "x": 480, "y": 200 }
     }
   ],
-  "playerSpawn": { "x": 160, "y": 240 }
+  "shops": [{ "label": "Upgrades", "position": { "x": 160, "y": 80 } }],
+  "playerSpawn": { "x": 320, "y": 240 }
 }

@@ -18,6 +18,8 @@ export interface GameEvents {
   'exit:nearby': { exitTo: string; label: string };
   'exit:left': Record<string, never>;
   'upgrade:available': { upgradeIds: string[] };
+  'shop:opened': Record<string, never>;
+  'shop:closed': Record<string, never>;
 }
 
 type EventCallback<T> = (data: T) => void;

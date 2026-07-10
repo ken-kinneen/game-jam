@@ -5,6 +5,7 @@ import { configManager } from './engine/core/ConfigManager';
 import { BootScene } from './engine/scenes/BootScene';
 import { GameScene } from './engine/scenes/GameScene';
 import { UIScene } from './engine/scenes/UIScene';
+import { ShopScene } from './engine/scenes/ShopScene';
 import { DebugPanel } from './ui/DebugPanel';
 import { cameraConfig } from './engine/configs/cameraConfig';
 import { playerConfig } from './engine/configs/playerConfig';
@@ -91,7 +92,7 @@ async function boot() {
         debug: false,
       },
     },
-    scene: [BootScene, GameScene, UIScene],
+    scene: [BootScene, GameScene, UIScene, ShopScene],
   });
 
   game.scene.start('BootScene', { manifests });

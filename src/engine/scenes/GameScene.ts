@@ -15,8 +15,17 @@ import type { SceneDef } from '../schemas/scene.schema';
 interface ExitZone {
   sprite: Phaser.Physics.Arcade.Sprite;
   label: Phaser.GameObjects.Text;
+  tooltip: Phaser.GameObjects.Text;
   to: string;
   displayLabel: string;
+}
+
+interface InteractZone {
+  sprite: Phaser.Physics.Arcade.Sprite;
+  label: Phaser.GameObjects.Text;
+  tooltip: Phaser.GameObjects.Text;
+  displayLabel: string;
+  action: string;
 }
 
 /**
@@ -41,8 +50,12 @@ export class GameScene extends Phaser.Scene {
   private warmGlow!: Phaser.GameObjects.Sprite;
 
   private exitZones: ExitZone[] = [];
+  private interactZones: InteractZone[] = [];
   private activeExit: ExitZone | null = null;
+  private activeInteract: InteractZone | null = null;
   private promptText!: Phaser.GameObjects.Text;
+  private shopOpen = false;
+  private unsubShop: (() => void)[] = [];
 
   private isCave = false;
 
@@ -65,7 +78,10 @@ export class GameScene extends Phaser.Scene {
     this.isCave = this.sceneDef?.kind === 'cave';
 
     this.exitZones = [];
+    this.interactZones = [];
     this.activeExit = null;
+    this.activeInteract = null;
+    this.shopOpen = false;
 
     if (this.sceneDef?.generation.method === 'tilemap') {
       this.buildTilemap(this.sceneDef);
@@ -100,7 +116,17 @@ export class GameScene extends Phaser.Scene {
     }
 
     this.spawnExitZones();
+    this.spawnShopZones();
     this.createPromptText();
+
+    this.unsubShop = [
+      eventBus.on('shop:opened', () => {
+        this.shopOpen = true;
+      }),
+      eventBus.on('shop:closed', () => {
+        this.shopOpen = false;
+      }),
+    ];
 
     this.applyCameraConfig();
     this.applyPlayerConfig();
@@ -126,24 +152,38 @@ export class GameScene extends Phaser.Scene {
       this.lampSystem.update(dt);
     }
 
-    const move = this.inputMap.getMoveVector();
-    this.movementSystem.update(this.player, move.x, move.y, dt);
-    this.pickupSystem.update(this.player);
+    if (!this.shopOpen) {
+      const move = this.inputMap.getMoveVector();
+      this.movementSystem.update(this.player, move.x, move.y, dt);
+      this.pickupSystem.update(this.player);
+
+      this.checkExitOverlap();
+      this.checkInteractOverlap();
+
+      if (this.activeExit && this.inputMap.justPressed('interact')) {
+        this.enterExit(this.activeExit);
+      } else if (this.activeInteract && this.inputMap.justPressed('interact')) {
+        this.handleInteraction(this.activeInteract);
+      }
+    }
 
     if (this.isCave) {
       this.updateLampLight();
     }
+  }
 
-    this.checkExitOverlap();
-
-    if (this.activeExit && this.inputMap.justPressed('interact')) {
-      this.enterExit(this.activeExit);
-    }
+  /** Expose player stats so ShopScene can apply upgrades. */
+  getPlayerStats(): StatSheet {
+    const stats = this.player.getComponent<StatSheet>('stats');
+    if (!stats) throw new Error('Player has no stats component');
+    return stats;
   }
 
   shutdown() {
     this.unsubConfig?.();
     this.unsubFuel?.();
+    for (const unsub of this.unsubShop) unsub();
+    this.unsubShop = [];
   }
 
   private spawnExitZones(): void {
@@ -172,7 +212,118 @@ export class GameScene extends Phaser.Scene {
       label.setOrigin(0.5, 0.5);
       label.setDepth(10);
 
-      this.exitZones.push({ sprite: zoneSprite, label, to: exit.to, displayLabel });
+      const tooltip = this.createZoneTooltip(pos.x, pos.y + 34);
+
+      this.exitZones.push({ sprite: zoneSprite, label, tooltip, to: exit.to, displayLabel });
+    }
+  }
+
+  private spawnShopZones(): void {
+    const shops = this.sceneDef?.shops ?? [];
+    for (const shop of shops) {
+      const pos = shop.position;
+      const displayLabel = shop.label ?? 'Shop';
+
+      const zoneSprite = this.physics.add.sprite(pos.x, pos.y, '__placeholder');
+      zoneSprite.setDisplaySize(48, 48);
+      zoneSprite.setAlpha(0.6);
+      zoneSprite.setTint(0xffaa44);
+      zoneSprite.setDepth(5);
+      const body = zoneSprite.body as Phaser.Physics.Arcade.Body;
+      body.setImmovable(true);
+      body.setAllowGravity(false);
+
+      const label = this.add.text(pos.x, pos.y - 36, displayLabel, {
+        fontFamily: '"Courier New", monospace',
+        fontSize: '18px',
+        color: '#ffcc88',
+        stroke: '#000000',
+        strokeThickness: 3,
+        align: 'center',
+      });
+      label.setOrigin(0.5, 0.5);
+      label.setDepth(10);
+
+      const tooltip = this.createZoneTooltip(pos.x, pos.y + 34);
+
+      this.interactZones.push({ sprite: zoneSprite, label, tooltip, displayLabel, action: 'shop' });
+    }
+  }
+
+  private createZoneTooltip(x: number, y: number): Phaser.GameObjects.Text {
+    const tip = this.add.text(x, y, 'Press E', {
+      fontFamily: '"Courier New", monospace',
+      fontSize: '14px',
+      color: '#ffffff',
+      backgroundColor: '#000000aa',
+      padding: { x: 6, y: 3 },
+      stroke: '#000000',
+      strokeThickness: 2,
+    });
+    tip.setOrigin(0.5, 0);
+    tip.setDepth(11);
+    tip.setVisible(false);
+    return tip;
+  }
+
+  private showTooltip(tooltip: Phaser.GameObjects.Text): void {
+    if (tooltip.visible) return;
+    tooltip.setVisible(true);
+    tooltip.setAlpha(0);
+    this.tweens.add({ targets: tooltip, alpha: 1, duration: 150 });
+  }
+
+  private hideTooltip(tooltip: Phaser.GameObjects.Text): void {
+    if (!tooltip.visible) return;
+    this.tweens.add({
+      targets: tooltip,
+      alpha: 0,
+      duration: 150,
+      onComplete: () => tooltip.setVisible(false),
+    });
+  }
+
+  private hideAllTooltips(): void {
+    for (const z of this.exitZones) this.hideTooltip(z.tooltip);
+    for (const z of this.interactZones) this.hideTooltip(z.tooltip);
+  }
+
+  private checkInteractOverlap(): void {
+    const px = this.player.sprite.x;
+    const py = this.player.sprite.y;
+    const threshold = 50;
+
+    let nearest: InteractZone | null = null;
+    let nearestDist = Infinity;
+
+    for (const zone of this.interactZones) {
+      const dx = px - zone.sprite.x;
+      const dy = py - zone.sprite.y;
+      const dist = Math.sqrt(dx * dx + dy * dy);
+      if (dist < threshold && dist < nearestDist) {
+        nearest = zone;
+        nearestDist = dist;
+      }
+    }
+
+    if (nearest && nearest !== this.activeInteract && !this.activeExit) {
+      if (this.activeInteract) this.hideTooltip(this.activeInteract.tooltip);
+      this.activeInteract = nearest;
+      this.showTooltip(nearest.tooltip);
+      this.promptText.setText(`[E] ${nearest.displayLabel}`);
+      this.promptText.setVisible(true);
+    } else if (!nearest && this.activeInteract) {
+      this.hideTooltip(this.activeInteract.tooltip);
+      this.activeInteract = null;
+      if (!this.activeExit) {
+        this.promptText.setVisible(false);
+      }
+    }
+  }
+
+  private handleInteraction(zone: InteractZone): void {
+    if (zone.action === 'shop') {
+      this.scene.launch('ShopScene');
     }
   }
 
@@ -211,11 +362,14 @@ export class GameScene extends Phaser.Scene {
     }
 
     if (nearest && nearest !== this.activeExit) {
+      if (this.activeExit) this.hideTooltip(this.activeExit.tooltip);
       this.activeExit = nearest;
+      this.showTooltip(nearest.tooltip);
       this.promptText.setText(`[E] Enter ${nearest.displayLabel}`);
       this.promptText.setVisible(true);
       eventBus.emit('exit:nearby', { exitTo: nearest.to, label: nearest.displayLabel });
     } else if (!nearest && this.activeExit) {
+      this.hideTooltip(this.activeExit.tooltip);
       this.activeExit = null;
       this.promptText.setVisible(false);
       eventBus.emit('exit:left', {});

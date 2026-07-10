@@ -28,6 +28,11 @@ const ExitSchema = z.object({
   position: z.object({ x: z.number(), y: z.number() }).optional(),
 });
 
+const ShopSchema = z.object({
+  label: z.string().default('Shop'),
+  position: z.object({ x: z.number(), y: z.number() }),
+});
+
 /** Schema for scene content definitions. */
 export const SceneDefSchema = z.object({
   id: z.string().regex(/^[a-z0-9_]+:[a-z0-9_]+$/),
@@ -37,6 +42,7 @@ export const SceneDefSchema = z.object({
   music: z.string().optional(),
   generation: GenerationSchema,
   exits: z.array(ExitSchema).default([]),
+  shops: z.array(ShopSchema).default([]),
   playerSpawn: z.object({ x: z.number(), y: z.number() }).optional(),
 });
 
