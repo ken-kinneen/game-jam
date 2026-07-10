@@ -321,9 +321,11 @@ export class GameScene extends Phaser.Scene {
       if (prop.collides) {
         const sprite = this.physics.add.staticImage(pos.x, pos.y, prop.image);
         sprite.setScale(prop.scale);
-        sprite.setAngle(prop.angle);
         sprite.setDepth(prop.depth);
+        // Size the static (AABB) body from the UNROTATED scaled sprite first, then
+        // rotate visually — refreshing while rotated can mis-size/offset the body.
         sprite.refreshBody();
+        sprite.setAngle(prop.angle);
         if (this.player) {
           this.physics.add.collider(this.player.sprite, sprite);
         }
@@ -744,6 +746,9 @@ export class GameScene extends Phaser.Scene {
 
     this.player = EntityFactory.create(this, playerDef, spawnX, spawnY);
     this.player.setComponent('playerControlled', true);
+    // Character always renders above every map layer (floor, background/tileset props,
+    // furniture). Map props default to depth 0-2; the player sits well above them.
+    this.player.sprite.setDepth(10);
 
     this.player.sprite.preFX?.setPadding(10);
     this.player.sprite.preFX?.addShadow(2, 3, 0.1, 0.5, 0x000000, 6, 0.5);
