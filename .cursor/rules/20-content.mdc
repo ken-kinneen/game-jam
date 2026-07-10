@@ -1,0 +1,13 @@
+---
+description: Content/mod rules — safe zone for non-programmers
+globs: ["mods/**"]
+---
+- Content is JSON + assets only. Copy an existing def of the same type as a template.
+- Every def needs a namespaced id: "core:snake_case_name". IDs are permanent —
+  never rename one that's been merged (saves reference them).
+- Reference sprites by manifest KEY. Add the key to assets/manifest.json in the
+  same PR. Placeholder sprite key "placeholder" is allowed and encouraged early.
+- Prefer tags over item lists in recipes and effects.
+- Run `npm run validate` before committing — it checks every def against its schema
+  and every asset reference against manifests. A red validate = do not commit.
+- Sprites: 16px grid, snake_case.png, correct category folder.

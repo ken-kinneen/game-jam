@@ -1,0 +1,9 @@
+{
+  "id": "core:plastic_bag",
+  "type": "item",
+  "name": "Plastic Bag",
+  "sprite": "items/plastic_bag",
+  "stackSize": 99,
+  "tags": ["trash", "plastic"],
+  "value": 1
+}

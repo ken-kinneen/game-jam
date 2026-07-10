@@ -1,0 +1,9 @@
+{
+  "id": "core:home_trash",
+  "type": "loot-table",
+  "entries": [
+    { "item": "core:rusty_can", "weight": 10, "qty": [1, 2] },
+    { "item": "core:banana_peel", "weight": 8, "qty": [1, 1] },
+    { "item": "core:plastic_bag", "weight": 8, "qty": [1, 1] }
+  ]
+}

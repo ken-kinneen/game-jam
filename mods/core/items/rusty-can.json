@@ -1,0 +1,9 @@
+{
+  "id": "core:rusty_can",
+  "type": "item",
+  "name": "Rusty Can",
+  "sprite": "items/rusty_can",
+  "stackSize": 99,
+  "tags": ["trash", "metal", "craftable"],
+  "value": 2
+}

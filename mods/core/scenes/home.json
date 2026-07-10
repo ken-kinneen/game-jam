@@ -1,0 +1,12 @@
+{
+  "id": "core:home",
+  "type": "scene",
+  "kind": "home",
+  "tileset": "tilesets/home",
+  "generation": {
+    "method": "tilemap",
+    "map": "maps/home"
+  },
+  "exits": [],
+  "playerSpawn": { "x": 160, "y": 120 }
+}

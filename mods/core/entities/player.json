@@ -1,0 +1,20 @@
+{
+  "id": "core:player",
+  "type": "entity",
+  "name": "Player",
+  "sprite": "player/idle",
+  "components": {
+    "health": { "max": 100 },
+    "movement": { "maxSpeed": 200 },
+    "inventory": { "capacity": 20 },
+    "stats": {
+      "maxHealth": 100,
+      "moveSpeed": 200,
+      "damage": 10,
+      "attackSpeed": 1.0,
+      "pickupRadius": 32,
+      "carryCapacity": 20,
+      "luck": 0
+    }
+  }
+}

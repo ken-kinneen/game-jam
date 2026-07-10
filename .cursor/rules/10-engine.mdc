@@ -1,0 +1,12 @@
+---
+description: Engine code rules
+globs: ["src/engine/**"]
+---
+- No content IDs, no game-specific logic. If you're writing "if (itemId === ...)" stop
+  and use a tag, a def field, or a registered behavior instead.
+- Every new def type needs: a Zod schema in src/engine/schemas/, ContentRegistry
+  support, and a section in docs/ADDING_CONTENT.md.
+- New component types must be registered in EntityFactory's component map.
+- Pure logic (stats math, crafting checks, loot rolls) gets a Vitest unit test in tests/.
+- Emit events for anything another system might care about. Emitting is cheap.
+- Phaser objects never leak into pure-logic modules (stats/, CraftingSystem core).

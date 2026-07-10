@@ -1,0 +1,10 @@
+---
+description: Code style
+alwaysApply: true
+---
+- TypeScript strict. No `any` — use `unknown` + narrowing or fix the type.
+- No classes over 300 lines; split into components/helpers.
+- Filenames: PascalCase.ts for classes, camelCase.ts for utilities, kebab-case for json.
+- Prefer small pure functions; side effects live in systems.
+- Every exported function/class gets a one-line JSDoc saying what it's for.
+- Do not add dependencies without a docs/decisions/ entry.

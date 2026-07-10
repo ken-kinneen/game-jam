@@ -1,0 +1,20 @@
+---
+description: Project philosophy — read before any change
+alwaysApply: true
+---
+This is TRASHED, a top-down trash-collector roguelite. Phaser 3 + TypeScript strict + Vite.
+
+THE GOLDEN RULE: src/engine contains generic systems and must NEVER reference a
+specific content ID (no "core:rusty_can" strings in engine code). ALL game content
+(items, entities, upgrades, recipes, scenes, loot tables) lives in mods/ as JSON
+defs validated by Zod schemas in src/engine/schemas/.
+
+Before writing code, ask: "Can this be done by adding/editing JSON in mods/core?"
+If yes, do ONLY that. Adding content must never require engine changes.
+
+Systems communicate ONLY via the typed EventBus (src/engine/core/EventBus.ts).
+Never import one system into another. New cross-system feature = new event + listener.
+
+Never mutate base stats. All stat changes go through StatSheet modifiers with a source ID.
+All tunable numbers (speeds, damage, costs) live in JSON defs, never hardcoded.
+Read docs/ADDING_CONTENT.md before adding any item/enemy/upgrade/recipe/scene.

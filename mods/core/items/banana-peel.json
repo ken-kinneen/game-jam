@@ -1,0 +1,9 @@
+{
+  "id": "core:banana_peel",
+  "type": "item",
+  "name": "Banana Peel",
+  "sprite": "items/banana_peel",
+  "stackSize": 99,
+  "tags": ["trash", "organic"],
+  "value": 1
+}
