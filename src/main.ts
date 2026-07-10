@@ -19,9 +19,16 @@ import rustyCan from '../mods/core/items/rusty-can.json';
 import bananaPeel from '../mods/core/items/banana-peel.json';
 import plasticBag from '../mods/core/items/plastic-bag.json';
 import homeScene from '../mods/core/scenes/home.json';
+import cave1Scene from '../mods/core/scenes/cave-1.json';
+import cave2Scene from '../mods/core/scenes/cave-2.json';
 import homeTrash from '../mods/core/loot-tables/home-trash.json';
+import caveTrash from '../mods/core/loot-tables/cave-trash.json';
 import oilCan from '../mods/core/items/oil-can.json';
 import fuelBottle from '../mods/core/items/fuel-bottle.json';
+import quickFeet from '../mods/core/upgrades/quick-feet.json';
+import brightLamp from '../mods/core/upgrades/bright-lamp.json';
+import deepPockets from '../mods/core/upgrades/deep-pockets.json';
+import fuelEfficiency from '../mods/core/upgrades/fuel-efficiency.json';
 
 async function boot() {
   const loader = new ModLoader();
@@ -34,7 +41,14 @@ async function boot() {
     { filename: 'items/oil-can.json', data: oilCan },
     { filename: 'items/fuel-bottle.json', data: fuelBottle },
     { filename: 'scenes/home.json', data: homeScene },
+    { filename: 'scenes/cave-1.json', data: cave1Scene },
+    { filename: 'scenes/cave-2.json', data: cave2Scene },
     { filename: 'loot-tables/home-trash.json', data: homeTrash },
+    { filename: 'loot-tables/cave-trash.json', data: caveTrash },
+    { filename: 'upgrades/quick-feet.json', data: quickFeet },
+    { filename: 'upgrades/bright-lamp.json', data: brightLamp },
+    { filename: 'upgrades/deep-pockets.json', data: deepPockets },
+    { filename: 'upgrades/fuel-efficiency.json', data: fuelEfficiency },
   ];
 
   const { errors } = loader.loadMod(coreMod, defFiles, coreManifest, 'mods/core/assets', registry);

@@ -15,6 +15,9 @@ export interface GameEvents {
   'lamp:fuel_changed': { fuel: number; maxFuel: number; ratio: number };
   'lamp:refueled': { amount: number; fuel: number };
   'lamp:extinguished': Record<string, never>;
+  'exit:nearby': { exitTo: string; label: string };
+  'exit:left': Record<string, never>;
+  'upgrade:available': { upgradeIds: string[] };
 }
 
 type EventCallback<T> = (data: T) => void;

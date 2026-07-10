@@ -1,0 +1,14 @@
+{
+  "id": "core:cave_2",
+  "type": "scene",
+  "kind": "cave",
+  "generation": {
+    "method": "rooms",
+    "roomCount": [6, 9],
+    "spawnTables": {
+      "trash": "core:cave_trash"
+    }
+  },
+  "exits": [{ "to": "core:home", "condition": "always" }],
+  "playerSpawn": { "x": 160, "y": 160 }
+}

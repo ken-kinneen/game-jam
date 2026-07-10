@@ -62,7 +62,7 @@ Use a separate ADD-blend sprite at the player position for warm lamp color.
 This is independent of the darkness system.
 
 ### For scrolling/zoomed games
-- RT is screen-sized with `scrollFactor(0)` — always covers the viewport
-- Vision image position must be in screen coords (world-to-screen conversion each frame)
-- Scale the vision image by `cam.zoom` to match world-unit radius to screen pixels
-- Do NOT put the RT in world space — offset/sizing issues are impossible to debug
+- RT and vision image are both in world space — the camera transforms them identically
+- Oversize the RT by at least `max(cam.width, cam.height)` margin on each side
+- Vision image scale is in world units — do NOT multiply by cam.zoom
+- Do NOT use scrollFactor(0) on the RT — it breaks mask alignment

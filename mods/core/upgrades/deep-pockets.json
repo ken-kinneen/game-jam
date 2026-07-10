@@ -1,0 +1,10 @@
+{
+  "id": "core:deep_pockets",
+  "type": "upgrade",
+  "name": "Deep Pockets",
+  "sprite": "placeholder",
+  "rarity": "uncommon",
+  "cost": { "core:rusty_can": 12, "core:plastic_bag": 3 },
+  "effects": [{ "kind": "stat", "stat": "carryCapacity", "mod": "flat", "value": 5 }],
+  "requires": []
+}

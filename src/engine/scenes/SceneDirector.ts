@@ -41,9 +41,8 @@ export class SceneDirector {
     this.state.currentSceneId = sceneId;
     this.state.isInCave = sceneDef.kind === 'cave';
 
+    // GameScene.create() emits scene:enter after restart completes
     phaserScene.scene.restart({ sceneId });
-
-    this.eventBus.emit('scene:enter', { sceneId });
   }
 
   /** Reset run state when returning home from a cave. */

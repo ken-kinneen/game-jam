@@ -1,0 +1,10 @@
+{
+  "id": "core:quick_feet",
+  "type": "upgrade",
+  "name": "Quick Feet",
+  "sprite": "placeholder",
+  "rarity": "common",
+  "cost": { "core:rusty_can": 5 },
+  "effects": [{ "kind": "stat", "stat": "moveSpeed", "mod": "increased", "value": 0.15 }],
+  "requires": []
+}

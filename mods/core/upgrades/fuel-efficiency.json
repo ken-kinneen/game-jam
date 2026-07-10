@@ -1,0 +1,10 @@
+{
+  "id": "core:fuel_efficiency",
+  "type": "upgrade",
+  "name": "Fuel Efficiency",
+  "sprite": "placeholder",
+  "rarity": "uncommon",
+  "cost": { "core:rusty_can": 10 },
+  "effects": [{ "kind": "stat", "stat": "fuelBurnRate", "mod": "more", "value": -0.2 }],
+  "requires": ["core:bright_lamp"]
+}

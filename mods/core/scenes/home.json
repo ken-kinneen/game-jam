@@ -7,6 +7,19 @@
     "method": "tilemap",
     "map": "maps/home"
   },
-  "exits": [],
-  "playerSpawn": { "x": 320, "y": 240 }
+  "exits": [
+    {
+      "to": "core:cave_1",
+      "condition": "always",
+      "label": "Shallow Cave",
+      "position": { "x": 480, "y": 80 }
+    },
+    {
+      "to": "core:cave_2",
+      "condition": "always",
+      "label": "Deep Cave",
+      "position": { "x": 480, "y": 200 }
+    }
+  ],
+  "playerSpawn": { "x": 160, "y": 240 }
 }

@@ -5,11 +5,19 @@ import { MovementSystem } from '../systems/MovementSystem';
 import { PickupSystem } from '../systems/PickupSystem';
 import { LampSystem } from '../systems/LampSystem';
 import { InputMap } from '../input/InputMap';
+import { SceneDirector } from './SceneDirector';
 import { eventBus } from '../core/EventBus';
 import { registry } from '../core/ContentRegistry';
 import { configManager } from '../core/ConfigManager';
 import type { StatSheet } from '../stats/StatSheet';
 import type { SceneDef } from '../schemas/scene.schema';
+
+interface ExitZone {
+  sprite: Phaser.Physics.Arcade.Sprite;
+  label: Phaser.GameObjects.Text;
+  to: string;
+  displayLabel: string;
+}
 
 /**
  * ONE generic GameScene configured by a SceneDef.
@@ -21,7 +29,9 @@ export class GameScene extends Phaser.Scene {
   private pickupSystem!: PickupSystem;
   private lampSystem!: LampSystem;
   private inputMap!: InputMap;
+  private director!: SceneDirector;
   private sceneDefId = 'core:home';
+  private sceneDef: SceneDef | undefined;
   private wallLayer: Phaser.Tilemaps.TilemapLayer | null = null;
   private unsubConfig: (() => void) | null = null;
   private unsubFuel: (() => void) | null = null;
@@ -29,6 +39,12 @@ export class GameScene extends Phaser.Scene {
   private darknessRT!: Phaser.GameObjects.RenderTexture;
   private visionImage!: Phaser.GameObjects.Image;
   private warmGlow!: Phaser.GameObjects.Sprite;
+
+  private exitZones: ExitZone[] = [];
+  private activeExit: ExitZone | null = null;
+  private promptText!: Phaser.GameObjects.Text;
+
+  private isCave = false;
 
   constructor() {
     super({ key: 'GameScene' });
@@ -43,33 +59,48 @@ export class GameScene extends Phaser.Scene {
     this.pickupSystem = new PickupSystem(registry, eventBus);
     this.lampSystem = new LampSystem(eventBus, configManager);
     this.inputMap = new InputMap(this);
+    this.director = new SceneDirector(registry, eventBus);
 
-    const sceneDef = registry.get('scene', this.sceneDefId);
+    this.sceneDef = registry.get('scene', this.sceneDefId);
+    this.isCave = this.sceneDef?.kind === 'cave';
 
-    if (sceneDef?.generation.method === 'tilemap') {
-      this.buildTilemap(sceneDef);
+    this.exitZones = [];
+    this.activeExit = null;
+
+    if (this.sceneDef?.generation.method === 'tilemap') {
+      this.buildTilemap(this.sceneDef);
     } else {
       this.buildFallbackRoom();
     }
 
-    this.spawnPlayer(sceneDef);
-    this.spawnGroundItems();
-    this.spawnFuelItems();
+    this.spawnPlayer(this.sceneDef);
+
+    if (this.isCave) {
+      this.spawnGroundItems();
+      this.spawnFuelItems();
+    }
+
     this.setupCollisions();
-    this.createLampLight();
-    this.displayedRadius = configManager.get<number>('lamp', 'glowRadiusMax');
 
-    this.unsubFuel = eventBus.on('item:picked_up', ({ itemId }) => {
-      const def = registry.get('item', itemId);
-      if (def && def.tags.includes('fuel')) {
-        const fuelAmount = configManager.get<number>('lamp', 'fuelPerPickup');
-        this.lampSystem.addFuel(fuelAmount);
-      }
-    });
+    if (this.isCave) {
+      this.createLampLight();
+      this.displayedRadius = configManager.get<number>('lamp', 'glowRadiusMax');
 
-    eventBus.on('lamp:extinguished', () => {
-      this.handleLampOut();
-    });
+      this.unsubFuel = eventBus.on('item:picked_up', ({ itemId }) => {
+        const def = registry.get('item', itemId);
+        if (def && def.tags.includes('fuel')) {
+          const fuelAmount = configManager.get<number>('lamp', 'fuelPerPickup');
+          this.lampSystem.addFuel(fuelAmount);
+        }
+      });
+
+      eventBus.on('lamp:extinguished', () => {
+        this.handleLampOut();
+      });
+    }
+
+    this.spawnExitZones();
+    this.createPromptText();
 
     this.applyCameraConfig();
     this.applyPlayerConfig();
@@ -82,7 +113,7 @@ export class GameScene extends Phaser.Scene {
     });
 
     if (!this.scene.isActive('UIScene')) {
-      this.scene.launch('UIScene');
+      this.scene.launch('UIScene', { sceneId: this.sceneDefId });
     }
 
     eventBus.emit('scene:enter', { sceneId: this.sceneDefId });
@@ -91,18 +122,112 @@ export class GameScene extends Phaser.Scene {
   update(_time: number, delta: number) {
     const dt = delta / 1000;
 
-    this.lampSystem.update(dt);
+    if (this.isCave) {
+      this.lampSystem.update(dt);
+    }
 
     const move = this.inputMap.getMoveVector();
     this.movementSystem.update(this.player, move.x, move.y, dt);
     this.pickupSystem.update(this.player);
 
-    this.updateLampLight();
+    if (this.isCave) {
+      this.updateLampLight();
+    }
+
+    this.checkExitOverlap();
+
+    if (this.activeExit && this.inputMap.justPressed('interact')) {
+      this.enterExit(this.activeExit);
+    }
   }
 
   shutdown() {
     this.unsubConfig?.();
     this.unsubFuel?.();
+  }
+
+  private spawnExitZones(): void {
+    const exits = this.sceneDef?.exits ?? [];
+    for (const exit of exits) {
+      const pos = exit.position ?? { x: 320, y: 32 };
+      const displayLabel = exit.label ?? exit.to;
+
+      const zoneSprite = this.physics.add.sprite(pos.x, pos.y, '__placeholder');
+      zoneSprite.setDisplaySize(48, 48);
+      zoneSprite.setAlpha(0.6);
+      zoneSprite.setTint(0x44aaff);
+      zoneSprite.setDepth(5);
+      const body = zoneSprite.body as Phaser.Physics.Arcade.Body;
+      body.setImmovable(true);
+      body.setAllowGravity(false);
+
+      const label = this.add.text(pos.x, pos.y - 36, displayLabel, {
+        fontFamily: '"Courier New", monospace',
+        fontSize: '18px',
+        color: '#88ccff',
+        stroke: '#000000',
+        strokeThickness: 3,
+        align: 'center',
+      });
+      label.setOrigin(0.5, 0.5);
+      label.setDepth(10);
+
+      this.exitZones.push({ sprite: zoneSprite, label, to: exit.to, displayLabel });
+    }
+  }
+
+  private createPromptText(): void {
+    const cam = this.cameras.main;
+    this.promptText = this.add.text(cam.width / 2, cam.height - 60, '', {
+      fontFamily: '"Courier New", monospace',
+      fontSize: '24px',
+      color: '#ffffff',
+      stroke: '#000000',
+      strokeThickness: 4,
+      align: 'center',
+    });
+    this.promptText.setOrigin(0.5, 0.5);
+    this.promptText.setScrollFactor(0);
+    this.promptText.setDepth(900);
+    this.promptText.setVisible(false);
+  }
+
+  private checkExitOverlap(): void {
+    const px = this.player.sprite.x;
+    const py = this.player.sprite.y;
+    const threshold = 50;
+
+    let nearest: ExitZone | null = null;
+    let nearestDist = Infinity;
+
+    for (const zone of this.exitZones) {
+      const dx = px - zone.sprite.x;
+      const dy = py - zone.sprite.y;
+      const dist = Math.sqrt(dx * dx + dy * dy);
+      if (dist < threshold && dist < nearestDist) {
+        nearest = zone;
+        nearestDist = dist;
+      }
+    }
+
+    if (nearest && nearest !== this.activeExit) {
+      this.activeExit = nearest;
+      this.promptText.setText(`[E] Enter ${nearest.displayLabel}`);
+      this.promptText.setVisible(true);
+      eventBus.emit('exit:nearby', { exitTo: nearest.to, label: nearest.displayLabel });
+    } else if (!nearest && this.activeExit) {
+      this.activeExit = null;
+      this.promptText.setVisible(false);
+      eventBus.emit('exit:left', {});
+    }
+  }
+
+  private enterExit(exit: ExitZone): void {
+    this.cameras.main.fade(500, 0, 0, 0, false, (_cam: unknown, progress: number) => {
+      if (progress >= 1) {
+        this.director.transitionTo(exit.to, this);
+      }
+    });
   }
 
   private buildTilemap(sceneDef: SceneDef): void {
@@ -149,6 +274,12 @@ export class GameScene extends Phaser.Scene {
 
     const gfx = this.add.graphics();
 
+    const isHome = !this.isCave;
+    const wallDark = isHome ? 0x3a4a3a : 0x3a3a4a;
+    const wallLight = isHome ? 0x334433 : 0x333344;
+    const floorDark = isHome ? 0x2a3a2a : 0x2a2a2a;
+    const floorLight = isHome ? 0x253525 : 0x252525;
+
     for (let ty = 0; ty < height; ty += tileSize) {
       for (let tx = 0; tx < width; tx += tileSize) {
         const isWall =
@@ -158,10 +289,10 @@ export class GameScene extends Phaser.Scene {
           ty >= height - wallThickness;
 
         if (isWall) {
-          const shade = ((tx + ty) / tileSize) % 2 === 0 ? 0x3a3a4a : 0x333344;
+          const shade = ((tx + ty) / tileSize) % 2 === 0 ? wallDark : wallLight;
           gfx.fillStyle(shade, 1);
         } else {
-          const shade = ((tx + ty) / tileSize) % 2 === 0 ? 0x2a2a2a : 0x252525;
+          const shade = ((tx + ty) / tileSize) % 2 === 0 ? floorDark : floorLight;
           gfx.fillStyle(shade, 1);
         }
         gfx.fillRect(tx, ty, tileSize, tileSize);
@@ -176,8 +307,6 @@ export class GameScene extends Phaser.Scene {
       width - wallThickness * 2,
       height - wallThickness * 2,
     );
-    // No camera.setBounds — it conflicts with zoom (clamping pushes the view
-    // away from the player at high zoom). The darkness overlay hides out-of-bounds areas.
   }
 
   private spawnPlayer(sceneDef: SceneDef | undefined): void {
@@ -321,7 +450,6 @@ export class GameScene extends Phaser.Scene {
     const VS = GameScene.VISION_TEX_SIZE;
     const GS = GameScene.GLOW_TEX_SIZE;
 
-    // --- Vision texture: white radial gradient on transparent background ---
     if (!this.textures.exists('__vision')) {
       const c = document.createElement('canvas');
       c.width = VS;
@@ -339,7 +467,6 @@ export class GameScene extends Phaser.Scene {
       this.textures.addCanvas('__vision', c);
     }
 
-    // --- Warm glow texture ---
     if (!this.textures.exists('__lamp_glow')) {
       const c = document.createElement('canvas');
       c.width = GS;
@@ -356,9 +483,6 @@ export class GameScene extends Phaser.Scene {
       this.textures.addCanvas('__lamp_glow', c);
     }
 
-    // --- Darkness RenderTexture: world-space, oversized to cover any camera view ---
-    // BitmapMask renders mask source through the camera, so both RT and mask must
-    // be in world coords. Oversize by a generous margin so no edge is ever visible.
     const cam = this.cameras.main;
     const margin = Math.max(cam.width, cam.height);
     const wb = this.physics.world.bounds;
@@ -371,7 +495,6 @@ export class GameScene extends Phaser.Scene {
     this.darknessRT.fill(0x000000, 1);
     this.darknessRT.setDepth(800);
 
-    // --- Vision mask image: world-space, NOT added to display list ---
     this.visionImage = this.make.image({
       x: this.player.sprite.x,
       y: this.player.sprite.y,
@@ -379,12 +502,10 @@ export class GameScene extends Phaser.Scene {
       add: false,
     });
 
-    // --- BitmapMask: both RT and vision are in world space, camera transforms both ---
     const mask = new Phaser.Display.Masks.BitmapMask(this, this.visionImage);
     mask.invertAlpha = true;
     this.darknessRT.setMask(mask);
 
-    // --- Warm glow sprite: additive blend for amber lamp color ---
     this.warmGlow = this.add.sprite(0, 0, '__lamp_glow');
     this.warmGlow.setBlendMode(Phaser.BlendModes.ADD);
     this.warmGlow.setDepth(799);
@@ -417,16 +538,11 @@ export class GameScene extends Phaser.Scene {
     const lerpSpeed = ratio < 0.33 ? 0.25 : 0.12;
     this.displayedRadius = Phaser.Math.Linear(this.displayedRadius, targetRadius, lerpSpeed);
 
-    // Vision image in world space — just follow the player
     this.visionImage.setPosition(this.player.sprite.x, this.player.sprite.y);
 
-    // Scale: displayedRadius is in world units, vision texture is VISION_TEX_SIZE px.
-    // The gradient's fully-opaque zone is ~40% of the texture, so the "lit" area
-    // radius = scale * VISION_TEX_SIZE * 0.5 * 0.4. Solve for scale:
     const visionScale = this.displayedRadius / (GameScene.VISION_TEX_SIZE * 0.5 * 0.4);
     this.visionImage.setScale(Math.max(visionScale, 0.01));
 
-    // Warm glow follows player in world space
     const px = this.player.sprite.x;
     const py = this.player.sprite.y;
     this.warmGlow.setPosition(px, py);
@@ -440,7 +556,7 @@ export class GameScene extends Phaser.Scene {
     this.cameras.main.fade(1500, 0, 0, 0, false, (_cam: unknown, progress: number) => {
       if (progress >= 1) {
         this.lampSystem.reset();
-        this.scene.restart({ sceneId: this.sceneDefId });
+        this.director.returnHome(this);
       }
     });
   }

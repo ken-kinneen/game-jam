@@ -24,6 +24,8 @@ const GenerationSchema = z.discriminatedUnion('method', [
 const ExitSchema = z.object({
   to: z.string(),
   condition: z.string().default('always'),
+  label: z.string().optional(),
+  position: z.object({ x: z.number(), y: z.number() }).optional(),
 });
 
 /** Schema for scene content definitions. */
