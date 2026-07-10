@@ -587,17 +587,36 @@ export class GameScene extends Phaser.Scene {
       y: map.entry.y * TILE + TILE / 2,
     };
 
-    const gfx = this.add.graphics();
-    const wallDark = 0x2a2a32;
-    const wallLight = 0x24242a;
-    const floorDark = 0x2a2a2a;
-    const floorLight = 0x252525;
+    const canvasW = map.width * TILE;
+    const canvasH = map.height * TILE;
 
+    // tilesets/cave_floor is a single hand-illustrated floor with a branching path
+    // baked directly into the artwork (asset-pipeline repo, docs/09 style) — NOT a
+    // seamless material, so it's drawn ONCE, stretched to cover the generated
+    // canvas (the same technique buildBackgroundRoom already uses for Home/Shop),
+    // not tiled per-cell. Tiling an image with a strong illustrated pattern would
+    // just recreate the visible-repeat problem that texture was specifically
+    // redesigned to avoid. Its baked-in path is decorative — the actual walkable
+    // shape always comes from the generated grid below, they are not the same
+    // shape and are not expected to align pixel-for-pixel.
+    if (this.textures.exists('tilesets/cave_floor')) {
+      const floorImg = this.add.image(canvasW / 2, canvasH / 2, 'tilesets/cave_floor');
+      floorImg.setDisplaySize(canvasW, canvasH);
+      floorImg.setDepth(-2);
+    } else {
+      const fallback = this.add.rectangle(canvasW / 2, canvasH / 2, canvasW, canvasH, 0x252525);
+      fallback.setDepth(-2);
+    }
+
+    // Wall cells darken over the background image — floor cells are left untouched
+    // so the illustrated art shows through clearly there, matching the "lit path
+    // reveals the floor, unwalkable stays dark" logic from the asset-pipeline
+    // preview tool's mask-based renderer, done here with a simple overlay instead.
+    const gfx = this.add.graphics();
+    gfx.fillStyle(0x0a0e12, 0.82);
     for (let gy = 0; gy < map.height; gy++) {
       for (let gx = 0; gx < map.width; gx++) {
-        const isWall = map.grid[gy][gx] === 0;
-        const even = (gx + gy) % 2 === 0;
-        gfx.fillStyle(isWall ? (even ? wallDark : wallLight) : even ? floorDark : floorLight, 1);
+        if (map.grid[gy][gx] !== 0) continue;
         gfx.fillRect(gx * TILE, gy * TILE, TILE, TILE);
       }
     }
@@ -625,7 +644,7 @@ export class GameScene extends Phaser.Scene {
       }
     }
 
-    this.physics.world.setBounds(0, 0, map.width * TILE, map.height * TILE);
+    this.physics.world.setBounds(0, 0, canvasW, canvasH);
   }
 
   /**
