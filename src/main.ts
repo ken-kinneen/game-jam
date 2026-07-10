@@ -20,8 +20,7 @@ import rustyCan from '../mods/core/items/rusty-can.json';
 import bananaPeel from '../mods/core/items/banana-peel.json';
 import plasticBag from '../mods/core/items/plastic-bag.json';
 import homeScene from '../mods/core/scenes/home.json';
-import cave1Scene from '../mods/core/scenes/cave-1.json';
-import cave2Scene from '../mods/core/scenes/cave-2.json';
+import caveScene from '../mods/core/scenes/cave.json';
 import shopScene from '../mods/core/scenes/shop.json';
 import homeTrash from '../mods/core/loot-tables/home-trash.json';
 import caveTrash from '../mods/core/loot-tables/cave-trash.json';
@@ -53,8 +52,7 @@ async function boot() {
     { filename: 'items/fuel-bottle.json', data: fuelBottle },
     { filename: 'items/battery.json', data: battery },
     { filename: 'scenes/home.json', data: homeScene },
-    { filename: 'scenes/cave-1.json', data: cave1Scene },
-    { filename: 'scenes/cave-2.json', data: cave2Scene },
+    { filename: 'scenes/cave.json', data: caveScene },
     { filename: 'scenes/shop.json', data: shopScene },
     { filename: 'loot-tables/home-trash.json', data: homeTrash },
     { filename: 'loot-tables/cave-trash.json', data: caveTrash },

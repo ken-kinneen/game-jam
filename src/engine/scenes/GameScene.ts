@@ -11,6 +11,7 @@ import { SceneDirector } from './SceneDirector';
 import { eventBus } from '../core/EventBus';
 import { registry } from '../core/ContentRegistry';
 import { configManager } from '../core/ConfigManager';
+import { inventoryManager } from '../core/InventoryManager';
 import type { StatSheet } from '../stats/StatSheet';
 import type { SceneDef } from '../schemas/scene.schema';
 
@@ -48,6 +49,7 @@ export class GameScene extends Phaser.Scene {
   private wallLayer: Phaser.Tilemaps.TilemapLayer | null = null;
   private unsubConfig: (() => void) | null = null;
   private unsubFuel: (() => void) | null = null;
+  private unsubInventory: (() => void) | null = null;
   private displayedRadius = 120;
   private darknessRT!: Phaser.GameObjects.RenderTexture;
   private visionImage!: Phaser.GameObjects.Image;
@@ -128,6 +130,10 @@ export class GameScene extends Phaser.Scene {
     this.spawnShopZones();
     this.createPromptText();
 
+    this.unsubInventory = eventBus.on('item:picked_up', ({ itemId, qty }) => {
+      inventoryManager.add(itemId, qty);
+    });
+
     this.unsubShop = [
       eventBus.on('shop:opened', () => {
         this.shopOpen = true;
@@ -205,6 +211,7 @@ export class GameScene extends Phaser.Scene {
   shutdown() {
     this.unsubConfig?.();
     this.unsubFuel?.();
+    this.unsubInventory?.();
     this.soundSystem?.destroy();
     for (const unsub of this.unsubShop) unsub();
     this.unsubShop = [];

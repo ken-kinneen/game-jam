@@ -10,18 +10,12 @@
   },
   "exits": [
     {
-      "to": "core:cave_1",
+      "to": "core:cave",
       "condition": "always",
-      "label": "Shallow Cave",
-      "position": { "x": 480, "y": 80 }
-    },
-    {
-      "to": "core:cave_2",
-      "condition": "always",
-      "label": "Deep Cave",
-      "position": { "x": 480, "y": 200 }
+      "label": "Enter Cave",
+      "position": { "x": 256, "y": 460 }
     }
   ],
-  "shops": [{ "label": "Upgrades", "position": { "x": 160, "y": 80 } }],
-  "playerSpawn": { "x": 320, "y": 240 }
+  "shops": [{ "label": "Upgrades", "position": { "x": 420, "y": 260 } }],
+  "playerSpawn": { "x": 256, "y": 300 }
 }

@@ -1,6 +1,7 @@
 import { eventBus, type EventGroup } from '../core/EventBus';
 import { registry } from '../core/ContentRegistry';
 import { configManager } from '../core/ConfigManager';
+import { inventoryManager } from '../core/InventoryManager';
 
 const BAR_WIDTH = 360;
 const BAR_HEIGHT = 28;
@@ -8,7 +9,6 @@ const HUD_PADDING = 32;
 
 /** HUD overlay: lamp fuel bar, trash counter, status messages. Driven entirely by events. */
 export class UIScene extends Phaser.Scene {
-  private trashCount = 0;
   private eventGroup!: EventGroup;
 
   private hudBg!: Phaser.GameObjects.Graphics;
@@ -39,12 +39,12 @@ export class UIScene extends Phaser.Scene {
 
   create() {
     this.eventGroup = eventBus.createGroup();
-    this.trashCount = 0;
     this.currentFuelRatio = 1;
     this.displayedFuelRatio = 1;
 
     this.buildHUD();
     this.bindEvents();
+    this.refreshTrashDisplay();
 
     const activeSceneId = this.initialSceneId ?? 'core:home';
     const sceneDef = registry.get('scene', activeSceneId);
@@ -209,11 +209,17 @@ export class UIScene extends Phaser.Scene {
     this.fuelValueText.setText(`${pct}%`);
   }
 
+  private refreshTrashDisplay(): void {
+    this.trashText.setText(String(inventoryManager.totalCount()));
+  }
+
   private bindEvents(): void {
     this.eventGroup.on('item:picked_up', ({ qty }) => {
-      this.trashCount += qty;
-      this.trashText.setText(String(this.trashCount));
       this.showStatus(`+${qty} picked up`);
+    });
+
+    this.eventGroup.on('inventory:changed', () => {
+      this.refreshTrashDisplay();
     });
 
     this.eventGroup.on('lamp:fuel_changed', ({ ratio }) => {

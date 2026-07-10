@@ -6,8 +6,5 @@
   "volume": 0.8,
   "pitchRange": [1, 1],
   "cooldown": 500,
-  "triggers": [
-    { "event": "scene:enter", "filter": { "sceneId": "core:cave_1" } },
-    { "event": "scene:enter", "filter": { "sceneId": "core:cave_2" } }
-  ]
+  "triggers": [{ "event": "scene:enter", "filter": { "sceneId": "core:cave" } }]
 }

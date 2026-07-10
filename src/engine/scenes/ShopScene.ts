@@ -1,5 +1,6 @@
 import { eventBus, type EventGroup } from '../core/EventBus';
 import { registry } from '../core/ContentRegistry';
+import { inventoryManager } from '../core/InventoryManager';
 import type { UpgradeDef } from '../schemas/upgrade.schema';
 import { UpgradeSystem } from '../systems/UpgradeSystem';
 import type { StatSheet } from '../stats/StatSheet';
@@ -122,6 +123,10 @@ export class ShopScene extends Phaser.Scene {
     this.eKey = this.input.keyboard!.addKey(Phaser.Input.Keyboard.KeyCodes.E);
 
     this.eventGroup.on('upgrade:acquired', () => {
+      this.refreshAll();
+    });
+
+    this.eventGroup.on('inventory:changed', () => {
       this.refreshAll();
     });
 
@@ -267,7 +272,7 @@ export class ShopScene extends Phaser.Scene {
     container.setDepth(3);
 
     const owned = this.upgradeSystem.hasUpgrade(upg.id);
-    const canBuy = this.upgradeSystem.canAcquire(upg);
+    const canBuy = this.upgradeSystem.canAcquire(upg) && inventoryManager.canAfford(upg.cost);
 
     const rarityColors: Record<string, number> = {
       common: 0x555566,
@@ -462,7 +467,9 @@ export class ShopScene extends Phaser.Scene {
   }
 
   private buyUpgrade(upg: UpgradeDef): void {
-    // TODO: deduct cost from player inventory once inventory spending is wired
+    if (!this.upgradeSystem.canAcquire(upg)) return;
+    if (!inventoryManager.canAfford(upg.cost)) return;
+    if (!inventoryManager.spend(upg.cost)) return;
     this.upgradeSystem.acquire(upg, this.getPlayerStats());
   }
 

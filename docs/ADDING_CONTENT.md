@@ -162,7 +162,7 @@ Location: `mods/core/sounds/`
   "cooldown": 100,
   "triggers": [
     { "event": "item:picked_up" },
-    { "event": "scene:enter", "filter": { "sceneId": "core:cave_1" } }
+    { "event": "scene:enter", "filter": { "sceneId": "core:cave" } }
   ]
 }
 ```
