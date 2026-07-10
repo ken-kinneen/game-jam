@@ -41,11 +41,14 @@ export interface ConfigSection {
 type FieldValue = number | boolean | string;
 type ChangeListener = (sectionId: string, key: string, value: FieldValue) => void;
 
+const STORAGE_KEY = 'trashed_config';
+
 /** Stores runtime-tunable config values and notifies listeners on change. */
 export class ConfigManager {
   private sections = new Map<string, ConfigSection>();
   private values = new Map<string, Map<string, FieldValue>>();
   private listeners: ChangeListener[] = [];
+  private persistTimer: ReturnType<typeof setTimeout> | null = null;
 
   /** Register a config section. Initializes all fields to their defaults. */
   register(section: ConfigSection): void {
@@ -55,6 +58,23 @@ export class ConfigManager {
       vals.set(field.key, field.defaultValue);
     }
     this.values.set(section.id, vals);
+  }
+
+  /** Load persisted values from localStorage, applying them over defaults. */
+  loadPersisted(): void {
+    try {
+      const raw = localStorage.getItem(STORAGE_KEY);
+      if (!raw) return;
+      const stored = JSON.parse(raw) as Record<string, Record<string, FieldValue>>;
+      for (const [sectionId, fields] of Object.entries(stored)) {
+        if (!this.sections.has(sectionId)) continue;
+        for (const [key, value] of Object.entries(fields)) {
+          this.set(sectionId, key, value);
+        }
+      }
+    } catch {
+      // Corrupted data — ignore and use defaults
+    }
   }
 
   /** Get all registered sections (for the debug panel to iterate). */
@@ -81,6 +101,7 @@ export class ConfigManager {
     }
 
     vals.set(key, value);
+    this.schedulePersist();
     for (const listener of this.listeners) {
       listener(sectionId, key, value);
     }
@@ -109,6 +130,30 @@ export class ConfigManager {
       const idx = this.listeners.indexOf(listener);
       if (idx !== -1) this.listeners.splice(idx, 1);
     };
+  }
+
+  private schedulePersist(): void {
+    if (this.persistTimer) return;
+    this.persistTimer = setTimeout(() => {
+      this.persistTimer = null;
+      this.persist();
+    }, 200);
+  }
+
+  private persist(): void {
+    const data: Record<string, Record<string, FieldValue>> = {};
+    for (const [sectionId, vals] of this.values) {
+      const obj: Record<string, FieldValue> = {};
+      for (const [key, value] of vals) {
+        obj[key] = value;
+      }
+      data[sectionId] = obj;
+    }
+    try {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+    } catch {
+      // Storage full or unavailable — silently skip
+    }
   }
 
   private getDefault(sectionId: string, key: string): FieldValue {

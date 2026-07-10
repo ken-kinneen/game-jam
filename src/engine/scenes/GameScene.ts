@@ -26,7 +26,8 @@ export class GameScene extends Phaser.Scene {
   private unsubConfig: (() => void) | null = null;
   private unsubFuel: (() => void) | null = null;
   private displayedRadius = 120;
-  private lampLight!: Phaser.GameObjects.Sprite;
+  private darknessRT!: Phaser.GameObjects.RenderTexture;
+  private visionImage!: Phaser.GameObjects.Image;
   private warmGlow!: Phaser.GameObjects.Sprite;
 
   constructor() {
@@ -138,7 +139,6 @@ export class GameScene extends Phaser.Scene {
     }
 
     this.physics.world.setBounds(0, 0, map.widthInPixels, map.heightInPixels);
-    this.cameras.main.setBounds(0, 0, map.widthInPixels, map.heightInPixels);
   }
 
   private buildFallbackRoom(): void {
@@ -176,7 +176,8 @@ export class GameScene extends Phaser.Scene {
       width - wallThickness * 2,
       height - wallThickness * 2,
     );
-    this.cameras.main.setBounds(0, 0, width, height);
+    // No camera.setBounds — it conflicts with zoom (clamping pushes the view
+    // away from the player at high zoom). The darkness overlay hides out-of-bounds areas.
   }
 
   private spawnPlayer(sceneDef: SceneDef | undefined): void {
@@ -197,7 +198,7 @@ export class GameScene extends Phaser.Scene {
       this.player.sprite.height * ((1 - radiusPct * 2) / 2),
     );
 
-    this.cameras.main.startFollow(this.player.sprite, true, 0.1, 0.1);
+    this.cameras.main.startFollow(this.player.sprite, false, 0.1, 0.1);
   }
 
   private applyCameraConfig(): void {
@@ -313,32 +314,32 @@ export class GameScene extends Phaser.Scene {
     }
   }
 
-  private static readonly DARK_TEX_SIZE = 512;
+  private static readonly VISION_TEX_SIZE = 256;
   private static readonly GLOW_TEX_SIZE = 256;
 
   private createLampLight(): void {
-    const DS = GameScene.DARK_TEX_SIZE;
+    const VS = GameScene.VISION_TEX_SIZE;
     const GS = GameScene.GLOW_TEX_SIZE;
 
-    if (!this.textures.exists('__lamp_dark')) {
+    // --- Vision texture: white radial gradient on transparent background ---
+    if (!this.textures.exists('__vision')) {
       const c = document.createElement('canvas');
-      c.width = DS;
-      c.height = DS;
+      c.width = VS;
+      c.height = VS;
       const ctx = c.getContext('2d')!;
-      const half = DS / 2;
+      const half = VS / 2;
       const g = ctx.createRadialGradient(half, half, 0, half, half, half);
-      g.addColorStop(0, 'rgba(0,0,0,0)');
-      g.addColorStop(0.28, 'rgba(0,0,0,0)');
-      g.addColorStop(0.45, 'rgba(0,0,0,0.15)');
-      g.addColorStop(0.6, 'rgba(0,0,0,0.55)');
-      g.addColorStop(0.75, 'rgba(0,0,0,0.88)');
-      g.addColorStop(0.88, 'rgba(0,0,0,0.98)');
-      g.addColorStop(1, 'rgba(0,0,0,1)');
+      g.addColorStop(0, 'rgba(255,255,255,1)');
+      g.addColorStop(0.4, 'rgba(255,255,255,1)');
+      g.addColorStop(0.7, 'rgba(255,255,255,0.5)');
+      g.addColorStop(0.85, 'rgba(255,255,255,0.15)');
+      g.addColorStop(1, 'rgba(255,255,255,0)');
       ctx.fillStyle = g;
-      ctx.fillRect(0, 0, DS, DS);
-      this.textures.addCanvas('__lamp_dark', c);
+      ctx.fillRect(0, 0, VS, VS);
+      this.textures.addCanvas('__vision', c);
     }
 
+    // --- Warm glow texture ---
     if (!this.textures.exists('__lamp_glow')) {
       const c = document.createElement('canvas');
       c.width = GS;
@@ -346,23 +347,48 @@ export class GameScene extends Phaser.Scene {
       const ctx = c.getContext('2d')!;
       const half = GS / 2;
       const g = ctx.createRadialGradient(half, half, 0, half, half, half);
-      g.addColorStop(0, 'rgba(255,200,100,0.45)');
-      g.addColorStop(0.2, 'rgba(255,180,80,0.3)');
-      g.addColorStop(0.5, 'rgba(255,150,50,0.1)');
+      g.addColorStop(0, 'rgba(255,200,100,0.4)');
+      g.addColorStop(0.3, 'rgba(255,180,80,0.25)');
+      g.addColorStop(0.6, 'rgba(255,150,50,0.08)');
       g.addColorStop(1, 'rgba(255,120,30,0)');
       ctx.fillStyle = g;
       ctx.fillRect(0, 0, GS, GS);
       this.textures.addCanvas('__lamp_glow', c);
     }
 
+    // --- Darkness RenderTexture: world-space, oversized to cover any camera view ---
+    // BitmapMask renders mask source through the camera, so both RT and mask must
+    // be in world coords. Oversize by a generous margin so no edge is ever visible.
+    const cam = this.cameras.main;
+    const margin = Math.max(cam.width, cam.height);
+    const wb = this.physics.world.bounds;
+    const rtX = wb.x - margin;
+    const rtY = wb.y - margin;
+    const rtW = wb.width + margin * 2;
+    const rtH = wb.height + margin * 2;
+    this.darknessRT = this.add.renderTexture(rtX, rtY, rtW, rtH);
+    this.darknessRT.setOrigin(0, 0);
+    this.darknessRT.fill(0x000000, 1);
+    this.darknessRT.setDepth(800);
+
+    // --- Vision mask image: world-space, NOT added to display list ---
+    this.visionImage = this.make.image({
+      x: this.player.sprite.x,
+      y: this.player.sprite.y,
+      key: '__vision',
+      add: false,
+    });
+
+    // --- BitmapMask: both RT and vision are in world space, camera transforms both ---
+    const mask = new Phaser.Display.Masks.BitmapMask(this, this.visionImage);
+    mask.invertAlpha = true;
+    this.darknessRT.setMask(mask);
+
+    // --- Warm glow sprite: additive blend for amber lamp color ---
     this.warmGlow = this.add.sprite(0, 0, '__lamp_glow');
     this.warmGlow.setBlendMode(Phaser.BlendModes.ADD);
     this.warmGlow.setDepth(799);
     this.warmGlow.setOrigin(0.5, 0.5);
-
-    this.lampLight = this.add.sprite(0, 0, '__lamp_dark');
-    this.lampLight.setDepth(800);
-    this.lampLight.setOrigin(0.5, 0.5);
   }
 
   private updateLampLight(): void {
@@ -372,11 +398,9 @@ export class GameScene extends Phaser.Scene {
     const rMin = configManager.get<number>('lamp', 'glowRadiusMin');
     const t = this.time.now;
 
-    // Power curve: light shrinks slowly at first, then collapses fast below ~33%
     const curved = Math.pow(ratio, 2.5);
     let targetRadius = rMin + (rMax - rMin) * curved;
 
-    // Constant gentle flicker even at full fuel, stronger when critical
     const baseFlicker =
       Math.sin(t * 0.005) * 1.5 + Math.sin(t * 0.013) * 1.0 + Math.sin(t * 0.029) * 0.5;
 
@@ -393,31 +417,22 @@ export class GameScene extends Phaser.Scene {
     const lerpSpeed = ratio < 0.33 ? 0.25 : 0.12;
     this.displayedRadius = Phaser.Math.Linear(this.displayedRadius, targetRadius, lerpSpeed);
 
+    // Vision image in world space — just follow the player
+    this.visionImage.setPosition(this.player.sprite.x, this.player.sprite.y);
+
+    // Scale: displayedRadius is in world units, vision texture is VISION_TEX_SIZE px.
+    // The gradient's fully-opaque zone is ~40% of the texture, so the "lit" area
+    // radius = scale * VISION_TEX_SIZE * 0.5 * 0.4. Solve for scale:
+    const visionScale = this.displayedRadius / (GameScene.VISION_TEX_SIZE * 0.5 * 0.4);
+    this.visionImage.setScale(Math.max(visionScale, 0.01));
+
+    // Warm glow follows player in world space
     const px = this.player.sprite.x;
     const py = this.player.sprite.y;
-
-    this.lampLight.setPosition(px, py);
     this.warmGlow.setPosition(px, py);
-
-    // Dark sprite: the clear zone is ~28% of the texture radius.
-    // We want that clear zone to equal displayedRadius in world units.
-    const clearFraction = 0.28;
-    const darkScale = this.displayedRadius / (GameScene.DARK_TEX_SIZE * clearFraction * 0.5);
-
-    // Ensure the opaque black edges cover the full camera viewport.
-    // Camera sees (width/zoom) x (height/zoom) world units.
-    // Sprite half-extent in world = darkScale * DARK_TEX_SIZE / 2
-    // Needs to reach every corner from player (player is ~centered by camera follow).
-    const cam = this.cameras.main;
-    const viewW = cam.width / cam.zoom;
-    const viewH = cam.height / cam.zoom;
-    const minDarkScale = (Math.max(viewW, viewH) * 1.5) / GameScene.DARK_TEX_SIZE;
-    this.lampLight.setScale(Math.max(darkScale, minDarkScale));
-
-    // Warm glow: slightly smaller than the light, with gentle flicker in alpha
     const glowAlphaFlicker = 0.7 + Math.sin(t * 0.006) * 0.1 + Math.sin(t * 0.017) * 0.08;
-    const glowScale = this.displayedRadius / (GameScene.GLOW_TEX_SIZE * 0.3);
-    this.warmGlow.setScale(glowScale);
+    const glowScale = this.displayedRadius / (GameScene.GLOW_TEX_SIZE * 0.25);
+    this.warmGlow.setScale(Math.max(glowScale, 0.01));
     this.warmGlow.setAlpha(ratio > 0 ? glowAlphaFlicker : 0);
   }
 

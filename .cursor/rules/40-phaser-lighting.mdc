@@ -1,0 +1,68 @@
+---
+description: Phaser 3 darkness/lighting patterns — how to correctly implement fog-of-war and lamp effects
+globs: src/engine/scenes/**/*.ts
+alwaysApply: false
+---
+
+# Phaser 3 Darkness & Lighting
+
+## Correct Pattern: RenderTexture + BitmapMask
+
+The ONLY reliable way to do darkness with a light cutout in Phaser 3:
+
+1. **RenderTexture** — filled with black, covers the world. This IS the darkness.
+2. **Vision image** — a radial gradient (opaque white center → transparent edges). Created with `add: false` (NOT in display list).
+3. **BitmapMask** — created from the vision image, applied to the RenderTexture with `invertAlpha = true`.
+
+```typescript
+// 1. Darkness layer — world-space, oversized to cover any camera view
+const margin = Math.max(cam.width, cam.height);
+const rt = this.add.renderTexture(-margin, -margin, worldW + margin * 2, worldH + margin * 2);
+rt.setOrigin(0, 0);
+rt.fill(0x000000, 1);
+rt.setDepth(800);
+
+// 2. Vision image — WORLD coords, NOT added to scene
+const vision = this.make.image({ x: player.x, y: player.y, key: 'vision', add: false });
+
+// 3. Mask — invertAlpha means "where mask is opaque → darkness is invisible"
+rt.mask = new Phaser.Display.Masks.BitmapMask(this, vision);
+rt.mask.invertAlpha = true;
+
+// 4. Update loop — position vision at player (world coords), scale in world units
+vision.setPosition(player.x, player.y);
+vision.setScale(worldRadius / (VISION_TEX_SIZE * 0.5 * 0.4));
+```
+
+### CRITICAL: BitmapMask renders the mask source THROUGH THE CAMERA
+- Phaser's BitmapMask passes the camera to the WebGL pipeline when rendering the mask source
+- This means the camera's scroll and zoom are applied to the mask source automatically
+- Therefore BOTH the darkness RT and the vision image MUST be in world coordinates
+- Do NOT use scrollFactor(0) on the RT — it creates a coordinate mismatch with the mask
+- Do NOT manually convert world→screen coords for the vision image
+- The camera transforms both RT and mask identically, so they stay aligned at any zoom/scroll
+- Oversize the RT well beyond the world bounds so edges are never visible
+- The vision image is never rendered directly (add: false), only used as mask source
+- Where vision alpha > 0 → darkness is hidden (invertAlpha). Where vision alpha = 0 → darkness shows.
+
+### Why other approaches FAIL
+- **Dark gradient sprite on player**: edges are square, doesn't cover full screen, scale/scroll issues
+- **RenderTexture.erase()**: unreliable with blend modes, hard to get soft gradients
+- **Graphics-based darkness**: poor performance, can't do radial gradients
+- **scrollFactor(0) overlays**: zoom interaction is unpredictable, coordinate mismatches
+
+### Vision texture (canvas-generated)
+Generate at boot: white radial gradient circle on transparent background.
+- Center: fully opaque white
+- Edge: fully transparent
+- The alpha channel gradient controls the softness of the light boundary.
+
+### Warm glow (optional)
+Use a separate ADD-blend sprite at the player position for warm lamp color.
+This is independent of the darkness system.
+
+### For scrolling/zoomed games
+- RT is screen-sized with `scrollFactor(0)` — always covers the viewport
+- Vision image position must be in screen coords (world-to-screen conversion each frame)
+- Scale the vision image by `cam.zoom` to match world-unit radius to screen pixels
+- Do NOT put the RT in world space — offset/sizing issues are impossible to debug

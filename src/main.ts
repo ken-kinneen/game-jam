@@ -52,6 +52,7 @@ async function boot() {
   configManager.register(playerConfig);
   configManager.register(audioConfig);
   configManager.register(lampConfig);
+  configManager.loadPersisted();
 
   const debugPanel = new DebugPanel(configManager);
   debugPanel.mount();
