@@ -2,11 +2,18 @@
   "id": "core:player",
   "type": "entity",
   "name": "Player",
-  "sprite": "player/idle",
+  "sprite": "player/walk",
   "components": {
     "health": { "max": 100 },
     "movement": { "maxSpeed": 200 },
     "inventory": { "capacity": 20 },
+    "animations": {
+      "directions": ["down", "up", "side"],
+      "framesPerRow": 5,
+      "idleFrame": 0,
+      "walkFrames": [1, 2, 3, 4],
+      "frameRate": 8
+    },
     "stats": {
       "maxHealth": 100,
       "moveSpeed": 200,

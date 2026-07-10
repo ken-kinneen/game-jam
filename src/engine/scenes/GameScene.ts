@@ -2,6 +2,7 @@ import { Entity } from '../entities/Entity';
 import { EntityFactory } from '../entities/EntityFactory';
 import { Movement } from '../entities/components/Movement';
 import { MovementSystem } from '../systems/MovementSystem';
+import { AnimationSystem } from '../systems/AnimationSystem';
 import { PickupSystem } from '../systems/PickupSystem';
 import { LampSystem } from '../systems/LampSystem';
 import { SoundSystem } from '../systems/SoundSystem';
@@ -36,6 +37,7 @@ interface InteractZone {
 export class GameScene extends Phaser.Scene {
   private player!: Entity;
   private movementSystem!: MovementSystem;
+  private animationSystem!: AnimationSystem;
   private pickupSystem!: PickupSystem;
   private lampSystem!: LampSystem;
   private soundSystem!: SoundSystem;
@@ -72,6 +74,7 @@ export class GameScene extends Phaser.Scene {
 
   create() {
     this.movementSystem = new MovementSystem();
+    this.animationSystem = new AnimationSystem();
     this.pickupSystem = new PickupSystem(registry, eventBus);
     this.lampSystem = new LampSystem(eventBus, configManager);
     this.soundSystem = new SoundSystem(this, eventBus, configManager, registry);
@@ -174,6 +177,7 @@ export class GameScene extends Phaser.Scene {
     if (!this.shopOpen) {
       const move = this.inputMap.getMoveVector();
       this.movementSystem.update(this.player, move.x, move.y, dt);
+      this.animationSystem.update(this.player);
       this.pickupSystem.update(this.player);
 
       this.checkExitOverlap();

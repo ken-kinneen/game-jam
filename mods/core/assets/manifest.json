@@ -8,5 +8,11 @@
   "items/battery": { "file": "sprites/items/battery.png", "type": "image" },
   "backgrounds/shop": { "file": "sprites/backgrounds/shop.png", "type": "image" },
   "tilesets/home": { "file": "tilesets/home.png", "type": "image" },
-  "backgrounds/home": { "file": "sprites/backgrounds/home.png", "type": "image" }
+  "backgrounds/home": { "file": "sprites/backgrounds/home.png", "type": "image" },
+  "player/walk": {
+    "file": "sprites/player/walk.png",
+    "type": "spritesheet",
+    "frameWidth": 128,
+    "frameHeight": 128
+  }
 }

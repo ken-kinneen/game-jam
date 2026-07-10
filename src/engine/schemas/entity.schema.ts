@@ -19,6 +19,21 @@ const StatSheetComponentSchema = z.object({
   luck: z.number().optional(),
 });
 
+/**
+ * Directional walk-cycle animation from a spritesheet grid: one row per direction,
+ * `framesPerRow` columns per row (frame 0 = idle, the rest = the walk cycle).
+ * `sprite` must be a manifest key of type "spritesheet" (see ModLoader.ts). Movement
+ * direction/facing is derived at runtime from the entity's velocity — this schema
+ * only describes the sheet's layout, not the runtime state (see Animator.ts).
+ */
+const AnimationsComponentSchema = z.object({
+  directions: z.array(z.enum(['down', 'up', 'side'])).min(1),
+  framesPerRow: z.number().int().positive(),
+  idleFrame: z.number().int().nonnegative().default(0),
+  walkFrames: z.array(z.number().int().nonnegative()).min(1),
+  frameRate: z.number().positive().default(8),
+});
+
 /** Schema for entity content definitions (player, enemies, NPCs, destructibles). */
 export const EntityDefSchema = z.object({
   id: z.string().regex(/^[a-z0-9_]+:[a-z0-9_]+$/),
@@ -34,6 +49,7 @@ export const EntityDefSchema = z.object({
       contactDamage: ContactDamageComponentSchema.optional(),
       inventory: InventoryComponentSchema.optional(),
       stats: StatSheetComponentSchema.optional(),
+      animations: AnimationsComponentSchema.optional(),
     })
     .passthrough(),
 });

@@ -2,6 +2,7 @@ import { Entity } from './Entity';
 import { Health } from './components/Health';
 import { Movement } from './components/Movement';
 import { Inventory } from './components/Inventory';
+import { Animator } from './components/Animator';
 import { StatSheet } from '../stats/StatSheet';
 import type { EntityDef } from '../schemas/entity.schema';
 
@@ -74,6 +75,51 @@ export class EntityFactory {
       entity.setComponent('contactDamage', { ...comps.contactDamage });
     }
 
+    if (comps.animations) {
+      const animIdPrefix = def.id.replace(/[^a-z0-9]/gi, '_');
+      EntityFactory.registerAnimations(scene, textureKey, animIdPrefix, comps.animations);
+      entity.setComponent('animator', new Animator(animIdPrefix));
+      // Land on a real frame immediately — otherwise the sprite shows frame 0 of
+      // whatever texture Phaser defaults to until the first AnimationSystem.update().
+      sprite.play(`${animIdPrefix}_idle_${comps.animations.directions[0]}`, true);
+    }
+
     return entity;
+  }
+
+  /**
+   * Builds idle/walk Phaser animations for every direction row in a spritesheet, per
+   * docs/09's layout convention: row = direction, frame 0 in the row = idle, the rest
+   * = the walk cycle. Registered once per (texture, def) pair — safe to call on every
+   * spawn since scene.anims is keyed and create() is skipped if the key exists.
+   */
+  private static registerAnimations(
+    scene: Phaser.Scene,
+    textureKey: string,
+    animIdPrefix: string,
+    anim: NonNullable<EntityDef['components']['animations']>,
+  ): void {
+    anim.directions.forEach((direction, row) => {
+      const rowOffset = row * anim.framesPerRow;
+
+      const idleKey = `${animIdPrefix}_idle_${direction}`;
+      if (!scene.anims.exists(idleKey)) {
+        scene.anims.create({
+          key: idleKey,
+          frames: [{ key: textureKey, frame: rowOffset + anim.idleFrame }],
+          frameRate: 1,
+        });
+      }
+
+      const walkKey = `${animIdPrefix}_walk_${direction}`;
+      if (!scene.anims.exists(walkKey)) {
+        scene.anims.create({
+          key: walkKey,
+          frames: anim.walkFrames.map((f) => ({ key: textureKey, frame: rowOffset + f })),
+          frameRate: anim.frameRate,
+          repeat: -1,
+        });
+      }
+    });
   }
 }
