@@ -37,10 +37,47 @@ const BackgroundGenerationSchema = z.object({
   scale: z.number().positive().default(1),
 });
 
+const TiledGenerationSchema = z.object({
+  method: z.literal('tiled'),
+  width: z.number().int().positive().default(640),
+  height: z.number().int().positive().default(480),
+  wallThickness: z.number().int().nonnegative().default(16),
+});
+
+const FloorTileDefSchema = z.object({
+  texture: z.enum(['wood', 'stone', 'metal', 'marble']).default('wood'),
+  baseColor: z.string().default('#4a4035'),
+  accentColor: z.string().default('#3a3530'),
+  variation: z.number().min(0).max(1).default(0.5),
+  roughness: z.number().min(0).max(1).default(0.4),
+  variant: z.number().int().nonnegative().default(0),
+});
+
+const TileFloorGenerationSchema = z.object({
+  method: z.literal('tileFloor'),
+  width: z.number().int().positive().default(640),
+  height: z.number().int().positive().default(480),
+  wallThickness: z.number().int().nonnegative().default(16),
+  tileSize: z.number().int().positive().default(128),
+  /** If set, uses this image key as the seamless tile (repeated via GL_REPEAT). */
+  tileImage: z.string().optional(),
+  /** Default tile used for cells not specified in the map. */
+  defaultTile: FloorTileDefSchema.default({}),
+  /**
+   * Grid map of tile indices (row-major). Each number references a tile def
+   * from the `tiles` array. Omit to fill the whole floor with defaultTile.
+   */
+  map: z.array(z.array(z.number().int().nonnegative())).optional(),
+  /** Palette of tile definitions referenced by the map indices. */
+  tiles: z.array(FloorTileDefSchema).default([]),
+});
+
 const GenerationSchema = z.discriminatedUnion('method', [
   TilemapGenerationSchema,
   RoomsGenerationSchema,
   BackgroundGenerationSchema,
+  TiledGenerationSchema,
+  TileFloorGenerationSchema,
 ]);
 
 const ExitSchema = z.object({
@@ -55,6 +92,14 @@ const ShopSchema = z.object({
   position: z.object({ x: z.number(), y: z.number() }),
 });
 
+const PropSchema = z.object({
+  image: z.string(),
+  position: z.object({ x: z.number(), y: z.number() }),
+  scale: z.number().positive().default(1),
+  depth: z.number().default(2),
+  collides: z.boolean().default(false),
+});
+
 /** Schema for scene content definitions. */
 export const SceneDefSchema = z.object({
   id: z.string().regex(/^[a-z0-9_]+:[a-z0-9_]+$/),
@@ -65,6 +110,7 @@ export const SceneDefSchema = z.object({
   generation: GenerationSchema,
   exits: z.array(ExitSchema).default([]),
   shops: z.array(ShopSchema).default([]),
+  props: z.array(PropSchema).default([]),
   playerSpawn: z.object({ x: z.number(), y: z.number() }).optional(),
 });
 

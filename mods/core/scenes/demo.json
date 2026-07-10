@@ -1,0 +1,20 @@
+{
+  "id": "core:demo",
+  "type": "scene",
+  "kind": "demo",
+  "generation": {
+    "method": "tiled",
+    "width": 768,
+    "height": 640,
+    "wallThickness": 16
+  },
+  "exits": [
+    {
+      "to": "core:home",
+      "condition": "always",
+      "label": "Back to Home",
+      "position": { "x": 384, "y": 40 }
+    }
+  ],
+  "playerSpawn": { "x": 384, "y": 560 }
+}

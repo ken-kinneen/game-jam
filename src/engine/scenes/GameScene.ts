@@ -13,8 +13,10 @@ import { registry } from '../core/ContentRegistry';
 import { configManager } from '../core/ConfigManager';
 import { inventoryManager } from '../core/InventoryManager';
 import { generateCave, type CaveMap } from '../generation/caveGenerator';
+import { buildTileFloorGraphics } from '../generation/floorTileGenerator';
 import type { StatSheet } from '../stats/StatSheet';
 import type { SceneDef } from '../schemas/scene.schema';
+import { spawnFxStatues } from './spawnFxStatues';
 
 interface ExitZone {
   sprite: Phaser.Physics.Arcade.Sprite;
@@ -106,6 +108,11 @@ export class GameScene extends Phaser.Scene {
       this.buildBackgroundRoom(this.sceneDef);
     } else if (this.sceneDef?.generation.method === 'rooms') {
       this.buildProceduralCave(this.sceneDef);
+    } else if (this.sceneDef?.generation.method === 'tileFloor') {
+      this.buildTileFloor(this.sceneDef);
+    } else if (this.sceneDef?.generation.method === 'tiled') {
+      const gen = this.sceneDef.generation;
+      this.buildFallbackRoom(gen.width, gen.height, gen.wallThickness);
     } else {
       this.buildFallbackRoom();
     }
@@ -122,6 +129,10 @@ export class GameScene extends Phaser.Scene {
     }
 
     this.setupCollisions();
+
+    if (this.sceneDef?.kind === 'demo') {
+      spawnFxStatues(this);
+    }
 
     if (this.isCave) {
       this.createLampLight();
@@ -142,6 +153,7 @@ export class GameScene extends Phaser.Scene {
 
     this.spawnExitZones();
     this.spawnShopZones();
+    this.spawnProps();
     this.createPromptText();
 
     this.unsubInventory = eventBus.on('item:picked_up', ({ itemId, qty }) => {
@@ -292,6 +304,33 @@ export class GameScene extends Phaser.Scene {
       const tooltip = this.createZoneTooltip(pos.x, pos.y + 34);
 
       this.interactZones.push({ sprite: zoneSprite, label, tooltip, displayLabel, action: 'shop' });
+    }
+  }
+
+  /** Places static decorative props defined in the scene JSON. */
+  private spawnProps(): void {
+    const props = this.sceneDef?.props ?? [];
+    for (const prop of props) {
+      const pos = prop.position;
+
+      if (!this.textures.exists(prop.image)) {
+        console.warn(`Prop image "${prop.image}" not found, skipping`);
+        continue;
+      }
+
+      if (prop.collides) {
+        const sprite = this.physics.add.staticImage(pos.x, pos.y, prop.image);
+        sprite.setScale(prop.scale);
+        sprite.setDepth(prop.depth);
+        sprite.refreshBody();
+        if (this.player) {
+          this.physics.add.collider(this.player.sprite, sprite);
+        }
+      } else {
+        const img = this.add.image(pos.x, pos.y, prop.image);
+        img.setScale(prop.scale);
+        img.setDepth(prop.depth);
+      }
     }
   }
 
@@ -473,10 +512,7 @@ export class GameScene extends Phaser.Scene {
     this.physics.world.setBounds(0, 0, map.widthInPixels, map.heightInPixels);
   }
 
-  private buildFallbackRoom(): void {
-    const width = 640;
-    const height = 480;
-    const wallThickness = 16;
+  private buildFallbackRoom(width = 640, height = 480, wallThickness = 16): void {
     const tileSize = 16;
 
     const gfx = this.add.graphics();
@@ -546,6 +582,23 @@ export class GameScene extends Phaser.Scene {
       width - wallInset * 2,
       height - wallInset * 2,
     );
+  }
+
+  /** Builds a room with a seamless tiled floor (procedural or image-based). */
+  private buildTileFloor(sceneDef: SceneDef): void {
+    const gen = sceneDef.generation;
+    if (gen.method !== 'tileFloor') return;
+
+    buildTileFloorGraphics(this, {
+      width: gen.width,
+      height: gen.height,
+      tileSize: gen.tileSize,
+      tileImage: gen.tileImage,
+      defaultTile: gen.defaultTile,
+      map: gen.map,
+      tiles: gen.tiles,
+      wallThickness: gen.wallThickness,
+    });
   }
 
   private static readonly CAVE_TILE_PX = 16;
@@ -690,6 +743,9 @@ export class GameScene extends Phaser.Scene {
     this.player = EntityFactory.create(this, playerDef, spawnX, spawnY);
     this.player.setComponent('playerControlled', true);
 
+    this.player.sprite.preFX?.setPadding(10);
+    this.player.sprite.preFX?.addShadow(2, 3, 0.1, 0.5, 0x000000, 6, 0.5);
+
     const body = this.player.sprite.body as Phaser.Physics.Arcade.Body;
     body.setCollideWorldBounds(true);
 
@@ -700,7 +756,31 @@ export class GameScene extends Phaser.Scene {
       this.player.sprite.height * ((1 - radiusPct * 2) / 2),
     );
 
-    this.cameras.main.startFollow(this.player.sprite, false, 0.1, 0.1);
+    if (this.isStaticCamera()) {
+      this.centerCameraOnRoom(sceneDef);
+    } else {
+      this.cameras.main.startFollow(this.player.sprite, false, 0.1, 0.1);
+    }
+  }
+
+  /** Small rooms (shop, home) get a fixed camera instead of player-follow. */
+  private isStaticCamera(): boolean {
+    return this.sceneDef?.generation.method === 'background';
+  }
+
+  /** Centers the camera on the room so the entire background is visible. */
+  private centerCameraOnRoom(sceneDef: SceneDef | undefined): void {
+    const cam = this.cameras.main;
+    cam.stopFollow();
+
+    const gen = sceneDef?.generation;
+    if (gen?.method === 'background' && gen.image && this.textures.exists(gen.image)) {
+      const frame = this.textures.get(gen.image).getSourceImage();
+      const scale = gen.scale ?? 1;
+      const roomW = frame.width * scale;
+      const roomH = frame.height * scale;
+      cam.centerOn(roomW / 2, roomH / 2);
+    }
   }
 
   private applyCameraConfig(): void {

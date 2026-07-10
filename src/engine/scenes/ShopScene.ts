@@ -6,9 +6,10 @@ import { UpgradeSystem } from '../systems/UpgradeSystem';
 import type { StatSheet } from '../stats/StatSheet';
 
 const PANEL_PCT = 0.15;
-const CARD_W = 220;
-const CARD_H = 210;
-const CARD_GAP = 18;
+const DPR = Math.min(window.devicePixelRatio || 1, 2);
+const CARD_W = Math.round(220 * DPR);
+const CARD_H = Math.round(210 * DPR);
+const CARD_GAP = Math.round(18 * DPR);
 const COLS = 3;
 
 const STAT_LABELS: Record<string, string> = {
@@ -32,6 +33,11 @@ const BEHAVIOR_COLORS: Record<string, number> = {
 /** Formats a stat name into a readable label. */
 function statLabel(stat: string): string {
   return STAT_LABELS[stat] ?? stat.replace(/([A-Z])/g, ' $1').replace(/^./, (s) => s.toUpperCase());
+}
+
+/** Scales a pixel value by DPR and returns a CSS font-size string. */
+function fontSize(px: number): string {
+  return `${Math.round(px * DPR)}px`;
 }
 
 /** Overlay shop for browsing and buying upgrades, with a live stats panel. */
@@ -75,35 +81,35 @@ export class ShopScene extends Phaser.Scene {
 
     const panelGfx = this.add.graphics();
     panelGfx.fillStyle(0x1a1a2e, 0.95);
-    panelGfx.fillRoundedRect(this.panelX, this.panelY, this.panelW, this.panelH, 16);
-    panelGfx.lineStyle(2, 0x444466, 1);
-    panelGfx.strokeRoundedRect(this.panelX, this.panelY, this.panelW, this.panelH, 16);
+    panelGfx.fillRoundedRect(this.panelX, this.panelY, this.panelW, this.panelH, 16 * DPR);
+    panelGfx.lineStyle(2 * DPR, 0x444466, 1);
+    panelGfx.strokeRoundedRect(this.panelX, this.panelY, this.panelW, this.panelH, 16 * DPR);
     panelGfx.setDepth(1);
 
-    const title = this.add.text(w / 2, this.panelY + 24, 'UPGRADES', {
+    const title = this.add.text(w / 2, this.panelY + 24 * DPR, 'UPGRADES', {
       fontFamily: '"Courier New", monospace',
-      fontSize: '36px',
+      fontSize: fontSize(36),
       color: '#ffcc44',
       fontStyle: 'bold',
       stroke: '#000000',
-      strokeThickness: 3,
+      strokeThickness: 3 * DPR,
     });
     title.setOrigin(0.5, 0).setDepth(2);
 
     const closeBtnGfx = this.add.graphics();
-    const closeBtnW = 200;
-    const closeBtnH = 40;
+    const closeBtnW = Math.round(200 * DPR);
+    const closeBtnH = Math.round(40 * DPR);
     const closeBtnX = w / 2 - closeBtnW / 2;
-    const closeBtnY = this.panelY + this.panelH - 52;
+    const closeBtnY = this.panelY + this.panelH - Math.round(52 * DPR);
     closeBtnGfx.fillStyle(0x442222, 0.9);
-    closeBtnGfx.fillRoundedRect(closeBtnX, closeBtnY, closeBtnW, closeBtnH, 8);
-    closeBtnGfx.lineStyle(2, 0xaa4444, 1);
-    closeBtnGfx.strokeRoundedRect(closeBtnX, closeBtnY, closeBtnW, closeBtnH, 8);
+    closeBtnGfx.fillRoundedRect(closeBtnX, closeBtnY, closeBtnW, closeBtnH, 8 * DPR);
+    closeBtnGfx.lineStyle(2 * DPR, 0xaa4444, 1);
+    closeBtnGfx.strokeRoundedRect(closeBtnX, closeBtnY, closeBtnW, closeBtnH, 8 * DPR);
     closeBtnGfx.setDepth(2);
 
     const closeHint = this.add.text(w / 2, closeBtnY + closeBtnH / 2, '[ESC / E]  Close', {
       fontFamily: '"Courier New", monospace',
-      fontSize: '20px',
+      fontSize: fontSize(20),
       color: '#ff8888',
       fontStyle: 'bold',
     });
@@ -145,22 +151,28 @@ export class ShopScene extends Phaser.Scene {
   }
 
   private buildStatsPanel(): void {
-    const statsX = this.panelX + 28;
-    const statsY = this.panelY + 76;
-    const statsW = 220;
+    const statsX = this.panelX + Math.round(28 * DPR);
+    const statsY = this.panelY + Math.round(76 * DPR);
+    const statsW = Math.round(220 * DPR);
 
     this.statsContainer = this.add.container(0, 0).setDepth(3);
 
     const statsBg = this.add.graphics();
     statsBg.fillStyle(0x0a0a18, 0.8);
-    statsBg.fillRoundedRect(statsX, statsY, statsW, this.panelH - 130, 10);
+    statsBg.fillRoundedRect(statsX, statsY, statsW, this.panelH - Math.round(130 * DPR), 10 * DPR);
     statsBg.lineStyle(1, 0x333355, 1);
-    statsBg.strokeRoundedRect(statsX, statsY, statsW, this.panelH - 130, 10);
+    statsBg.strokeRoundedRect(
+      statsX,
+      statsY,
+      statsW,
+      this.panelH - Math.round(130 * DPR),
+      10 * DPR,
+    );
     this.statsContainer.add(statsBg);
 
-    const header = this.add.text(statsX + statsW / 2, statsY + 14, 'YOUR STATS', {
+    const header = this.add.text(statsX + statsW / 2, statsY + 14 * DPR, 'YOUR STATS', {
       fontFamily: '"Courier New", monospace',
-      fontSize: '16px',
+      fontSize: fontSize(16),
       color: '#88ff88',
       fontStyle: 'bold',
     });
@@ -169,10 +181,15 @@ export class ShopScene extends Phaser.Scene {
 
     const divider = this.add.graphics();
     divider.lineStyle(1, 0x335533, 0.6);
-    divider.lineBetween(statsX + 16, statsY + 38, statsX + statsW - 16, statsY + 38);
+    divider.lineBetween(
+      statsX + 16 * DPR,
+      statsY + 38 * DPR,
+      statsX + statsW - 16 * DPR,
+      statsY + 38 * DPR,
+    );
     this.statsContainer.add(divider);
 
-    this.refreshStats(statsX, statsY + 48, statsW);
+    this.refreshStats(statsX, statsY + 48 * DPR, statsW);
   }
 
   private refreshStats(x: number, startY: number, w: number): void {
@@ -187,7 +204,7 @@ export class ShopScene extends Phaser.Scene {
     }
 
     const allStats = stats.allStats();
-    const pad = 12;
+    const pad = Math.round(12 * DPR);
     let y = startY;
 
     for (const stat of allStats) {
@@ -201,7 +218,7 @@ export class ShopScene extends Phaser.Scene {
 
       const nameText = this.add.text(x + pad, y, label, {
         fontFamily: '"Courier New", monospace',
-        fontSize: '14px',
+        fontSize: fontSize(14),
         color: '#cccccc',
       });
       this.statsContainer.add(nameText);
@@ -209,7 +226,7 @@ export class ShopScene extends Phaser.Scene {
 
       const valText = this.add.text(x + w - pad, y, valueStr, {
         fontFamily: '"Courier New", monospace',
-        fontSize: '14px',
+        fontSize: fontSize(14),
         color,
         fontStyle: changed ? 'bold' : 'normal',
       });
@@ -221,18 +238,18 @@ export class ShopScene extends Phaser.Scene {
         const diff = final - base;
         const sign = diff > 0 ? '+' : '';
         const diffStr = Number.isInteger(diff) ? `${sign}${diff}` : `${sign}${diff.toFixed(1)}`;
-        const diffText = this.add.text(x + w - pad, y + 16, diffStr, {
+        const diffText = this.add.text(x + w - pad, y + 16 * DPR, diffStr, {
           fontFamily: '"Courier New", monospace',
-          fontSize: '11px',
+          fontSize: fontSize(11),
           color: diff > 0 ? '#66cc66' : '#cc6666',
         });
         diffText.setOrigin(1, 0);
         this.statsContainer.add(diffText);
         this.statTexts.push(diffText);
-        y += 14;
+        y += 14 * DPR;
       }
 
-      y += 24;
+      y += 24 * DPR;
     }
   }
 
@@ -240,9 +257,9 @@ export class ShopScene extends Phaser.Scene {
     const upgrades = registry.getAll('upgrade') as UpgradeDef[];
     if (upgrades.length === 0) return;
 
-    const cardsAreaX = this.panelX + 270;
-    const cardsAreaW = this.panelW - 290;
-    const cardsTop = this.panelY + 80;
+    const cardsAreaX = this.panelX + Math.round(270 * DPR);
+    const cardsAreaW = this.panelW - Math.round(290 * DPR);
+    const cardsTop = this.panelY + Math.round(80 * DPR);
 
     const totalW =
       Math.min(COLS, upgrades.length) * CARD_W + (Math.min(COLS, upgrades.length) - 1) * CARD_GAP;
@@ -263,8 +280,8 @@ export class ShopScene extends Phaser.Scene {
     this.cardContainers = [];
     this.buildCards();
 
-    const statsX = this.panelX + 28;
-    this.refreshStats(statsX, this.panelY + 76 + 48, 220);
+    const statsX = this.panelX + Math.round(28 * DPR);
+    this.refreshStats(statsX, this.panelY + Math.round((76 + 48) * DPR), Math.round(220 * DPR));
   }
 
   private buildCard(upg: UpgradeDef, x: number, y: number): Phaser.GameObjects.Container {
@@ -292,24 +309,24 @@ export class ShopScene extends Phaser.Scene {
 
     const bg = this.add.graphics();
     bg.fillStyle(0x0d0d1a, bgAlpha);
-    bg.fillRoundedRect(0, 0, CARD_W, CARD_H, 10);
-    bg.lineStyle(owned ? 3 : 2, borderColor, 1);
-    bg.strokeRoundedRect(0, 0, CARD_W, CARD_H, 10);
+    bg.fillRoundedRect(0, 0, CARD_W, CARD_H, 10 * DPR);
+    bg.lineStyle(owned ? 3 * DPR : 2 * DPR, borderColor, 1);
+    bg.strokeRoundedRect(0, 0, CARD_W, CARD_H, 10 * DPR);
     container.add(bg);
 
     const rarityLabel = upg.rarity.charAt(0).toUpperCase() + upg.rarity.slice(1);
-    const rarityText = this.add.text(CARD_W / 2, 12, rarityLabel, {
+    const rarityText = this.add.text(CARD_W / 2, 12 * DPR, rarityLabel, {
       fontFamily: '"Courier New", monospace',
-      fontSize: '12px',
+      fontSize: fontSize(12),
       color: '#' + (rarityGlow[upg.rarity] ?? 0x888888).toString(16).padStart(6, '0'),
     });
     rarityText.setOrigin(0.5, 0);
     container.add(rarityText);
 
     const nameColor = owned ? '#66aa66' : '#ffffff';
-    const nameText = this.add.text(CARD_W / 2, 30, upg.name, {
+    const nameText = this.add.text(CARD_W / 2, 30 * DPR, upg.name, {
       fontFamily: '"Courier New", monospace',
-      fontSize: '22px',
+      fontSize: fontSize(22),
       color: nameColor,
       fontStyle: 'bold',
     });
@@ -318,10 +335,10 @@ export class ShopScene extends Phaser.Scene {
 
     const divider = this.add.graphics();
     divider.lineStyle(1, 0x333355, 0.5);
-    divider.lineBetween(20, 60, CARD_W - 20, 60);
+    divider.lineBetween(20 * DPR, 60 * DPR, CARD_W - 20 * DPR, 60 * DPR);
     container.add(divider);
 
-    let effectY = 70;
+    let effectY = 70 * DPR;
     for (const eff of upg.effects) {
       if (eff.kind === 'stat') {
         const sign = eff.value >= 0 ? '+' : '';
@@ -333,22 +350,22 @@ export class ShopScene extends Phaser.Scene {
 
         const statNameText = this.add.text(CARD_W / 2, effectY, label, {
           fontFamily: '"Courier New", monospace',
-          fontSize: '14px',
+          fontSize: fontSize(14),
           color: '#aaaacc',
         });
         statNameText.setOrigin(0.5, 0);
         container.add(statNameText);
 
-        const valueText = this.add.text(CARD_W / 2, effectY + 18, `${sign}${val}${pct}`, {
+        const valueText = this.add.text(CARD_W / 2, effectY + 18 * DPR, `${sign}${val}${pct}`, {
           fontFamily: '"Courier New", monospace',
-          fontSize: '20px',
+          fontSize: fontSize(20),
           color: valueColor,
           fontStyle: 'bold',
         });
         valueText.setOrigin(0.5, 0);
         container.add(valueText);
 
-        effectY += 48;
+        effectY += 48 * DPR;
       } else if (eff.kind === 'behavior') {
         const desc = eff.description ?? eff.behavior;
         const colorHex = BEHAVIOR_COLORS[eff.behavior];
@@ -356,24 +373,24 @@ export class ShopScene extends Phaser.Scene {
         if (colorHex !== undefined) {
           const swatch = this.add.graphics();
           swatch.fillStyle(colorHex, 1);
-          swatch.fillCircle(CARD_W / 2, effectY + 14, 12);
-          swatch.lineStyle(2, 0xffffff, 0.3);
-          swatch.strokeCircle(CARD_W / 2, effectY + 14, 12);
+          swatch.fillCircle(CARD_W / 2, effectY + 14 * DPR, 12 * DPR);
+          swatch.lineStyle(2 * DPR, 0xffffff, 0.3);
+          swatch.strokeCircle(CARD_W / 2, effectY + 14 * DPR, 12 * DPR);
           container.add(swatch);
-          effectY += 34;
+          effectY += 34 * DPR;
         }
 
         const descText = this.add.text(CARD_W / 2, effectY, desc, {
           fontFamily: '"Courier New", monospace',
-          fontSize: '14px',
+          fontSize: fontSize(14),
           color: '#ddaaff',
           align: 'center',
-          wordWrap: { width: CARD_W - 30 },
+          wordWrap: { width: CARD_W - 30 * DPR },
         });
         descText.setOrigin(0.5, 0);
         container.add(descText);
 
-        effectY += descText.height + 12;
+        effectY += descText.height + 12 * DPR;
       }
     }
 
@@ -382,11 +399,16 @@ export class ShopScene extends Phaser.Scene {
         const def = registry.get('upgrade', r);
         return def?.name ?? r.split(':')[1];
       });
-      const reqText = this.add.text(CARD_W / 2, effectY + 4, `Requires: ${reqNames.join(', ')}`, {
-        fontFamily: '"Courier New", monospace',
-        fontSize: '12px',
-        color: '#ff6666',
-      });
+      const reqText = this.add.text(
+        CARD_W / 2,
+        effectY + 4 * DPR,
+        `Requires: ${reqNames.join(', ')}`,
+        {
+          fontFamily: '"Courier New", monospace',
+          fontSize: fontSize(12),
+          color: '#ff6666',
+        },
+      );
       reqText.setOrigin(0.5, 0);
       container.add(reqText);
     }
@@ -402,21 +424,21 @@ export class ShopScene extends Phaser.Scene {
     if (owned) {
       const ownedBadge = this.add.graphics();
       ownedBadge.fillStyle(0x224422, 0.8);
-      ownedBadge.fillRoundedRect(20, CARD_H - 44, CARD_W - 40, 32, 6);
+      ownedBadge.fillRoundedRect(20 * DPR, CARD_H - 44 * DPR, CARD_W - 40 * DPR, 32 * DPR, 6 * DPR);
       container.add(ownedBadge);
 
-      const ownedText = this.add.text(CARD_W / 2, CARD_H - 28, 'OWNED', {
+      const ownedText = this.add.text(CARD_W / 2, CARD_H - 28 * DPR, 'OWNED', {
         fontFamily: '"Courier New", monospace',
-        fontSize: '18px',
+        fontSize: fontSize(18),
         color: '#66cc66',
         fontStyle: 'bold',
       });
       ownedText.setOrigin(0.5, 0.5);
       container.add(ownedText);
     } else {
-      const btnY = CARD_H - 48;
-      const btnW = CARD_W - 30;
-      const btnH = 36;
+      const btnY = CARD_H - 48 * DPR;
+      const btnW = CARD_W - 30 * DPR;
+      const btnH = Math.round(36 * DPR);
       const btnX = (CARD_W - btnW) / 2;
 
       const btnColor = canBuy ? 0x335533 : 0x2a2a2a;
@@ -425,14 +447,14 @@ export class ShopScene extends Phaser.Scene {
 
       const btnGfx = this.add.graphics();
       btnGfx.fillStyle(btnColor, 1);
-      btnGfx.fillRoundedRect(btnX, btnY, btnW, btnH, 6);
+      btnGfx.fillRoundedRect(btnX, btnY, btnW, btnH, 6 * DPR);
       btnGfx.lineStyle(1, btnBorder, 1);
-      btnGfx.strokeRoundedRect(btnX, btnY, btnW, btnH, 6);
+      btnGfx.strokeRoundedRect(btnX, btnY, btnW, btnH, 6 * DPR);
       container.add(btnGfx);
 
       const btnLabel = this.add.text(CARD_W / 2, btnY + btnH / 2, costStr, {
         fontFamily: '"Courier New", monospace',
-        fontSize: '14px',
+        fontSize: fontSize(14),
         color: btnTextColor,
         fontStyle: 'bold',
       });
@@ -446,16 +468,16 @@ export class ShopScene extends Phaser.Scene {
         hitZone.on('pointerover', () => {
           btnGfx.clear();
           btnGfx.fillStyle(0x447744, 1);
-          btnGfx.fillRoundedRect(btnX, btnY, btnW, btnH, 6);
+          btnGfx.fillRoundedRect(btnX, btnY, btnW, btnH, 6 * DPR);
           btnGfx.lineStyle(1, 0x77cc77, 1);
-          btnGfx.strokeRoundedRect(btnX, btnY, btnW, btnH, 6);
+          btnGfx.strokeRoundedRect(btnX, btnY, btnW, btnH, 6 * DPR);
         });
         hitZone.on('pointerout', () => {
           btnGfx.clear();
           btnGfx.fillStyle(btnColor, 1);
-          btnGfx.fillRoundedRect(btnX, btnY, btnW, btnH, 6);
+          btnGfx.fillRoundedRect(btnX, btnY, btnW, btnH, 6 * DPR);
           btnGfx.lineStyle(1, btnBorder, 1);
-          btnGfx.strokeRoundedRect(btnX, btnY, btnW, btnH, 6);
+          btnGfx.strokeRoundedRect(btnX, btnY, btnW, btnH, 6 * DPR);
         });
         hitZone.on('pointerdown', () => {
           this.buyUpgrade(upg);
