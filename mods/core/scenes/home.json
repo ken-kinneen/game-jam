@@ -3,11 +3,36 @@
   "type": "scene",
   "kind": "home",
   "generation": {
-    "method": "background",
-    "image": "backgrounds/home",
-    "scale": 0.5,
-    "wallInset": 32
+    "method": "tileFloor",
+    "width": 512,
+    "height": 480,
+    "wallThickness": 32,
+    "tileSize": 512,
+    "tileImage": "tilesets/home_floor"
   },
+  "props": [
+    {
+      "image": "furniture/bed",
+      "position": { "x": 120, "y": 110 },
+      "scale": 0.3,
+      "depth": 2,
+      "collides": true
+    },
+    {
+      "image": "furniture/desk",
+      "position": { "x": 400, "y": 120 },
+      "scale": 0.3,
+      "depth": 2,
+      "collides": true
+    },
+    {
+      "image": "furniture/drawers",
+      "position": { "x": 140, "y": 380 },
+      "scale": 0.28,
+      "depth": 2,
+      "collides": true
+    }
+  ],
   "exits": [
     {
       "to": "core:cave",
