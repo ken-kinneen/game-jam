@@ -20,5 +20,6 @@
   "furniture/desk": { "file": "sprites/furniture/desk.png", "type": "image" },
   "furniture/bed": { "file": "sprites/furniture/bed.png", "type": "image" },
   "furniture/drawers": { "file": "sprites/furniture/drawers.png", "type": "image" },
-  "tilesets/home_floor": { "file": "sprites/tilesets/home_floor.png", "type": "image" }
+  "tilesets/home_floor": { "file": "sprites/tilesets/home_floor.png", "type": "image" },
+  "furniture/desk_2": { "file": "sprites/furniture/desk_2.png", "type": "image" }
 }

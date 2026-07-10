@@ -321,6 +321,7 @@ export class GameScene extends Phaser.Scene {
       if (prop.collides) {
         const sprite = this.physics.add.staticImage(pos.x, pos.y, prop.image);
         sprite.setScale(prop.scale);
+        sprite.setAngle(prop.angle);
         sprite.setDepth(prop.depth);
         sprite.refreshBody();
         if (this.player) {
@@ -329,6 +330,7 @@ export class GameScene extends Phaser.Scene {
       } else {
         const img = this.add.image(pos.x, pos.y, prop.image);
         img.setScale(prop.scale);
+        img.setAngle(prop.angle);
         img.setDepth(prop.depth);
       }
     }

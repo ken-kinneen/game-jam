@@ -98,6 +98,9 @@ const PropSchema = z.object({
   scale: z.number().positive().default(1),
   depth: z.number().default(2),
   collides: z.boolean().default(false),
+  /** Visual rotation in degrees. Note: arcade physics bodies stay axis-aligned,
+   * so a rotated collides:true prop keeps an upright rectangular collision box. */
+  angle: z.number().default(0),
 });
 
 /** Schema for scene content definitions. */
