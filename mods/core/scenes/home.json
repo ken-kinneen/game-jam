@@ -57,6 +57,13 @@
       "depth": 2,
       "collides": true,
       "angle": 0
+    },
+    {
+      "image": "furniture/shelves",
+      "position": { "x": 256, "y": 80 },
+      "scale": 0.15,
+      "depth": 2,
+      "collides": true
     }
   ],
   "exits": [],

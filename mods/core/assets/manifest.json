@@ -24,5 +24,6 @@
   "furniture/desk_2": { "file": "sprites/furniture/desk_2.png", "type": "image" },
   "furniture/hatch_grate": { "file": "sprites/furniture/hatch_grate.png", "type": "image" },
   "tilesets/shop_floor": { "file": "sprites/tilesets/shop_floor.png", "type": "image" },
-  "furniture/workbench": { "file": "sprites/furniture/workbench.png", "type": "image" }
+  "furniture/workbench": { "file": "sprites/furniture/workbench.png", "type": "image" },
+  "furniture/shelves": { "file": "sprites/furniture/shelves.png", "type": "image" }
 }
