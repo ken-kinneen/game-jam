@@ -4,25 +4,25 @@
   "kind": "home",
   "generation": {
     "method": "tileFloor",
-    "width": 512,
-    "height": 480,
-    "wallThickness": 32,
-    "tileSize": 128,
+    "width": 299,
+    "height": 299,
+    "wallThickness": 25,
+    "tileSize": 80,
     "tileImage": "tilesets/home_floor"
   },
   "props": [
     {
       "image": "furniture/bed",
-      "position": { "x": 100, "y": 110 },
-      "scale": 0.2,
+      "position": { "x": 59, "y": 87 },
+      "height": 115,
       "depth": 2,
       "collides": true,
       "angle": 0
     },
     {
       "image": "furniture/hatch_grate",
-      "position": { "x": 256, "y": 380 },
-      "scale": 0.15,
+      "position": { "x": 150, "y": 238 },
+      "height": 54,
       "depth": 1,
       "collides": false,
       "action": "exit",
@@ -32,8 +32,8 @@
     },
     {
       "image": "furniture/desk",
-      "position": { "x": 400, "y": 100 },
-      "scale": 0.21,
+      "position": { "x": 155, "y": 52 },
+      "height": 62,
       "angle": 0,
       "depth": 2,
       "collides": true,
@@ -42,8 +42,8 @@
     },
     {
       "image": "furniture/drawers",
-      "position": { "x": 420, "y": 370 },
-      "scale": 0.2,
+      "position": { "x": 242, "y": 156 },
+      "height": 54,
       "depth": 2,
       "angle": 90,
       "collides": true,
@@ -53,21 +53,28 @@
     },
     {
       "image": "furniture/workbench",
-      "position": { "x": 100, "y": 370 },
-      "scale": 0.18,
+      "position": { "x": 68, "y": 236 },
+      "height": 61,
       "depth": 2,
       "collides": true,
       "angle": 0
     },
     {
       "image": "furniture/shelves",
-      "position": { "x": 256, "y": 80 },
-      "scale": 0.15,
+      "position": { "x": 245, "y": 60 },
+      "height": 64,
+      "depth": 2,
+      "collides": true
+    },
+    {
+      "image": "furniture/shelves_parts",
+      "position": { "x": 245, "y": 243 },
+      "height": 58,
       "depth": 2,
       "collides": true
     }
   ],
   "exits": [],
   "shops": [],
-  "playerSpawn": { "x": 256, "y": 300 }
+  "playerSpawn": { "x": 120, "y": 125 }
 }

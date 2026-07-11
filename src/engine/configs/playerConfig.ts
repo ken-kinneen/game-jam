@@ -6,13 +6,13 @@ export const playerConfig: ConfigSection = {
   label: 'Player',
   fields: [
     {
-      key: 'scale',
-      label: 'Sprite Scale',
+      key: 'height',
+      label: 'Sprite Height (px)',
       type: 'number',
-      min: 0.5,
-      max: 4,
-      step: 0.25,
-      defaultValue: 1,
+      min: 92,
+      max: 92,
+      step: 1,
+      defaultValue: 92,
     },
     {
       key: 'maxSpeed',

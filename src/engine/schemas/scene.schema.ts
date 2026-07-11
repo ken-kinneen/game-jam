@@ -99,7 +99,10 @@ const PropFxSchema = z.enum(['shine', 'glow', 'shadow', 'bloom']);
 const PropSchema = z.object({
   image: z.string(),
   position: z.object({ x: z.number(), y: z.number() }),
+  /** Raw scale factor. Ignored when `height` is set. */
   scale: z.number().positive().default(1),
+  /** Desired display height in pixels; overrides `scale`. */
+  height: z.number().positive().optional(),
   depth: z.number().default(2),
   collides: z.boolean().default(false),
   /** Visual rotation in degrees. Arcade physics bodies stay axis-aligned. */
