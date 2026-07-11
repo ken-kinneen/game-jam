@@ -101,5 +101,7 @@
   "playerSpawn": {
     "x": 271,
     "y": 256
-  }
+  },
+  "playerHeight": 125,
+  "playerMaxSpeed": 110
 }

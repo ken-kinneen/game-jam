@@ -296,7 +296,8 @@ export class GameScene extends Phaser.Scene {
   private applyPlayerConfig(): void {
     if (!this.player) return;
 
-    const targetHeight = configManager.get<number>('player', 'height');
+    const targetHeight =
+      this.sceneDef?.playerHeight ?? configManager.get<number>('player', 'height');
     const frameHeight = this.player.sprite.height;
     const scale = targetHeight / frameHeight;
     this.player.sprite.setScale(scale);

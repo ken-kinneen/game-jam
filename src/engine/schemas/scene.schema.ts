@@ -133,6 +133,8 @@ export const SceneDefSchema = z.object({
   playerSpawn: z.object({ x: z.number(), y: z.number() }).optional(),
   /** Per-scene override for player max speed. Falls back to playerConfig default. */
   playerMaxSpeed: z.number().positive().optional(),
+  /** Per-scene override for player sprite height (px). Falls back to playerConfig default. */
+  playerHeight: z.number().positive().optional(),
 });
 
 export type SceneDef = z.infer<typeof SceneDefSchema>;
