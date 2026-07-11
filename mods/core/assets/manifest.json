@@ -21,5 +21,19 @@
   "furniture/bed": { "file": "sprites/furniture/bed.png", "type": "image" },
   "furniture/drawers": { "file": "sprites/furniture/drawers.png", "type": "image" },
   "tilesets/home_floor": { "file": "sprites/tilesets/home_floor.png", "type": "image" },
-  "furniture/desk_2": { "file": "sprites/furniture/desk_2.png", "type": "image" }
+  "furniture/desk_2": { "file": "sprites/furniture/desk_2.png", "type": "image" },
+  "tilesets/home_floor_2": { "file": "sprites/tilesets/home_floor_2.png", "type": "image" },
+  "tilesets/home_floor_3": { "file": "sprites/tilesets/home_floor_3.png", "type": "image" },
+  "tilesets/home_floor_4": { "file": "sprites/tilesets/home_floor_4.png", "type": "image" },
+  "tilesets/home_floor_5": { "file": "sprites/tilesets/home_floor_5.png", "type": "image" },
+  "tilesets/home_floor_6": { "file": "sprites/tilesets/home_floor_6.png", "type": "image" },
+  "tilesets/home_floor_7": { "file": "sprites/tilesets/home_floor_7.png", "type": "image" },
+  "tilesets/home_floor_8": { "file": "sprites/tilesets/home_floor_8.png", "type": "image" },
+  "tilesets/home_floor_9": { "file": "sprites/tilesets/home_floor_9.png", "type": "image" },
+  "furniture/desk_3": { "file": "sprites/furniture/desk_3.png", "type": "image" },
+  "tilesets/cave_wall": { "file": "sprites/tilesets/cave_wall.png", "type": "image" },
+  "tilesets/rock_element_a": { "file": "sprites/tilesets/rock_element_a.png", "type": "image" },
+  "tilesets/rock_element_b": { "file": "sprites/tilesets/rock_element_b.png", "type": "image" },
+  "items/scrap": { "file": "sprites/items/scrap.png", "type": "image" },
+  "items/fuel": { "file": "sprites/items/fuel.png", "type": "image" }
 }

@@ -4,49 +4,76 @@
   "kind": "home",
   "generation": {
     "method": "tileFloor",
-    "width": 512,
-    "height": 480,
+    "width": 923,
+    "height": 775,
     "wallThickness": 32,
     "tileSize": 512,
-    "tileImage": "tilesets/home_floor"
+    "tileImage": "tilesets/home_floor_2"
   },
   "props": [
     {
+      "image": "furniture/desk_2",
+      "position": {
+        "x": 194,
+        "y": 111
+      },
+      "scale": 0.4,
+      "depth": 2,
+      "collides": true,
+      "angle": 0
+    },
+    {
       "image": "furniture/bed",
-      "position": { "x": 120, "y": 110 },
+      "position": {
+        "x": 71,
+        "y": 319
+      },
       "scale": 0.3,
       "depth": 2,
-      "collides": true
+      "collides": true,
+      "angle": 0
     },
     {
-      "image": "furniture/desk",
-      "position": { "x": 400, "y": 120 },
+      "image": "furniture/desk_3",
+      "position": {
+        "x": 604,
+        "y": 84
+      },
       "scale": 0.3,
       "depth": 2,
-      "collides": true
+      "collides": true,
+      "angle": 0
     },
     {
-      "image": "furniture/drawers",
-      "position": { "x": 140, "y": 380 },
-      "scale": 0.28,
+      "image": "furniture/bed",
+      "position": {
+        "x": 766,
+        "y": 369
+      },
+      "scale": 0.3,
       "depth": 2,
-      "collides": true
+      "collides": true,
+      "angle": 0
     }
   ],
   "exits": [
     {
       "to": "core:cave",
       "condition": "always",
-      "label": "Enter Cave",
-      "position": { "x": 256, "y": 460 }
-    },
-    {
-      "to": "core:demo",
-      "condition": "always",
-      "label": "FX Demo",
-      "position": { "x": 100, "y": 260 }
+      "label": "Exit",
+      "position": {
+        "x": 464,
+        "y": 641
+      }
     }
   ],
-  "shops": [{ "label": "Upgrades", "position": { "x": 420, "y": 260 } }],
-  "playerSpawn": { "x": 256, "y": 300 }
+  "shops": [
+    {
+      "label": "Shop",
+      "position": {
+        "x": 771,
+        "y": 369
+      }
+    }
+  ]
 }
