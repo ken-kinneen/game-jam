@@ -5,6 +5,8 @@
   "generation": {
     "method": "rooms",
     "roomCount": [4, 6],
+    "fillRatio": 0.46,
+    "pillarCount": 5,
     "spawnTables": {
       "trash": "core:cave_trash"
     }

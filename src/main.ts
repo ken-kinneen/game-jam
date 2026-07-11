@@ -1,4 +1,5 @@
 import Phaser from 'phaser';
+import PhaserRaycaster from 'phaser-raycaster';
 import { ModLoader, type AssetManifest } from './engine/core/ModLoader';
 import { registry } from './engine/core/ContentRegistry';
 import { configManager } from './engine/core/ConfigManager';
@@ -111,6 +112,15 @@ async function boot() {
         gravity: { x: 0, y: 0 },
         debug: false,
       },
+    },
+    plugins: {
+      scene: [
+        {
+          key: 'PhaserRaycaster',
+          plugin: PhaserRaycaster,
+          mapping: 'raycasterPlugin',
+        },
+      ],
     },
     scene: [BootScene, GameScene, UIScene, ShopScene],
   });

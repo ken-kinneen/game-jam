@@ -19,6 +19,7 @@ const RoomsGenerationSchema = z.object({
   fillRatio: z.number().min(0.2).max(0.6).default(0.4),
   smoothIterations: z.number().int().min(0).max(10).default(6),
   widenPasses: z.number().int().min(0).max(5).default(2),
+  pillarCount: z.number().int().nonnegative().default(0),
   exitCount: z.number().int().positive().default(2),
   openItemCount: z.number().int().nonnegative().default(8),
   behindWallItemCount: z.number().int().nonnegative().default(3),
@@ -98,9 +99,14 @@ const PropSchema = z.object({
   scale: z.number().positive().default(1),
   depth: z.number().default(2),
   collides: z.boolean().default(false),
-  /** Visual rotation in degrees. Note: arcade physics bodies stay axis-aligned,
-   * so a rotated collides:true prop keeps an upright rectangular collision box. */
+  /** Visual rotation in degrees. Arcade physics bodies stay axis-aligned. */
   angle: z.number().default(0),
+  /** If set, this prop acts as an interaction point when the player presses E nearby. */
+  action: z.enum(['shop', 'exit']).optional(),
+  /** For exit actions: the scene to transition to. */
+  actionTarget: z.string().optional(),
+  /** Label shown in the [E] prompt when near this prop. */
+  actionLabel: z.string().optional(),
 });
 
 /** Schema for scene content definitions. */

@@ -7,46 +7,57 @@
     "width": 512,
     "height": 480,
     "wallThickness": 32,
-    "tileSize": 512,
+    "tileSize": 128,
     "tileImage": "tilesets/home_floor"
   },
   "props": [
     {
       "image": "furniture/bed",
-      "position": { "x": 120, "y": 110 },
-      "scale": 0.3,
+      "position": { "x": 100, "y": 110 },
+      "scale": 0.2,
       "depth": 2,
       "collides": true
+    },
+    {
+      "image": "furniture/hatch_grate",
+      "position": { "x": 256, "y": 380 },
+      "scale": 0.15,
+      "depth": 1,
+      "collides": false,
+      "action": "exit",
+      "actionTarget": "core:cave",
+      "actionLabel": "Enter Cave"
     },
     {
       "image": "furniture/desk",
-      "position": { "x": 400, "y": 120 },
-      "scale": 0.3,
+      "position": { "x": 400, "y": 100 },
+      "scale": 0.21,
+      "angle": 0,
       "depth": 2,
-      "collides": true
+      "collides": true,
+      "action": "shop",
+      "actionLabel": "Upgrades"
     },
     {
       "image": "furniture/drawers",
-      "position": { "x": 140, "y": 380 },
-      "scale": 0.28,
+      "position": { "x": 420, "y": 370 },
+      "scale": 0.2,
+      "depth": 2,
+      "angle": 90,
+      "collides": true,
+      "action": "exit",
+      "actionTarget": "core:demo",
+      "actionLabel": "FX Demo"
+    },
+    {
+      "image": "furniture/workbench",
+      "position": { "x": 100, "y": 370 },
+      "scale": 0.18,
       "depth": 2,
       "collides": true
     }
   ],
-  "exits": [
-    {
-      "to": "core:cave",
-      "condition": "always",
-      "label": "Enter Cave",
-      "position": { "x": 256, "y": 460 }
-    },
-    {
-      "to": "core:demo",
-      "condition": "always",
-      "label": "FX Demo",
-      "position": { "x": 100, "y": 260 }
-    }
-  ],
-  "shops": [{ "label": "Upgrades", "position": { "x": 420, "y": 260 } }],
+  "exits": [],
+  "shops": [],
   "playerSpawn": { "x": 256, "y": 300 }
 }

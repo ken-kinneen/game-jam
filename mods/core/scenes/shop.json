@@ -8,56 +8,7 @@
     "height": 576,
     "wallThickness": 24,
     "tileSize": 128,
-    "defaultTile": {
-      "texture": "wood",
-      "baseColor": "#6b4c32",
-      "accentColor": "#3d2a18",
-      "variation": 0.7,
-      "roughness": 0.6,
-      "variant": 0
-    },
-    "tiles": [
-      {
-        "texture": "wood",
-        "baseColor": "#6b4c32",
-        "accentColor": "#3d2a18",
-        "variation": 0.7,
-        "roughness": 0.6,
-        "variant": 0
-      },
-      {
-        "texture": "stone",
-        "baseColor": "#6a6a6a",
-        "accentColor": "#3a3a3a",
-        "variation": 0.5,
-        "roughness": 0.8,
-        "variant": 0
-      },
-      {
-        "texture": "metal",
-        "baseColor": "#5a5a60",
-        "accentColor": "#8a5533",
-        "variation": 0.6,
-        "roughness": 0.7,
-        "variant": 0
-      },
-      {
-        "texture": "marble",
-        "baseColor": "#d4cfc8",
-        "accentColor": "#4a4040",
-        "variation": 0.8,
-        "roughness": 0.3,
-        "variant": 0
-      }
-    ],
-    "map": [
-      [0, 0, 0, 1, 1, 1],
-      [0, 0, 0, 1, 1, 1],
-      [0, 0, 0, 1, 1, 1],
-      [2, 2, 2, 3, 3, 3],
-      [2, 2, 2, 3, 3, 3],
-      [2, 2, 2, 3, 3, 3]
-    ]
+    "tileImage": "tilesets/shop_floor"
   },
   "exits": [
     {

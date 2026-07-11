@@ -57,6 +57,7 @@ export interface CaveGenOptions {
   fillRatio?: number;
   smoothIterations?: number;
   widenPasses?: number;
+  pillarCount?: number;
   entry?: GridPoint | null;
   exitCount?: number;
   openItemCount?: number;
@@ -336,6 +337,63 @@ function carveOpen(grid: Grid, w: number, h: number, center: GridPoint, radius: 
   }
 }
 
+/** Places small wall clusters (1–3 tiles) in open floor areas as shadow-casting pillars. */
+function placePillars(
+  grid: Grid,
+  w: number,
+  h: number,
+  reachable: Set<string>,
+  entry: GridPoint,
+  count: number,
+  rng: () => number,
+): void {
+  const candidates: GridPoint[] = [];
+  const entryKey = `${entry.x},${entry.y}`;
+
+  for (const k of reachable) {
+    if (k === entryKey) continue;
+    const [x, y] = k.split(',').map(Number);
+    if (x < 3 || y < 3 || x >= w - 3 || y >= h - 3) continue;
+
+    let openNeighbors = 0;
+    for (let dy = -1; dy <= 1; dy++) {
+      for (let dx = -1; dx <= 1; dx++) {
+        if (dx === 0 && dy === 0) continue;
+        if (grid[y + dy]?.[x + dx] === FLOOR) openNeighbors++;
+      }
+    }
+    if (openNeighbors >= 7) candidates.push({ x, y });
+  }
+
+  shuffle(candidates, rng);
+  const minSpacing = 4;
+  const placed: GridPoint[] = [];
+
+  for (const c of candidates) {
+    if (placed.length >= count) break;
+    const tooClose = placed.some((p) => Math.hypot(p.x - c.x, p.y - c.y) < minSpacing);
+    if (tooClose) continue;
+
+    grid[c.y][c.x] = WALL;
+    const spread = Math.floor(rng() * 3);
+    const dirs: [number, number][] = [
+      [1, 0],
+      [-1, 0],
+      [0, 1],
+      [0, -1],
+    ];
+    for (let i = 0; i < spread; i++) {
+      const [dx, dy] = dirs[Math.floor(rng() * dirs.length)];
+      const nx = c.x + dx;
+      const ny = c.y + dy;
+      if (nx > 1 && ny > 1 && nx < w - 2 && ny < h - 2) {
+        grid[ny][nx] = WALL;
+      }
+    }
+    placed.push(c);
+  }
+}
+
 /**
  * Generates one cave map. Pass the previous scene's chosen exit as `entry` to chain
  * maps logically (each cave has its own coordinate space — this is NOT literal
@@ -349,6 +407,7 @@ export function generateCave(options: CaveGenOptions = {}): CaveMap {
     fillRatio = 0.4,
     smoothIterations = 6,
     widenPasses = 2,
+    pillarCount = 0,
     entry = null,
     exitCount = 2,
     openItemCount = 8,
@@ -368,8 +427,14 @@ export function generateCave(options: CaveGenOptions = {}): CaveMap {
   }
   carveOpen(smoothed, width, height, entryPoint, 1);
 
-  const { reachable, dist } = floodFill(smoothed, width, height, entryPoint);
+  let { reachable, dist } = floodFill(smoothed, width, height, entryPoint);
   pruneUnreachable(smoothed, width, height, reachable);
+
+  if (pillarCount > 0) {
+    placePillars(smoothed, width, height, reachable, entryPoint, pillarCount, rng);
+    ({ reachable, dist } = floodFill(smoothed, width, height, entryPoint));
+    pruneUnreachable(smoothed, width, height, reachable);
+  }
 
   const exits = pickExits(width, height, reachable, dist, exitCount);
   const { items, breakableWalls } = placeItems(

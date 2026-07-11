@@ -371,6 +371,10 @@ export function buildTileFloorGraphics(
 
   if (tileImage && scene.textures.exists(tileImage)) {
     const tileSprite = scene.add.tileSprite(width / 2, height / 2, width, height, tileImage);
+    const tex = scene.textures.get(tileImage);
+    const srcWidth = tex.getSourceImage().width;
+    const scale = tileSize / srcWidth;
+    tileSprite.setTileScale(scale, scale);
     tileSprite.setDepth(-1);
   } else if (map && map.length > 0 && tiles.length > 0) {
     renderTileMap(scene, width, height, tileSize, map, tiles, defaultTile, wallThickness);

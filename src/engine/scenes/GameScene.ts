@@ -14,6 +14,7 @@ import { configManager } from '../core/ConfigManager';
 import { inventoryManager } from '../core/InventoryManager';
 import { generateCave, type CaveMap } from '../generation/caveGenerator';
 import { buildTileFloorGraphics } from '../generation/floorTileGenerator';
+import PhaserRaycaster from 'phaser-raycaster';
 import type { StatSheet } from '../stats/StatSheet';
 import type { SceneDef } from '../schemas/scene.schema';
 import { spawnFxStatues } from './spawnFxStatues';
@@ -24,6 +25,7 @@ interface ExitZone {
   tooltip: Phaser.GameObjects.Text;
   to: string;
   displayLabel: string;
+  propVisual?: Phaser.GameObjects.Image;
 }
 
 interface InteractZone {
@@ -32,6 +34,7 @@ interface InteractZone {
   tooltip: Phaser.GameObjects.Text;
   displayLabel: string;
   action: string;
+  propVisual?: Phaser.GameObjects.Image;
 }
 
 /**
@@ -57,9 +60,15 @@ export class GameScene extends Phaser.Scene {
   private unsubFuel: (() => void) | null = null;
   private unsubInventory: (() => void) | null = null;
   private displayedRadius = 120;
-  private darknessRT!: Phaser.GameObjects.RenderTexture;
-  private visionImage!: Phaser.GameObjects.Image;
+  private fow!: Phaser.GameObjects.RenderTexture;
+  private fowEraser!: Phaser.GameObjects.Sprite;
+  private darknessAlpha = 0.88;
+  private raycaster!: PhaserRaycaster.Raycaster;
+  private ray!: PhaserRaycaster.Raycaster.Ray;
   private warmGlow!: Phaser.GameObjects.Sprite;
+  private propShadows: { shadow: Phaser.GameObjects.Image; source: Phaser.GameObjects.Image }[] =
+    [];
+  declare raycasterPlugin: PhaserRaycaster;
 
   private exitZones: ExitZone[] = [];
   private interactZones: InteractZone[] = [];
@@ -135,9 +144,6 @@ export class GameScene extends Phaser.Scene {
     }
 
     if (this.isCave) {
-      this.createLampLight();
-      this.displayedRadius = configManager.get<number>('lamp', 'glowRadiusMax');
-
       this.unsubFuel = eventBus.on('item:picked_up', ({ itemId }) => {
         const def = registry.get('item', itemId);
         if (def && def.tags.includes('fuel')) {
@@ -155,6 +161,9 @@ export class GameScene extends Phaser.Scene {
     this.spawnShopZones();
     this.spawnProps();
     this.createPromptText();
+
+    this.createLampLight();
+    this.displayedRadius = configManager.get<number>('lamp', 'glowRadiusMax');
 
     this.unsubInventory = eventBus.on('item:picked_up', ({ itemId, qty }) => {
       inventoryManager.add(itemId, qty);
@@ -176,11 +185,9 @@ export class GameScene extends Phaser.Scene {
     this.applyPlayerConfig();
     this.applyAudioConfig();
 
-    if (this.isCave) {
-      const savedColor = configManager.get<string>('lamp', 'glowColorName');
-      if (savedColor && savedColor !== 'default') {
-        this.setLampColor(savedColor);
-      }
+    const savedColor = configManager.get<string>('lamp', 'glowColorName');
+    if (savedColor && savedColor !== 'default') {
+      this.setLampColor(savedColor);
     }
 
     this.unsubConfig = configManager.onChange((sectionId, key) => {
@@ -190,11 +197,23 @@ export class GameScene extends Phaser.Scene {
       if (sectionId === 'lamp' && key === 'glowColorName') {
         this.setLampColor(configManager.get<string>('lamp', 'glowColorName'));
       }
+      if (sectionId === 'lamp' && key === 'darknessAlpha' && this.fow) {
+        const base = configManager.get<number>('lamp', 'darknessAlpha');
+        this.fow.setAlpha(this.isCave ? base : Math.min(base, 0.88));
+      }
     });
 
     if (!this.scene.isActive('UIScene')) {
       this.scene.launch('UIScene', { sceneId: this.sceneDefId });
     }
+
+    // F3 toggles physics debug rendering
+    this.input.keyboard?.on('keydown-F3', () => {
+      this.physics.world.debugGraphic?.setVisible(!this.physics.world.debugGraphic?.visible);
+      if (!this.physics.world.debugGraphic) {
+        this.physics.world.createDebugGraphic();
+      }
+    });
 
     eventBus.emit('scene:enter', { sceneId: this.sceneDefId });
   }
@@ -222,9 +241,7 @@ export class GameScene extends Phaser.Scene {
       }
     }
 
-    if (this.isCave) {
-      this.updateLampLight();
-    }
+    this.updateLampLight();
   }
 
   /** Expose player stats so ShopScene can apply upgrades. */
@@ -318,28 +335,115 @@ export class GameScene extends Phaser.Scene {
         continue;
       }
 
+      let visual: Phaser.GameObjects.Image | undefined;
+
       if (prop.collides) {
+        const shadow = this.add.image(pos.x, pos.y, prop.image);
+        shadow.setScale(prop.scale);
+        shadow.setAngle(prop.angle);
+        shadow.setTint(0x000000);
+        shadow.setAlpha(0.4);
+        shadow.setDepth(prop.depth - 0.1);
+        shadow.setOrigin(0.5, 0.5);
+
         const sprite = this.physics.add.staticImage(pos.x, pos.y, prop.image);
         sprite.setScale(prop.scale);
         sprite.setDepth(prop.depth);
-        // Size the static (AABB) body from the UNROTATED scaled sprite first, then
-        // rotate visually — refreshing while rotated can mis-size/offset the body.
         sprite.refreshBody();
+        const body = sprite.body as Phaser.Physics.Arcade.StaticBody;
+        const shrink = 0.7;
+        body.setSize(body.width * shrink, body.height * shrink);
+        body.setOffset(
+          (sprite.displayWidth - body.width) / 2,
+          (sprite.displayHeight - body.height) / 2,
+        );
         sprite.setAngle(prop.angle);
         if (this.player) {
           this.physics.add.collider(this.player.sprite, sprite);
         }
+        visual = sprite;
+
+        this.propShadows.push({ shadow, source: sprite });
       } else {
         const img = this.add.image(pos.x, pos.y, prop.image);
         img.setScale(prop.scale);
         img.setAngle(prop.angle);
         img.setDepth(prop.depth);
+        visual = img;
+      }
+
+      if (prop.action) {
+        this.registerPropInteraction(prop, visual);
       }
     }
   }
 
-  private createZoneTooltip(x: number, y: number): Phaser.GameObjects.Text {
-    const tip = this.add.text(x, y, 'Press E', {
+  /** Registers a prop as an interaction or exit zone (no visible placeholder). */
+  private registerPropInteraction(
+    prop: {
+      position: { x: number; y: number };
+      action?: string;
+      actionTarget?: string;
+      actionLabel?: string;
+    },
+    visual?: Phaser.GameObjects.Image,
+  ): void {
+    const pos = prop.position;
+    const displayLabel = prop.actionLabel ?? prop.action ?? '';
+    const tooltip = this.createZoneTooltip(pos.x, pos.y + 40, displayLabel);
+
+    // Add a subtle idle glow to signal interactability
+    if (visual?.preFX) {
+      visual.preFX.setPadding(6);
+      visual.preFX.addGlow(0xffdd66, 0, 0, false);
+    }
+
+    if (prop.action === 'exit' && prop.actionTarget) {
+      const zoneSprite = this.physics.add.sprite(pos.x, pos.y, '__placeholder');
+      zoneSprite.setDisplaySize(48, 48);
+      zoneSprite.setAlpha(0);
+      zoneSprite.setDepth(5);
+      const body = zoneSprite.body as Phaser.Physics.Arcade.Body;
+      body.setImmovable(true);
+      body.setAllowGravity(false);
+
+      const label = this.add.text(pos.x, pos.y - 36, '', { fontSize: '1px' });
+      label.setVisible(false);
+
+      this.exitZones.push({
+        sprite: zoneSprite,
+        label,
+        tooltip,
+        to: prop.actionTarget!,
+        displayLabel,
+        propVisual: visual,
+      });
+    } else if (prop.action === 'shop') {
+      const zoneSprite = this.physics.add.sprite(pos.x, pos.y, '__placeholder');
+      zoneSprite.setDisplaySize(48, 48);
+      zoneSprite.setAlpha(0);
+      zoneSprite.setDepth(5);
+      const body = zoneSprite.body as Phaser.Physics.Arcade.Body;
+      body.setImmovable(true);
+      body.setAllowGravity(false);
+
+      const label = this.add.text(pos.x, pos.y - 36, '', { fontSize: '1px' });
+      label.setVisible(false);
+
+      this.interactZones.push({
+        sprite: zoneSprite,
+        label,
+        tooltip,
+        displayLabel,
+        action: 'shop',
+        propVisual: visual,
+      });
+    }
+  }
+
+  private createZoneTooltip(x: number, y: number, label?: string): Phaser.GameObjects.Text {
+    const text = label ? `E  ${label}` : 'E';
+    const tip = this.add.text(x, y, text, {
       fontFamily: '"Courier New", monospace',
       fontSize: '14px',
       color: '#ffffff',
@@ -376,18 +480,70 @@ export class GameScene extends Phaser.Scene {
     for (const z of this.interactZones) this.hideTooltip(z.tooltip);
   }
 
+  /**
+   * Calculates the distance from a point to the nearest edge of a prop's body.
+   * Falls back to center-to-center if no prop visual is attached.
+   */
+  private distToZoneEdge(
+    px: number,
+    py: number,
+    propVisual: Phaser.GameObjects.Image | undefined,
+    fallbackSprite: Phaser.Physics.Arcade.Sprite,
+  ): number {
+    if (propVisual && 'body' in propVisual && propVisual.body) {
+      const body = propVisual.body as Phaser.Physics.Arcade.StaticBody;
+      const bx = body.x;
+      const by = body.y;
+      const bw = body.width;
+      const bh = body.height;
+
+      // Closest point on the AABB to the player
+      const cx = Math.max(bx, Math.min(px, bx + bw));
+      const cy = Math.max(by, Math.min(py, by + bh));
+      const dx = px - cx;
+      const dy = py - cy;
+      return Math.sqrt(dx * dx + dy * dy);
+    }
+    const dx = px - fallbackSprite.x;
+    const dy = py - fallbackSprite.y;
+    return Math.sqrt(dx * dx + dy * dy);
+  }
+
+  /** Activates or deactivates the glow effect on an interactive prop. */
+  private setPropGlow(visual: Phaser.GameObjects.Image | undefined, active: boolean): void {
+    if (!visual?.preFX) return;
+    const fx = visual.preFX.list;
+    const glow = fx.find((f) => (f as { type?: number }).type === 4) as Phaser.FX.Glow | undefined;
+    if (!glow) return;
+
+    this.tweens.killTweensOf(glow);
+    if (active) {
+      this.tweens.add({
+        targets: glow,
+        outerStrength: 4,
+        duration: 200,
+        ease: 'Sine.easeOut',
+      });
+    } else {
+      this.tweens.add({
+        targets: glow,
+        outerStrength: 0,
+        duration: 300,
+        ease: 'Sine.easeIn',
+      });
+    }
+  }
+
   private checkInteractOverlap(): void {
     const px = this.player.sprite.x;
     const py = this.player.sprite.y;
-    const threshold = 50;
+    const threshold = 80;
 
     let nearest: InteractZone | null = null;
     let nearestDist = Infinity;
 
     for (const zone of this.interactZones) {
-      const dx = px - zone.sprite.x;
-      const dy = py - zone.sprite.y;
-      const dist = Math.sqrt(dx * dx + dy * dy);
+      const dist = this.distToZoneEdge(px, py, zone.propVisual, zone.sprite);
       if (dist < threshold && dist < nearestDist) {
         nearest = zone;
         nearestDist = dist;
@@ -395,13 +551,18 @@ export class GameScene extends Phaser.Scene {
     }
 
     if (nearest && nearest !== this.activeInteract && !this.activeExit) {
-      if (this.activeInteract) this.hideTooltip(this.activeInteract.tooltip);
+      if (this.activeInteract) {
+        this.hideTooltip(this.activeInteract.tooltip);
+        this.setPropGlow(this.activeInteract.propVisual, false);
+      }
       this.activeInteract = nearest;
       this.showTooltip(nearest.tooltip);
-      this.promptText.setText(`[E] ${nearest.displayLabel}`);
+      this.setPropGlow(nearest.propVisual, true);
+      this.promptText.setText(`E ${nearest.displayLabel}`);
       this.promptText.setVisible(true);
     } else if (!nearest && this.activeInteract) {
       this.hideTooltip(this.activeInteract.tooltip);
+      this.setPropGlow(this.activeInteract.propVisual, false);
       this.activeInteract = null;
       if (!this.activeExit) {
         this.promptText.setVisible(false);
@@ -442,15 +603,13 @@ export class GameScene extends Phaser.Scene {
   private checkExitOverlap(): void {
     const px = this.player.sprite.x;
     const py = this.player.sprite.y;
-    const threshold = 50;
+    const threshold = 80;
 
     let nearest: ExitZone | null = null;
     let nearestDist = Infinity;
 
     for (const zone of this.exitZones) {
-      const dx = px - zone.sprite.x;
-      const dy = py - zone.sprite.y;
-      const dist = Math.sqrt(dx * dx + dy * dy);
+      const dist = this.distToZoneEdge(px, py, zone.propVisual, zone.sprite);
       if (dist < threshold && dist < nearestDist) {
         nearest = zone;
         nearestDist = dist;
@@ -458,14 +617,19 @@ export class GameScene extends Phaser.Scene {
     }
 
     if (nearest && nearest !== this.activeExit) {
-      if (this.activeExit) this.hideTooltip(this.activeExit.tooltip);
+      if (this.activeExit) {
+        this.hideTooltip(this.activeExit.tooltip);
+        this.setPropGlow(this.activeExit.propVisual, false);
+      }
       this.activeExit = nearest;
       this.showTooltip(nearest.tooltip);
-      this.promptText.setText(`[E] Enter ${nearest.displayLabel}`);
+      this.setPropGlow(nearest.propVisual, true);
+      this.promptText.setText(`E ${nearest.displayLabel}`);
       this.promptText.setVisible(true);
       eventBus.emit('exit:nearby', { exitTo: nearest.to, label: nearest.displayLabel });
     } else if (!nearest && this.activeExit) {
       this.hideTooltip(this.activeExit.tooltip);
+      this.setPropGlow(this.activeExit.propVisual, false);
       this.activeExit = null;
       this.promptText.setVisible(false);
       eventBus.emit('exit:left', {});
@@ -634,6 +798,7 @@ export class GameScene extends Phaser.Scene {
       fillRatio: gen.fillRatio,
       smoothIterations: gen.smoothIterations,
       widenPasses: gen.widenPasses,
+      pillarCount: gen.pillarCount,
       exitCount: gen.exitCount,
       openItemCount: gen.openItemCount,
       behindWallItemCount: gen.behindWallItemCount,
@@ -907,29 +1072,55 @@ export class GameScene extends Phaser.Scene {
     return sprite;
   }
 
-  private static readonly VISION_TEX_SIZE = 256;
   private static readonly GLOW_TEX_SIZE = 256;
 
   private createLampLight(): void {
-    const VS = GameScene.VISION_TEX_SIZE;
     const GS = GameScene.GLOW_TEX_SIZE;
+    const wb = this.physics.world.bounds;
 
-    if (!this.textures.exists('__vision')) {
+    this.raycaster = this.raycasterPlugin.createRaycaster({
+      boundingBox: new Phaser.Geom.Rectangle(wb.x, wb.y, wb.width, wb.height),
+    });
+
+    const obstacles = this.getLightObstacles();
+    if (obstacles.length > 0) {
+      this.raycaster.mapGameObjects(obstacles, true);
+    }
+
+    this.ray = this.raycaster.createRay({
+      origin: { x: this.player.sprite.x, y: this.player.sprite.y },
+      autoSlice: true,
+    });
+
+    const baseDarkness = configManager.get<number>('lamp', 'darknessAlpha');
+    this.darknessAlpha = this.isCave ? baseDarkness : Math.min(baseDarkness, 0.88);
+
+    this.fow = this.add.renderTexture(wb.x, wb.y, wb.width, wb.height);
+    this.fow.setOrigin(0, 0);
+    this.fow.fill(0x000000, this.darknessAlpha);
+    this.fow.setDepth(800);
+    this.fow.setScrollFactor(1, 1);
+
+    if (!this.textures.exists('__lamp_eraser')) {
+      const ES = 256;
       const c = document.createElement('canvas');
-      c.width = VS;
-      c.height = VS;
+      c.width = ES;
+      c.height = ES;
       const ctx = c.getContext('2d')!;
-      const half = VS / 2;
+      const half = ES / 2;
       const g = ctx.createRadialGradient(half, half, 0, half, half, half);
       g.addColorStop(0, 'rgba(255,255,255,1)');
-      g.addColorStop(0.4, 'rgba(255,255,255,1)');
-      g.addColorStop(0.7, 'rgba(255,255,255,0.5)');
-      g.addColorStop(0.85, 'rgba(255,255,255,0.15)');
+      g.addColorStop(0.6, 'rgba(255,255,255,0.9)');
+      g.addColorStop(0.8, 'rgba(255,255,255,0.4)');
+      g.addColorStop(0.9, 'rgba(255,255,255,0.1)');
       g.addColorStop(1, 'rgba(255,255,255,0)');
       ctx.fillStyle = g;
-      ctx.fillRect(0, 0, VS, VS);
-      this.textures.addCanvas('__vision', c);
+      ctx.fillRect(0, 0, ES, ES);
+      this.textures.addCanvas('__lamp_eraser', c);
     }
+
+    this.fowEraser = this.make.sprite({ x: 0, y: 0, key: '__lamp_eraser', add: false });
+    this.fowEraser.setOrigin(0.5, 0.5);
 
     if (!this.textures.exists('__lamp_glow')) {
       const c = document.createElement('canvas');
@@ -947,33 +1138,21 @@ export class GameScene extends Phaser.Scene {
       this.textures.addCanvas('__lamp_glow', c);
     }
 
-    const cam = this.cameras.main;
-    const margin = Math.max(cam.width, cam.height);
-    const wb = this.physics.world.bounds;
-    const rtX = wb.x - margin;
-    const rtY = wb.y - margin;
-    const rtW = wb.width + margin * 2;
-    const rtH = wb.height + margin * 2;
-    this.darknessRT = this.add.renderTexture(rtX, rtY, rtW, rtH);
-    this.darknessRT.setOrigin(0, 0);
-    this.darknessRT.fill(0x000000, 1);
-    this.darknessRT.setDepth(800);
-
-    this.visionImage = this.make.image({
-      x: this.player.sprite.x,
-      y: this.player.sprite.y,
-      key: '__vision',
-      add: false,
-    });
-
-    const mask = new Phaser.Display.Masks.BitmapMask(this, this.visionImage);
-    mask.invertAlpha = true;
-    this.darknessRT.setMask(mask);
-
     this.warmGlow = this.add.sprite(0, 0, '__lamp_glow');
     this.warmGlow.setBlendMode(Phaser.BlendModes.ADD);
     this.warmGlow.setDepth(799);
     this.warmGlow.setOrigin(0.5, 0.5);
+  }
+
+  /** Gather wall bodies that should block light via raycasting. */
+  private getLightObstacles(): Phaser.GameObjects.GameObject[] {
+    const obstacles: Phaser.GameObjects.GameObject[] = [];
+
+    if (this.wallGroup) {
+      obstacles.push(...this.wallGroup.getChildren());
+    }
+
+    return obstacles;
   }
 
   private static readonly GLOW_COLORS: Record<string, [string, string, string, string]> = {
@@ -1067,18 +1246,52 @@ export class GameScene extends Phaser.Scene {
     const lerpSpeed = ratio < 0.33 ? 0.25 : 0.12;
     this.displayedRadius = Phaser.Math.Linear(this.displayedRadius, targetRadius, lerpSpeed);
 
-    this.visionImage.setPosition(this.player.sprite.x, this.player.sprite.y);
-
-    const visionScale = this.displayedRadius / (GameScene.VISION_TEX_SIZE * 0.5 * 0.4);
-    this.visionImage.setScale(Math.max(visionScale, 0.01));
-
     const px = this.player.sprite.x;
     const py = this.player.sprite.y;
+
+    const wb = this.physics.world.bounds;
+    this.fow.clear();
+    this.fow.fill(0x000000, this.darknessAlpha);
+    if (this.displayedRadius > 0) {
+      const eraserScale = (this.displayedRadius * 2) / 256;
+      this.fowEraser.setScale(eraserScale);
+      this.fow.erase(this.fowEraser, px - wb.x, py - wb.y);
+    }
+
+    this.updatePropShadows(px, py, this.displayedRadius);
+
     this.warmGlow.setPosition(px, py);
     const glowAlphaFlicker = 0.7 + Math.sin(t * 0.006) * 0.1 + Math.sin(t * 0.017) * 0.08;
     const glowScale = this.displayedRadius / (GameScene.GLOW_TEX_SIZE * 0.25);
     this.warmGlow.setScale(Math.max(glowScale, 0.01));
     this.warmGlow.setAlpha(ratio > 0 ? glowAlphaFlicker : 0);
+  }
+
+  /** Projects prop shadows away from the lamp based on angle and distance. */
+  private updatePropShadows(lampX: number, lampY: number, radius: number): void {
+    for (const { shadow, source } of this.propShadows) {
+      const sx = source.x;
+      const sy = source.y;
+      const dx = sx - lampX;
+      const dy = sy - lampY;
+      const dist = Math.sqrt(dx * dx + dy * dy);
+
+      if (radius <= 0 || dist > radius * 1.2) {
+        shadow.setAlpha(0);
+        continue;
+      }
+
+      const angle = Math.atan2(dy, dx);
+      const proximity = Phaser.Math.Clamp(1 - dist / radius, 0, 1);
+      const shadowLength = 0.3 + proximity * 0.5;
+      const offsetDist = 8 + (1 - proximity) * 20;
+
+      shadow.setPosition(sx + Math.cos(angle) * offsetDist, sy + Math.sin(angle) * offsetDist);
+
+      shadow.setScale(source.scaleX * (1 + shadowLength * 0.3), source.scaleY * (1 + shadowLength));
+      shadow.setAngle(source.angle);
+      shadow.setAlpha(0.6 * proximity);
+    }
   }
 
   private handleLampOut(): void {

@@ -4,6 +4,7 @@
   "private": true,
   "type": "module",
   "scripts": {
+    "postinstall": "patch-package",
     "dev": "vite",
     "build": "tsc && vite build",
     "preview": "vite preview",
@@ -18,6 +19,7 @@
   },
   "dependencies": {
     "phaser": "^3.87.0",
+    "phaser-raycaster": "^0.11.0",
     "zod": "^3.24.0"
   },
   "devDependencies": {
@@ -28,6 +30,7 @@
     "eslint-config-prettier": "^10.1.0",
     "husky": "^9.1.0",
     "lint-staged": "^15.5.0",
+    "patch-package": "^8.0.1",
     "prettier": "^3.5.0",
     "tsx": "^4.19.0",
     "typescript": "^5.8.0",
