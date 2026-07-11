@@ -294,16 +294,19 @@ export class GameScene extends Phaser.Scene {
     const scale = targetHeight / frameHeight;
     this.player.sprite.setScale(scale);
 
+    const maxSpeed =
+      this.sceneDef?.playerMaxSpeed ?? configManager.get<number>('player', 'maxSpeed');
+
     const movement = this.player.getComponent<Movement>('movement');
     if (movement) {
-      movement.maxSpeed = configManager.get<number>('player', 'maxSpeed');
+      movement.maxSpeed = maxSpeed;
       movement.acceleration = configManager.get<number>('player', 'acceleration');
       movement.friction = configManager.get<number>('player', 'friction');
     }
 
     const stats = this.player.getComponent<StatSheet>('stats');
     if (stats) {
-      stats.setBase('moveSpeed', configManager.get<number>('player', 'maxSpeed'));
+      stats.setBase('moveSpeed', maxSpeed);
       stats.setBase('pickupRadius', configManager.get<number>('player', 'pickupRadius'));
     }
 

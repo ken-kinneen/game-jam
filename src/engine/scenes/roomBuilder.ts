@@ -196,8 +196,8 @@ function buildProceduralCave(
   }
 
   const TILE = CAVE_TILE_PX;
-  const width = Phaser.Math.Clamp(gen.roomCount[1] * 8, 24, 70);
-  const height = Phaser.Math.Clamp(gen.roomCount[0] * 8, 24, 70);
+  const width = Phaser.Math.Clamp(gen.roomCount[1] * 8, 24, 120);
+  const height = Phaser.Math.Clamp(gen.roomCount[0] * 8, 24, 120);
 
   const map = generateCave({
     seed: gen.seed,
@@ -221,24 +221,24 @@ function buildProceduralCave(
   const canvasH = map.height * TILE;
 
   if (scene.textures.exists('tilesets/cave_floor')) {
-    const floorImg = scene.add.image(canvasW / 2, canvasH / 2, 'tilesets/cave_floor');
-    floorImg.setDisplaySize(canvasW, canvasH);
-    floorImg.setDepth(-2);
+    const floorTile = scene.add.tileSprite(
+      canvasW / 2,
+      canvasH / 2,
+      canvasW,
+      canvasH,
+      'tilesets/cave_floor',
+    );
+    const srcW = scene.textures.get('tilesets/cave_floor').getSourceImage().width;
+    const floorTileScale = gen.floorTileScale ?? 6;
+    const tileScale = (TILE * floorTileScale) / srcW;
+    floorTile.setTileScale(tileScale, tileScale);
+    floorTile.setDepth(-2);
   } else {
     const fallback = scene.add.rectangle(canvasW / 2, canvasH / 2, canvasW, canvasH, 0x252525);
     fallback.setDepth(-2);
   }
 
-  const gfx = scene.add.graphics();
-  gfx.fillStyle(0x0a0e12, 0.82);
-  for (let gy = 0; gy < map.height; gy++) {
-    for (let gx = 0; gx < map.width; gx++) {
-      if (map.grid[gy][gx] !== 0) continue;
-      gfx.fillRect(gx * TILE, gy * TILE, TILE, TILE);
-    }
-  }
-  gfx.setDepth(-1);
-
+  // Collision bodies on wall cells (invisible — no visual wall overlay)
   const wallGroup = scene.physics.add.staticGroup();
   for (let gy = 0; gy < map.height; gy++) {
     for (let gx = 0; gx < map.width; gx++) {

@@ -6,7 +6,7 @@
     "method": "tileFloor",
     "width": 299,
     "height": 299,
-    "wallThickness": 25,
+    "wallThickness": 15,
     "tileSize": 80,
     "tileImage": "tilesets/home_floor"
   },

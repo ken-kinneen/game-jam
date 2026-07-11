@@ -23,6 +23,8 @@ const RoomsGenerationSchema = z.object({
   exitCount: z.number().int().positive().default(2),
   openItemCount: z.number().int().nonnegative().default(8),
   behindWallItemCount: z.number().int().nonnegative().default(3),
+  /** How many cave tiles one floor texture tile covers. Higher = bigger tiles. */
+  floorTileScale: z.number().positive().default(6),
   spawnTables: z
     .object({
       enemies: z.string().optional(),
@@ -129,6 +131,8 @@ export const SceneDefSchema = z.object({
   shops: z.array(ShopSchema).default([]),
   props: z.array(PropSchema).default([]),
   playerSpawn: z.object({ x: z.number(), y: z.number() }).optional(),
+  /** Per-scene override for player max speed. Falls back to playerConfig default. */
+  playerMaxSpeed: z.number().positive().optional(),
 });
 
 export type SceneDef = z.infer<typeof SceneDefSchema>;

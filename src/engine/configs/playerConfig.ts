@@ -9,10 +9,10 @@ export const playerConfig: ConfigSection = {
       key: 'height',
       label: 'Sprite Height (px)',
       type: 'number',
-      min: 92,
+      min: 85,
       max: 92,
       step: 1,
-      defaultValue: 92,
+      defaultValue: 85,
     },
     {
       key: 'maxSpeed',
@@ -21,7 +21,7 @@ export const playerConfig: ConfigSection = {
       min: 20,
       max: 600,
       step: 10,
-      defaultValue: 100,
+      defaultValue: 60,
     },
     {
       key: 'acceleration',

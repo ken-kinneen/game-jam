@@ -2,10 +2,12 @@
   "id": "core:cave",
   "type": "scene",
   "kind": "cave",
+  "playerMaxSpeed": 120,
   "generation": {
     "method": "rooms",
-    "roomCount": [4, 6],
+    "roomCount": [8, 12],
     "fillRatio": 0.46,
+    "floorTileScale": 40,
     "pillarCount": 5,
     "spawnTables": {
       "trash": "core:cave_trash"

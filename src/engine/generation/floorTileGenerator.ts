@@ -527,7 +527,11 @@ function generateSeamlessWallCanvas(size: number): HTMLCanvasElement {
   return canvas;
 }
 
-/** Draws seamless textured wall borders around the room using TileSprite strips. */
+/**
+ * Draws walls that look like raised ledges seen from above.
+ * Each wall has: a top face (dark textured), a visible inner face (lighter
+ * vertical surface), and a shadow cast onto the floor.
+ */
 function drawWalls(
   scene: Phaser.Scene,
   width: number,
@@ -544,42 +548,117 @@ function drawWalls(
     scene.textures.addCanvas(texKey, wallCanvas);
   }
 
-  // Top wall
-  const top = scene.add.tileSprite(width / 2, wallThickness / 2, width, wallThickness, texKey);
-  top.setDepth(0);
+  // The "ledge" — how many pixels of visible inner face each wall shows.
+  // This is the strip between the wall top and the floor that sells the height.
+  const ledge = Math.max(3, Math.round(wallThickness * 0.22));
 
-  // Bottom wall
-  const bottom = scene.add.tileSprite(
+  const ix = wallThickness;
+  const iy = wallThickness;
+  const iw = width - wallThickness * 2;
+  const ih = height - wallThickness * 2;
+
+  // ── 1. Wall top faces (the flat surface you look down on) ──
+  const topW = scene.add.tileSprite(width / 2, wallThickness / 2, width, wallThickness, texKey);
+  topW.setDepth(0);
+  const botW = scene.add.tileSprite(
     width / 2,
     height - wallThickness / 2,
     width,
     wallThickness,
     texKey,
   );
-  bottom.setDepth(0);
-
-  // Left wall
-  const left = scene.add.tileSprite(wallThickness / 2, height / 2, wallThickness, height, texKey);
-  left.setDepth(0);
-
-  // Right wall
-  const right = scene.add.tileSprite(
+  botW.setDepth(0);
+  const lefW = scene.add.tileSprite(wallThickness / 2, height / 2, wallThickness, height, texKey);
+  lefW.setDepth(0);
+  const rigW = scene.add.tileSprite(
     width - wallThickness / 2,
     height / 2,
     wallThickness,
     height,
     texKey,
   );
-  right.setDepth(0);
+  rigW.setDepth(0);
 
-  // Inner edge highlight
-  const gfx = scene.add.graphics();
-  gfx.setDepth(1);
-  gfx.lineStyle(1, 0x111111, 0.6);
-  gfx.strokeRect(
-    wallThickness,
-    wallThickness,
-    width - wallThickness * 2,
-    height - wallThickness * 2,
-  );
+  // Darken the wall tops slightly — they're the "top" of a thick slab
+  const topDarken = scene.add.graphics();
+  topDarken.setDepth(0);
+  topDarken.fillStyle(0x000000, 0.15);
+  topDarken.fillRect(0, 0, width, wallThickness);
+  topDarken.fillRect(0, height - wallThickness, width, wallThickness);
+  topDarken.fillRect(0, wallThickness, wallThickness, ih);
+  topDarken.fillRect(width - wallThickness, wallThickness, wallThickness, ih);
+
+  // ── 2. Inner face ledges (the vertical surface visible from above) ──
+  // These are lighter strips along the inner edge of each wall.
+  // Light comes from upper-left, so:
+  //   top wall inner face (facing down): medium-lit
+  //   left wall inner face (facing right): medium-lit
+  //   bottom wall inner face (facing up): brightest (catches light)
+  //   right wall inner face (facing left): brightest
+
+  const faces = scene.add.graphics();
+  faces.setDepth(1);
+
+  // Top wall inner face — medium brightness, gradient lighter at top → darker at bottom
+  faces.fillGradientStyle(0x6b6358, 0x6b6358, 0x3d3830, 0x3d3830, 1, 1, 1, 1);
+  faces.fillRect(ix, iy, iw, ledge);
+
+  // Left wall inner face — medium brightness
+  faces.fillGradientStyle(0x6b6358, 0x3d3830, 0x6b6358, 0x3d3830, 1, 1, 1, 1);
+  faces.fillRect(ix, iy, ledge, ih);
+
+  // Bottom wall inner face — brightest (catches overhead light)
+  faces.fillGradientStyle(0x4a4438, 0x4a4438, 0x7a7266, 0x7a7266, 1, 1, 1, 1);
+  faces.fillRect(ix, iy + ih - ledge, iw, ledge);
+
+  // Right wall inner face — brightest
+  faces.fillGradientStyle(0x4a4438, 0x7a7266, 0x4a4438, 0x7a7266, 1, 1, 1, 1);
+  faces.fillRect(ix + iw - ledge, iy, ledge, ih);
+
+  // Corner miters where ledge faces meet — fill with darkest shade
+  faces.fillStyle(0x2e2a24, 1);
+  faces.fillRect(ix, iy, ledge, ledge); // TL
+  faces.fillRect(ix + iw - ledge, iy, ledge, ledge); // TR
+  faces.fillRect(ix, iy + ih - ledge, ledge, ledge); // BL
+  faces.fillRect(ix + iw - ledge, iy + ih - ledge, ledge, ledge); // BR
+
+  // ── 3. Shadow cast onto the floor ──
+  const shadowSize = Math.max(8, Math.round(wallThickness * 0.8));
+  const shadows = scene.add.graphics();
+  shadows.setDepth(1);
+
+  // Top wall shadow — strongest (light from above-left hits this wall)
+  shadows.fillGradientStyle(0x000000, 0x000000, 0x000000, 0x000000, 0.5, 0.5, 0, 0);
+  shadows.fillRect(ix, iy + ledge, iw, shadowSize);
+
+  // Left wall shadow — strong
+  shadows.fillGradientStyle(0x000000, 0x000000, 0x000000, 0x000000, 0.5, 0, 0.5, 0);
+  shadows.fillRect(ix + ledge, iy, shadowSize, ih);
+
+  // Bottom wall shadow — subtle (facing light)
+  shadows.fillGradientStyle(0x000000, 0x000000, 0x000000, 0x000000, 0, 0, 0.2, 0.2);
+  shadows.fillRect(ix, iy + ih - ledge - shadowSize, iw, shadowSize);
+
+  // Right wall shadow — subtle
+  shadows.fillGradientStyle(0x000000, 0x000000, 0x000000, 0x000000, 0, 0.2, 0, 0.2);
+  shadows.fillRect(ix + iw - ledge - shadowSize, iy, shadowSize, ih);
+
+  // Corner shadow vignettes
+  const cs = Math.max(10, Math.round(wallThickness * 1.0));
+
+  // TL corner — darkest
+  shadows.fillGradientStyle(0x000000, 0x000000, 0x000000, 0x000000, 0.55, 0, 0, 0);
+  shadows.fillRect(ix + ledge, iy + ledge, cs, cs);
+
+  // TR corner
+  shadows.fillGradientStyle(0x000000, 0x000000, 0x000000, 0x000000, 0, 0.35, 0, 0);
+  shadows.fillRect(ix + iw - ledge - cs, iy + ledge, cs, cs);
+
+  // BL corner
+  shadows.fillGradientStyle(0x000000, 0x000000, 0x000000, 0x000000, 0, 0, 0.35, 0);
+  shadows.fillRect(ix + ledge, iy + ih - ledge - cs, cs, cs);
+
+  // BR corner — lightest
+  shadows.fillGradientStyle(0x000000, 0x000000, 0x000000, 0x000000, 0, 0, 0, 0.2);
+  shadows.fillRect(ix + iw - ledge - cs, iy + ih - ledge - cs, cs, cs);
 }
