@@ -26,5 +26,9 @@
   "tilesets/shop_floor": { "file": "sprites/tilesets/shop_floor.png", "type": "image" },
   "furniture/workbench": { "file": "sprites/furniture/workbench.png", "type": "image" },
   "furniture/shelves": { "file": "sprites/furniture/shelves.png", "type": "image" },
-  "furniture/shelves_parts": { "file": "sprites/furniture/shelves_parts.png", "type": "image" }
+  "furniture/shelves_parts": { "file": "sprites/furniture/shelves_parts.png", "type": "image" },
+  "tilesets/home_floor_2": { "file": "sprites/tilesets/home_floor_2.png", "type": "image" },
+  "tilesets/home_floor_3": { "file": "sprites/tilesets/home_floor_3.png", "type": "image" },
+  "tilesets/home_floor_4": { "file": "sprites/tilesets/home_floor_4.png", "type": "image" },
+  "tilesets/home_floor_5": { "file": "sprites/tilesets/home_floor_5.png", "type": "image" }
 }

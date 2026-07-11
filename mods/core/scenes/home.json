@@ -4,77 +4,17 @@
   "kind": "home",
   "generation": {
     "method": "tileFloor",
-    "width": 299,
-    "height": 299,
-    "wallThickness": 25,
-    "tileSize": 80,
-    "tileImage": "tilesets/home_floor"
+    "width": 2048,
+    "height": 2048,
+    "wallThickness": 40,
+    "tileSize": 512,
+    "tileImage": "tilesets/home_floor_5"
   },
-  "props": [
-    {
-      "image": "furniture/bed",
-      "position": { "x": 59, "y": 87 },
-      "height": 115,
-      "depth": 2,
-      "collides": true,
-      "angle": 0
-    },
-    {
-      "image": "furniture/hatch_grate",
-      "position": { "x": 150, "y": 238 },
-      "height": 54,
-      "depth": 1,
-      "collides": false,
-      "action": "exit",
-      "actionTarget": "core:cave",
-      "actionLabel": "Enter Cave",
-      "fx": ["shine"]
-    },
-    {
-      "image": "furniture/desk",
-      "position": { "x": 155, "y": 52 },
-      "height": 62,
-      "angle": 0,
-      "depth": 2,
-      "collides": true,
-      "action": "upgrade",
-      "actionLabel": "Upgrades"
-    },
-    {
-      "image": "furniture/drawers",
-      "position": { "x": 242, "y": 156 },
-      "height": 54,
-      "depth": 2,
-      "angle": 90,
-      "collides": true,
-      "action": "exit",
-      "actionTarget": "core:demo",
-      "actionLabel": "FX Demo"
-    },
-    {
-      "image": "furniture/workbench",
-      "position": { "x": 68, "y": 236 },
-      "height": 61,
-      "depth": 2,
-      "collides": true,
-      "angle": 0
-    },
-    {
-      "image": "furniture/shelves",
-      "position": { "x": 245, "y": 60 },
-      "height": 64,
-      "depth": 2,
-      "collides": true
-    },
-    {
-      "image": "furniture/shelves_parts",
-      "position": { "x": 245, "y": 243 },
-      "height": 58,
-      "depth": 2,
-      "collides": true
-    }
-  ],
+  "props": [],
   "exits": [],
   "shops": [],
-  "playerSpawn": { "x": 120, "y": 125 }
+  "playerSpawn": {
+    "x": 1023,
+    "y": 1953
+  }
 }
