@@ -4,77 +4,102 @@
   "kind": "home",
   "generation": {
     "method": "tileFloor",
-    "width": 299,
-    "height": 299,
-    "wallThickness": 15,
+    "width": 512,
+    "height": 512,
+    "wallThickness": 25,
     "tileSize": 80,
-    "tileImage": "tilesets/home_floor"
+    "tileImage": "tilesets/home_floor_18"
   },
   "props": [
     {
-      "image": "furniture/bed",
-      "position": { "x": 59, "y": 87 },
-      "height": 115,
+      "image": "furniture/bed_3",
+      "position": {
+        "x": 85,
+        "y": 240
+      },
+      "scale": 0.3,
       "depth": 2,
       "collides": true,
       "angle": 0
     },
     {
-      "image": "furniture/hatch_grate",
-      "position": { "x": 150, "y": 238 },
-      "height": 54,
-      "depth": 1,
-      "collides": false,
-      "action": "exit",
-      "actionTarget": "core:cave",
-      "actionLabel": "Enter Cave",
-      "fx": ["shine"]
-    },
-    {
-      "image": "furniture/desk",
-      "position": { "x": 155, "y": 52 },
-      "height": 62,
-      "angle": 0,
-      "depth": 2,
-      "collides": true,
-      "action": "upgrade",
-      "actionLabel": "Upgrades"
-    },
-    {
-      "image": "furniture/drawers",
-      "position": { "x": 242, "y": 156 },
-      "height": 54,
-      "depth": 2,
-      "angle": 90,
-      "collides": true,
-      "action": "exit",
-      "actionTarget": "core:demo",
-      "actionLabel": "FX Demo"
-    },
-    {
-      "image": "furniture/workbench",
-      "position": { "x": 68, "y": 236 },
-      "height": 61,
+      "image": "furniture/bed_8",
+      "position": {
+        "x": 288,
+        "y": 79
+      },
+      "scale": 0.32,
       "depth": 2,
       "collides": true,
       "angle": 0
     },
     {
-      "image": "furniture/shelves",
-      "position": { "x": 245, "y": 60 },
-      "height": 64,
+      "image": "furniture/bed_10",
+      "position": {
+        "x": 446,
+        "y": 70
+      },
+      "scale": 0.24,
       "depth": 2,
-      "collides": true
+      "collides": true,
+      "angle": 0
     },
     {
-      "image": "furniture/shelves_parts",
-      "position": { "x": 245, "y": 243 },
-      "height": 58,
+      "image": "furniture/bed_11",
+      "position": {
+        "x": 273,
+        "y": 436
+      },
+      "scale": 0.28,
       "depth": 2,
-      "collides": true
+      "collides": true,
+      "angle": 0
+    },
+    {
+      "image": "furniture/bed_15",
+      "position": {
+        "x": 445,
+        "y": 232
+      },
+      "scale": 0.21,
+      "depth": 2,
+      "collides": true,
+      "angle": 90
+    },
+    {
+      "image": "furniture/bed_13",
+      "position": {
+        "x": 447,
+        "y": 374
+      },
+      "scale": 0.18,
+      "depth": 2,
+      "collides": true,
+      "angle": 90
     }
   ],
-  "exits": [],
-  "shops": [],
-  "playerSpawn": { "x": 120, "y": 125 }
+  "exits": [
+    {
+      "to": "core:cave",
+      "condition": "always",
+      "label": "Exit",
+      "position": {
+        "x": 270,
+        "y": 432
+      }
+    }
+  ],
+  "shops": [
+    {
+      "label": "Shop",
+      "position": {
+        "x": 288,
+        "y": 91
+      }
+    }
+  ],
+  "playerSpawn": {
+    "x": 271,
+    "y": 256
+  }
 }

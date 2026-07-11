@@ -21,6 +21,7 @@ import { ZoneManager } from './zoneManager';
 import { buildSceneRoom } from './roomBuilder';
 import { LampRenderer } from './lampRenderer';
 import { spawnGroundItems, spawnFuelItems, spawnProceduralItems } from './itemSpawner';
+import { AmbienceSystem } from '../systems/AmbienceSystem';
 
 /**
  * ONE generic GameScene configured by a SceneDef.
@@ -37,6 +38,7 @@ export class GameScene extends Phaser.Scene {
   private director!: SceneDirector;
   private zoneManager!: ZoneManager;
   private lampRenderer!: LampRenderer;
+  private ambienceSystem!: AmbienceSystem;
 
   private sceneDefId = 'core:home';
   private sceneDef: SceneDef | undefined;
@@ -114,6 +116,8 @@ export class GameScene extends Phaser.Scene {
     );
     this.lampRenderer.create();
 
+    this.ambienceSystem = new AmbienceSystem(this, this.player, this.isCave);
+
     if (this.isCave) {
       this.unsubFuel = eventBus.on('item:picked_up', ({ itemId }) => {
         const def = registry.get('item', itemId);
@@ -147,6 +151,8 @@ export class GameScene extends Phaser.Scene {
     this.applyCameraConfig();
     this.applyPlayerConfig();
     this.applyAudioConfig();
+
+    this.ambienceSystem.create(this.proceduralCaveMap);
 
     const savedColor = configManager.get<string>('lamp', 'glowColorName');
     if (savedColor && savedColor !== 'default') {
@@ -201,6 +207,7 @@ export class GameScene extends Phaser.Scene {
     }
 
     this.lampRenderer.update(this.zoneManager.propShadows);
+    this.ambienceSystem.update();
   }
 
   /** Expose player stats so ShopScene can apply upgrades. */
