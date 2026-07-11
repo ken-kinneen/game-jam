@@ -14,8 +14,8 @@
     {
       "image": "furniture/bed_3",
       "position": {
-        "x": 85,
-        "y": 240
+        "x": 104,
+        "y": 155
       },
       "scale": 0.3,
       "depth": 2,
@@ -25,10 +25,10 @@
     {
       "image": "furniture/bed_8",
       "position": {
-        "x": 288,
-        "y": 79
+        "x": 287,
+        "y": 114
       },
-      "scale": 0.32,
+      "scale": 0.3,
       "depth": 2,
       "collides": true,
       "angle": 0
@@ -36,19 +36,19 @@
     {
       "image": "furniture/bed_10",
       "position": {
-        "x": 446,
-        "y": 70
+        "x": 424,
+        "y": 143
       },
       "scale": 0.24,
-      "depth": 2,
+      "depth": 1,
       "collides": true,
       "angle": 0
     },
     {
       "image": "furniture/bed_11",
       "position": {
-        "x": 273,
-        "y": 436
+        "x": 190,
+        "y": 394
       },
       "scale": 0.28,
       "depth": 2,
@@ -58,8 +58,8 @@
     {
       "image": "furniture/bed_15",
       "position": {
-        "x": 445,
-        "y": 232
+        "x": 414,
+        "y": 283
       },
       "scale": 0.21,
       "depth": 2,
@@ -69,13 +69,167 @@
     {
       "image": "furniture/bed_13",
       "position": {
-        "x": 447,
-        "y": 374
+        "x": 416,
+        "y": 411
       },
       "scale": 0.18,
       "depth": 2,
       "collides": true,
       "angle": 90
+    },
+    {
+      "image": "furniture/bed_4",
+      "position": {
+        "x": 2,
+        "y": 455
+      },
+      "scale": 0.2,
+      "depth": 2,
+      "collides": true,
+      "angle": 90
+    },
+    {
+      "image": "furniture/bed_5",
+      "position": {
+        "x": 0,
+        "y": 324
+      },
+      "scale": 0.22,
+      "depth": 2,
+      "collides": true,
+      "angle": 90
+    },
+    {
+      "image": "furniture/bed_4",
+      "position": {
+        "x": 117,
+        "y": 0
+      },
+      "scale": 0.22,
+      "depth": 2,
+      "collides": true,
+      "angle": 0
+    },
+    {
+      "image": "furniture/bed_5",
+      "position": {
+        "x": 0,
+        "y": 184
+      },
+      "scale": 0.22,
+      "depth": 2,
+      "collides": true,
+      "angle": 90
+    },
+    {
+      "image": "furniture/bed_2",
+      "position": {
+        "x": 0,
+        "y": 65
+      },
+      "scale": 0.22,
+      "depth": 2,
+      "collides": true,
+      "angle": 90
+    },
+    {
+      "image": "furniture/bed_5",
+      "position": {
+        "x": 253,
+        "y": 0
+      },
+      "scale": 0.22,
+      "depth": 2,
+      "collides": true,
+      "angle": 0
+    },
+    {
+      "image": "furniture/bed_4",
+      "position": {
+        "x": 390,
+        "y": 0
+      },
+      "scale": 0.21,
+      "depth": 2,
+      "collides": true,
+      "angle": 0
+    },
+    {
+      "image": "furniture/bed_2",
+      "position": {
+        "x": 512,
+        "y": 0
+      },
+      "scale": 0.2,
+      "depth": 2,
+      "collides": true,
+      "angle": 0
+    },
+    {
+      "image": "furniture/bed_4",
+      "position": {
+        "x": 512,
+        "y": 114
+      },
+      "scale": 0.24,
+      "depth": 2,
+      "collides": true,
+      "angle": 270
+    },
+    {
+      "image": "furniture/bed_5",
+      "position": {
+        "x": 512,
+        "y": 269
+      },
+      "scale": 0.26,
+      "depth": 2,
+      "collides": true,
+      "angle": 270
+    },
+    {
+      "image": "furniture/bed_5",
+      "position": {
+        "x": 512,
+        "y": 438
+      },
+      "scale": 0.26,
+      "depth": 2,
+      "collides": true,
+      "angle": 270
+    },
+    {
+      "image": "furniture/bed_4",
+      "position": {
+        "x": 405,
+        "y": 512
+      },
+      "scale": 0.22,
+      "depth": 2,
+      "collides": true,
+      "angle": 0
+    },
+    {
+      "image": "furniture/bed_5",
+      "position": {
+        "x": 118,
+        "y": 512
+      },
+      "scale": 0.25,
+      "depth": 2,
+      "collides": true,
+      "angle": 0
+    },
+    {
+      "image": "furniture/bed_4",
+      "position": {
+        "x": 268,
+        "y": 512
+      },
+      "scale": 0.23,
+      "depth": 2,
+      "collides": true,
+      "angle": 0
     }
   ],
   "exits": [
@@ -84,8 +238,8 @@
       "condition": "always",
       "label": "Exit",
       "position": {
-        "x": 270,
-        "y": 432
+        "x": 189,
+        "y": 390
       }
     }
   ],
@@ -93,15 +247,13 @@
     {
       "label": "Shop",
       "position": {
-        "x": 288,
-        "y": 91
+        "x": 297,
+        "y": 111
       }
     }
   ],
   "playerSpawn": {
-    "x": 271,
-    "y": 256
-  },
-  "playerHeight": 125,
-  "playerMaxSpeed": 110
+    "x": 273,
+    "y": 248
+  }
 }

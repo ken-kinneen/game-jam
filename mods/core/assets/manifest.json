@@ -42,5 +42,8 @@
   "furniture/bed_11": { "file": "sprites/furniture/bed_11.png", "type": "image" },
   "furniture/bed_13": { "file": "sprites/furniture/bed_13.png", "type": "image" },
   "furniture/bed_15": { "file": "sprites/furniture/bed_15.png", "type": "image" },
-  "furniture/desk_3": { "file": "sprites/furniture/desk_3.png", "type": "image" }
+  "furniture/desk_3": { "file": "sprites/furniture/desk_3.png", "type": "image" },
+  "furniture/bed_2": { "file": "sprites/furniture/bed_2.png", "type": "image" },
+  "furniture/bed_4": { "file": "sprites/furniture/bed_4.png", "type": "image" },
+  "furniture/bed_5": { "file": "sprites/furniture/bed_5.png", "type": "image" }
 }

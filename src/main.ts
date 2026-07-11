@@ -8,6 +8,7 @@ import { GameScene } from './engine/scenes/GameScene';
 import { UIScene } from './engine/scenes/UIScene';
 import { ShopScene } from './engine/scenes/ShopScene';
 import { UpgradeScene } from './engine/scenes/UpgradeScene';
+import { CutsceneScene } from './engine/scenes/CutsceneScene';
 import { DebugPanel } from './ui/DebugPanel';
 import { cameraConfig } from './engine/configs/cameraConfig';
 import { playerConfig } from './engine/configs/playerConfig';
@@ -125,7 +126,7 @@ async function boot() {
         },
       ],
     },
-    scene: [BootScene, GameScene, UIScene, ShopScene, UpgradeScene],
+    scene: [BootScene, GameScene, UIScene, ShopScene, UpgradeScene, CutsceneScene],
   });
 
   game.scene.start('BootScene', { manifests });

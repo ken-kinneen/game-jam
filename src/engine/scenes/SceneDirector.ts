@@ -18,6 +18,12 @@ export class SceneDirector {
     private eventBus: EventBus,
   ) {}
 
+  /** Sync state with the actual scene that was loaded (e.g. from BootScene). */
+  syncState(sceneId: string, isCave: boolean): void {
+    this.state.currentSceneId = sceneId;
+    this.state.isInCave = isCave;
+  }
+
   /** Get the current scene ID. */
   get currentSceneId(): string {
     return this.state.currentSceneId;
@@ -36,17 +42,34 @@ export class SceneDirector {
       return;
     }
 
+    const leavingCave = this.state.isInCave && sceneDef.kind !== 'cave';
+
     this.eventBus.emit('scene:exit', { sceneId: this.state.currentSceneId });
 
     this.state.currentSceneId = sceneId;
     this.state.isInCave = sceneDef.kind === 'cave';
 
-    // GameScene.create() emits scene:enter after restart completes
-    phaserScene.scene.restart({ sceneId });
+    if (leavingCave) {
+      phaserScene.scene.start('CutsceneScene', {
+        video: 'cutscene_cave_exit',
+        nextSceneId: sceneId,
+      });
+    } else {
+      phaserScene.scene.restart({ sceneId });
+    }
   }
 
   /** Reset run state when returning home from a cave. */
   returnHome(phaserScene: Phaser.Scene): void {
-    this.transitionTo('core:home', phaserScene);
+    if (this.state.isInCave) {
+      this.state.currentSceneId = 'core:home';
+      this.state.isInCave = false;
+      phaserScene.scene.start('CutsceneScene', {
+        video: 'cutscene_cave_exit',
+        nextSceneId: 'core:home',
+      });
+    } else {
+      this.transitionTo('core:home', phaserScene);
+    }
   }
 }

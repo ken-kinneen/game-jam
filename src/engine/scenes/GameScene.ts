@@ -75,6 +75,7 @@ export class GameScene extends Phaser.Scene {
 
     this.sceneDef = registry.get('scene', this.sceneDefId);
     this.isCave = this.sceneDef?.kind === 'cave';
+    this.director.syncState(this.sceneDefId, this.isCave);
     this.shopOpen = false;
 
     const room = buildSceneRoom(this, this.sceneDef, this.isCave);
