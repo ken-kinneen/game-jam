@@ -93,6 +93,9 @@ const ShopSchema = z.object({
   position: z.object({ x: z.number(), y: z.number() }),
 });
 
+/** Built-in Phaser preFX effects that can be applied to props via JSON. */
+const PropFxSchema = z.enum(['shine', 'glow', 'shadow', 'bloom']);
+
 const PropSchema = z.object({
   image: z.string(),
   position: z.object({ x: z.number(), y: z.number() }),
@@ -102,11 +105,13 @@ const PropSchema = z.object({
   /** Visual rotation in degrees. Arcade physics bodies stay axis-aligned. */
   angle: z.number().default(0),
   /** If set, this prop acts as an interaction point when the player presses E nearby. */
-  action: z.enum(['shop', 'exit']).optional(),
+  action: z.enum(['shop', 'exit', 'upgrade']).optional(),
   /** For exit actions: the scene to transition to. */
   actionTarget: z.string().optional(),
   /** Label shown in the [E] prompt when near this prop. */
   actionLabel: z.string().optional(),
+  /** Phaser preFX effects to apply permanently to this prop. */
+  fx: z.array(PropFxSchema).default([]),
 });
 
 /** Schema for scene content definitions. */

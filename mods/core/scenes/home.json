@@ -27,7 +27,8 @@
       "collides": false,
       "action": "exit",
       "actionTarget": "core:cave",
-      "actionLabel": "Enter Cave"
+      "actionLabel": "Enter Cave",
+      "fx": ["shine"]
     },
     {
       "image": "furniture/desk",
@@ -36,7 +37,7 @@
       "angle": 0,
       "depth": 2,
       "collides": true,
-      "action": "shop",
+      "action": "upgrade",
       "actionLabel": "Upgrades"
     },
     {

@@ -372,8 +372,37 @@ export class GameScene extends Phaser.Scene {
         visual = img;
       }
 
+      if (prop.fx && prop.fx.length > 0 && visual?.preFX) {
+        this.applyPropFx(visual, prop.fx);
+      }
+
       if (prop.action) {
         this.registerPropInteraction(prop, visual);
+      }
+    }
+  }
+
+  /** Applies data-driven preFX effects from the prop's fx array. */
+  private applyPropFx(visual: Phaser.GameObjects.Image, fxList: string[]): void {
+    const fx = visual.preFX;
+    if (!fx) return;
+
+    for (const effect of fxList) {
+      switch (effect) {
+        case 'shine':
+          fx.addShine(0.5, 0.5, 3, false);
+          break;
+        case 'glow':
+          fx.setPadding(12);
+          fx.addGlow(0x00ff88, 4, 0, false);
+          break;
+        case 'shadow':
+          fx.setPadding(10);
+          fx.addShadow(3, 3, 0.1, 1, 0x000000, 6, 1);
+          break;
+        case 'bloom':
+          fx.addBloom(0xffffff, 1, 1, 1, 1.5, 4);
+          break;
       }
     }
   }
@@ -418,7 +447,7 @@ export class GameScene extends Phaser.Scene {
         displayLabel,
         propVisual: visual,
       });
-    } else if (prop.action === 'shop') {
+    } else if (prop.action === 'shop' || prop.action === 'upgrade') {
       const zoneSprite = this.physics.add.sprite(pos.x, pos.y, '__placeholder');
       zoneSprite.setDisplaySize(48, 48);
       zoneSprite.setAlpha(0);
@@ -435,7 +464,7 @@ export class GameScene extends Phaser.Scene {
         label,
         tooltip,
         displayLabel,
-        action: 'shop',
+        action: prop.action,
         propVisual: visual,
       });
     }
@@ -581,6 +610,8 @@ export class GameScene extends Phaser.Scene {
           }
         });
       }
+    } else if (zone.action === 'upgrade') {
+      this.scene.launch('UpgradeScene');
     }
   }
 
