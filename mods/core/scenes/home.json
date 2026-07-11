@@ -4,19 +4,31 @@
   "kind": "home",
   "generation": {
     "method": "tileFloor",
-    "width": 512,
-    "height": 480,
+    "width": 923,
+    "height": 775,
     "wallThickness": 32,
     "tileSize": 128,
     "tileImage": "tilesets/home_floor"
   },
   "props": [
     {
+      "image": "furniture/desk_2",
+      "position": {
+        "x": 194,
+        "y": 111
+      },
+      "scale": 0.4,
+      "depth": 2,
+      "collides": true,
+      "angle": 0
+    },
+    {
       "image": "furniture/bed",
       "position": { "x": 100, "y": 110 },
       "scale": 0.2,
       "depth": 2,
-      "collides": true
+      "collides": true,
+      "angle": 0
     },
     {
       "image": "furniture/hatch_grate",
@@ -54,7 +66,8 @@
       "position": { "x": 100, "y": 370 },
       "scale": 0.18,
       "depth": 2,
-      "collides": true
+      "collides": true,
+      "angle": 0
     }
   ],
   "exits": [],
