@@ -30,5 +30,17 @@
   "tilesets/home_floor_2": { "file": "sprites/tilesets/home_floor_2.png", "type": "image" },
   "tilesets/home_floor_3": { "file": "sprites/tilesets/home_floor_3.png", "type": "image" },
   "tilesets/home_floor_4": { "file": "sprites/tilesets/home_floor_4.png", "type": "image" },
-  "tilesets/home_floor_5": { "file": "sprites/tilesets/home_floor_5.png", "type": "image" }
+  "tilesets/home_floor_5": { "file": "sprites/tilesets/home_floor_5.png", "type": "image" },
+  "tilesets/home_floor_6": { "file": "sprites/tilesets/home_floor_6.png", "type": "image" },
+  "tilesets/home_floor_7": { "file": "sprites/tilesets/home_floor_7.png", "type": "image" },
+  "tilesets/home_floor_8": { "file": "sprites/tilesets/home_floor_8.png", "type": "image" },
+  "tilesets/home_floor_9": { "file": "sprites/tilesets/home_floor_9.png", "type": "image" },
+  "tilesets/home_floor_18": { "file": "sprites/tilesets/home_floor_18.png", "type": "image" },
+  "furniture/bed_3": { "file": "sprites/furniture/bed_3.png", "type": "image" },
+  "furniture/bed_8": { "file": "sprites/furniture/bed_8.png", "type": "image" },
+  "furniture/bed_10": { "file": "sprites/furniture/bed_10.png", "type": "image" },
+  "furniture/bed_11": { "file": "sprites/furniture/bed_11.png", "type": "image" },
+  "furniture/bed_13": { "file": "sprites/furniture/bed_13.png", "type": "image" },
+  "furniture/bed_15": { "file": "sprites/furniture/bed_15.png", "type": "image" },
+  "furniture/desk_3": { "file": "sprites/furniture/desk_3.png", "type": "image" }
 }
