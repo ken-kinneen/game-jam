@@ -3,41 +3,62 @@ import type { Entity } from '../entities/Entity';
 import type { SceneDef } from '../schemas/scene.schema';
 import type { SceneDirector } from './SceneDirector';
 import { spawnSceneProps, type PropShadow } from './propSpawner';
+import {
+  GlowLayer,
+  type Scene,
+  type AbstractMesh,
+  type Mesh,
+  type TransformNode,
+} from '@babylonjs/core';
+import type { CollisionWorld } from '../rendering/CollisionWorld';
+import { WORLD_SCALE } from '../entities/EntityFactory';
 
 export interface ExitZone {
-  sprite: Phaser.Physics.Arcade.Sprite;
-  label: Phaser.GameObjects.Text;
-  tooltip: Phaser.GameObjects.Text;
+  x: number;
+  y: number;
   to: string;
   displayLabel: string;
-  propVisual?: Phaser.GameObjects.Image;
+  propVisual?: AbstractMesh | TransformNode;
 }
 
 export interface InteractZone {
-  sprite: Phaser.Physics.Arcade.Sprite;
-  label: Phaser.GameObjects.Text;
-  tooltip: Phaser.GameObjects.Text;
+  x: number;
+  y: number;
   displayLabel: string;
   action: string;
-  propVisual?: Phaser.GameObjects.Image;
+  actionTarget?: string;
+  propVisual?: AbstractMesh | TransformNode;
 }
 
 export type { PropShadow } from './propSpawner';
 
-/** Manages exit/interact zones, props, tooltips, and proximity prompts. */
+type OverlayCallbacks = {
+  openShop: () => void;
+  openUpgrade: () => void;
+  setPrompt: (text: string | null) => void;
+};
+
+/** Manages exit/interact zones, props, and proximity prompts. */
 export class ZoneManager {
   readonly propShadows: PropShadow[] = [];
   private exitZones: ExitZone[] = [];
   private interactZones: InteractZone[] = [];
   private activeExit: ExitZone | null = null;
   private activeInteract: InteractZone | null = null;
-  private promptText!: Phaser.GameObjects.Text;
+  private transitioning = false;
+  private glowLayer: GlowLayer | null = null;
+  private readonly glowingMeshes = new Set<Mesh>();
+  private glowEnvelope = 0;
+  private glowTarget = 0;
+  private propDisposables: { dispose: () => void }[] = [];
 
   constructor(
-    private readonly scene: Phaser.Scene,
+    private readonly scene: Scene,
     private readonly sceneDef: SceneDef | undefined,
     private readonly director: SceneDirector,
     private player: Entity | undefined,
+    private readonly overlays: OverlayCallbacks,
+    private readonly collision: CollisionWorld,
   ) {}
 
   /** Resets zone state for a fresh scene load. */
@@ -47,6 +68,14 @@ export class ZoneManager {
     this.activeExit = null;
     this.activeInteract = null;
     this.propShadows.length = 0;
+    this.transitioning = false;
+    this.glowingMeshes.clear();
+    this.glowEnvelope = 0;
+    this.glowTarget = 0;
+    this.glowLayer?.dispose();
+    this.glowLayer = null;
+    for (const d of this.propDisposables) d.dispose();
+    this.propDisposables = [];
   }
 
   /** Sets the player reference after spawn. */
@@ -54,31 +83,36 @@ export class ZoneManager {
     this.player = player;
   }
 
-  /** Spawns all zones, props, and the on-screen prompt. */
+  /** Spawns all zones, props, and wires the on-screen prompt. */
   spawnAll(): void {
     this.spawnExitZones();
     this.spawnShopZones();
-    this.propShadows.push(
-      ...spawnSceneProps(this.scene, this.sceneDef, this.player, (prop, visual) =>
-        this.registerPropInteraction(prop, visual),
-      ),
+    const { shadows, walls, disposables } = spawnSceneProps(
+      this.scene,
+      this.sceneDef,
+      this.player,
+      (prop, visual) => this.registerPropInteraction(prop, visual),
     );
-    this.createPromptText();
+    this.propDisposables.push(...disposables);
+    this.propShadows.push(...shadows);
+    if (walls.length > 0) {
+      this.collision.setWalls([...this.collision.walls, ...walls]);
+    }
   }
 
   /** Checks proximity to interact zones and updates prompts. */
   checkInteractOverlap(): void {
     if (!this.player) return;
 
-    const px = this.player.sprite.x;
-    const py = this.player.sprite.y;
+    const px = this.player.x / WORLD_SCALE;
+    const py = this.player.y / WORLD_SCALE;
     const threshold = this.getInteractThreshold();
 
     let nearest: InteractZone | null = null;
     let nearestDist = Infinity;
 
     for (const zone of this.interactZones) {
-      const dist = this.distToZoneEdge(px, py, zone.propVisual, zone.sprite);
+      const dist = Math.hypot(zone.x - px, zone.y - py);
       if (dist < threshold && dist < nearestDist) {
         nearest = zone;
         nearestDist = dist;
@@ -86,22 +120,13 @@ export class ZoneManager {
     }
 
     if (nearest && nearest !== this.activeInteract && !this.activeExit) {
-      if (this.activeInteract) {
-        this.hideTooltip(this.activeInteract.tooltip);
-        this.setPropGlow(this.activeInteract.propVisual, false);
-      }
       this.activeInteract = nearest;
-      this.showTooltip(nearest.tooltip);
-      this.setPropGlow(nearest.propVisual, true);
-      this.promptText.setText(`E ${nearest.displayLabel}`);
-      this.promptText.setVisible(true);
+      this.overlays.setPrompt(`[E] ${nearest.displayLabel}`);
+      this.highlightProp(nearest.propVisual);
     } else if (!nearest && this.activeInteract) {
-      this.hideTooltip(this.activeInteract.tooltip);
-      this.setPropGlow(this.activeInteract.propVisual, false);
       this.activeInteract = null;
-      if (!this.activeExit) {
-        this.promptText.setVisible(false);
-      }
+      this.clearHighlight();
+      if (!this.activeExit) this.overlays.setPrompt(null);
     }
   }
 
@@ -109,15 +134,15 @@ export class ZoneManager {
   checkExitOverlap(): void {
     if (!this.player) return;
 
-    const px = this.player.sprite.x;
-    const py = this.player.sprite.y;
+    const px = this.player.x / WORLD_SCALE;
+    const py = this.player.y / WORLD_SCALE;
     const threshold = this.getInteractThreshold();
 
     let nearest: ExitZone | null = null;
     let nearestDist = Infinity;
 
     for (const zone of this.exitZones) {
-      const dist = this.distToZoneEdge(px, py, zone.propVisual, zone.sprite);
+      const dist = Math.hypot(zone.x - px, zone.y - py);
       if (dist < threshold && dist < nearestDist) {
         nearest = zone;
         nearestDist = dist;
@@ -125,110 +150,71 @@ export class ZoneManager {
     }
 
     if (nearest && nearest !== this.activeExit) {
-      if (this.activeExit) {
-        this.hideTooltip(this.activeExit.tooltip);
-        this.setPropGlow(this.activeExit.propVisual, false);
-      }
+      if (this.activeExit) eventBus.emit('exit:left', {});
       this.activeExit = nearest;
-      this.showTooltip(nearest.tooltip);
-      this.setPropGlow(nearest.propVisual, true);
-      this.promptText.setText(`E ${nearest.displayLabel}`);
-      this.promptText.setVisible(true);
+      this.activeInteract = null;
+      this.overlays.setPrompt(`[E] ${nearest.displayLabel}`);
+      this.highlightProp(nearest.propVisual);
       eventBus.emit('exit:nearby', { exitTo: nearest.to, label: nearest.displayLabel });
     } else if (!nearest && this.activeExit) {
-      this.hideTooltip(this.activeExit.tooltip);
-      this.setPropGlow(this.activeExit.propVisual, false);
-      this.activeExit = null;
-      this.promptText.setVisible(false);
       eventBus.emit('exit:left', {});
+      this.activeExit = null;
+      this.clearHighlight();
+      this.overlays.setPrompt(null);
     }
   }
 
-  /** Handles the interact key press for the active zone. */
-  handleInteractPress(): boolean {
+  /** Handle E press on the active zone. */
+  handleInteractPress(): void {
+    if (this.transitioning) return;
+
     if (this.activeExit) {
-      this.enterExit(this.activeExit);
-      return true;
+      this.transitioning = true;
+      this.overlays.setPrompt(null);
+      this.clearHighlight();
+      this.director.transitionTo(this.activeExit.to);
+      return;
     }
-    if (this.activeInteract) {
-      this.handleInteraction(this.activeInteract);
-      return true;
-    }
-    return false;
-  }
 
-  /** Interaction reach scales with room size — tighter in small rooms. */
-  private getInteractThreshold(): number {
-    const bounds = this.scene.physics.world.bounds;
-    const roomMin = Math.min(bounds.width, bounds.height);
-    return Phaser.Math.Clamp(Math.round(roomMin * 0.22), 32, 64);
+    if (this.activeInteract) {
+      const action = this.activeInteract.action;
+      if (action === 'shop') {
+        if (this.activeInteract.actionTarget) {
+          this.director.transitionTo(this.activeInteract.actionTarget);
+        } else {
+          this.overlays.openShop();
+        }
+      } else if (action === 'upgrade') {
+        this.overlays.openUpgrade();
+      } else if (action === 'exit' && this.activeInteract.actionTarget) {
+        this.director.transitionTo(this.activeInteract.actionTarget);
+      }
+    }
   }
 
   private spawnExitZones(): void {
-    const exits = this.sceneDef?.exits ?? [];
-    for (const exit of exits) {
-      const pos = exit.position ?? { x: 320, y: 32 };
-      const displayLabel = exit.label ?? exit.to;
-
-      const zoneSprite = this.scene.physics.add.sprite(pos.x, pos.y, '__placeholder');
-      zoneSprite.setDisplaySize(48, 48);
-      zoneSprite.setAlpha(0.6);
-      zoneSprite.setTint(0x44aaff);
-      zoneSprite.setDepth(5);
-      const body = zoneSprite.body as Phaser.Physics.Arcade.Body;
-      body.setImmovable(true);
-      body.setAllowGravity(false);
-
-      const label = this.scene.add.text(pos.x, pos.y - 36, displayLabel, {
-        fontFamily: '"Courier New", monospace',
-        fontSize: '18px',
-        color: '#88ccff',
-        stroke: '#000000',
-        strokeThickness: 3,
-        align: 'center',
+    for (const exit of this.sceneDef?.exits ?? []) {
+      const pos = exit.position ?? this.sceneDef?.playerSpawn ?? { x: 100, y: 100 };
+      this.exitZones.push({
+        x: pos.x,
+        y: pos.y,
+        to: exit.to,
+        displayLabel: exit.label ?? 'Exit',
       });
-      label.setOrigin(0.5, 0.5);
-      label.setDepth(10);
-
-      const tooltip = this.createZoneTooltip(pos.x, pos.y + 34);
-
-      this.exitZones.push({ sprite: zoneSprite, label, tooltip, to: exit.to, displayLabel });
     }
   }
 
   private spawnShopZones(): void {
-    const shops = this.sceneDef?.shops ?? [];
-    for (const shop of shops) {
-      const pos = shop.position;
-      const displayLabel = shop.label ?? 'Shop';
-
-      const zoneSprite = this.scene.physics.add.sprite(pos.x, pos.y, '__placeholder');
-      zoneSprite.setDisplaySize(48, 48);
-      zoneSprite.setAlpha(0.6);
-      zoneSprite.setTint(0xffaa44);
-      zoneSprite.setDepth(5);
-      const body = zoneSprite.body as Phaser.Physics.Arcade.Body;
-      body.setImmovable(true);
-      body.setAllowGravity(false);
-
-      const label = this.scene.add.text(pos.x, pos.y - 36, displayLabel, {
-        fontFamily: '"Courier New", monospace',
-        fontSize: '18px',
-        color: '#ffcc88',
-        stroke: '#000000',
-        strokeThickness: 3,
-        align: 'center',
+    for (const shop of this.sceneDef?.shops ?? []) {
+      this.interactZones.push({
+        x: shop.position.x,
+        y: shop.position.y,
+        displayLabel: shop.label ?? 'Shop',
+        action: 'shop',
       });
-      label.setOrigin(0.5, 0.5);
-      label.setDepth(10);
-
-      const tooltip = this.createZoneTooltip(pos.x, pos.y + 34);
-
-      this.interactZones.push({ sprite: zoneSprite, label, tooltip, displayLabel, action: 'shop' });
     }
   }
 
-  /** Registers a prop as an interaction or exit zone. */
   private registerPropInteraction(
     prop: {
       position: { x: number; y: number };
@@ -236,181 +222,81 @@ export class ZoneManager {
       actionTarget?: string;
       actionLabel?: string;
     },
-    visual?: Phaser.GameObjects.Image,
+    visual?: AbstractMesh | TransformNode,
   ): void {
-    const pos = prop.position;
-    const displayLabel = prop.actionLabel ?? prop.action ?? '';
-    const tooltip = this.createZoneTooltip(pos.x, pos.y + 40, displayLabel);
-
-    if (visual?.preFX) {
-      visual.preFX.setPadding(6);
-      visual.preFX.addGlow(0xffdd66, 0, 0, false);
-    }
-
-    if (prop.action === 'exit' && prop.actionTarget) {
-      const zoneSprite = this.scene.physics.add.sprite(pos.x, pos.y, '__placeholder');
-      zoneSprite.setDisplaySize(48, 48);
-      zoneSprite.setAlpha(0);
-      zoneSprite.setDepth(5);
-      const body = zoneSprite.body as Phaser.Physics.Arcade.Body;
-      body.setImmovable(true);
-      body.setAllowGravity(false);
-
-      const label = this.scene.add.text(pos.x, pos.y - 36, '', { fontSize: '1px' });
-      label.setVisible(false);
-
+    if (!prop.action) return;
+    if (prop.action === 'exit') {
       this.exitZones.push({
-        sprite: zoneSprite,
-        label,
-        tooltip,
-        to: prop.actionTarget,
-        displayLabel,
+        x: prop.position.x,
+        y: prop.position.y,
+        to: prop.actionTarget ?? 'core:home',
+        displayLabel: prop.actionLabel ?? 'Exit',
         propVisual: visual,
-      });
-    } else if (prop.action === 'shop' || prop.action === 'upgrade') {
-      const zoneSprite = this.scene.physics.add.sprite(pos.x, pos.y, '__placeholder');
-      zoneSprite.setDisplaySize(48, 48);
-      zoneSprite.setAlpha(0);
-      zoneSprite.setDepth(5);
-      const body = zoneSprite.body as Phaser.Physics.Arcade.Body;
-      body.setImmovable(true);
-      body.setAllowGravity(false);
-
-      const label = this.scene.add.text(pos.x, pos.y - 36, '', { fontSize: '1px' });
-      label.setVisible(false);
-
-      this.interactZones.push({
-        sprite: zoneSprite,
-        label,
-        tooltip,
-        displayLabel,
-        action: prop.action,
-        propVisual: visual,
-      });
-    }
-  }
-
-  private createZoneTooltip(x: number, y: number, label?: string): Phaser.GameObjects.Text {
-    const text = label ? `E  ${label}` : 'E';
-    const tip = this.scene.add.text(x, y, text, {
-      fontFamily: '"Courier New", monospace',
-      fontSize: '14px',
-      color: '#ffffff',
-      backgroundColor: '#000000aa',
-      padding: { x: 6, y: 3 },
-      stroke: '#000000',
-      strokeThickness: 2,
-    });
-    tip.setOrigin(0.5, 0);
-    tip.setDepth(11);
-    tip.setVisible(false);
-    return tip;
-  }
-
-  private showTooltip(tooltip: Phaser.GameObjects.Text): void {
-    if (tooltip.visible) return;
-    tooltip.setVisible(true);
-    tooltip.setAlpha(0);
-    this.scene.tweens.add({ targets: tooltip, alpha: 1, duration: 150 });
-  }
-
-  private hideTooltip(tooltip: Phaser.GameObjects.Text): void {
-    if (!tooltip.visible) return;
-    this.scene.tweens.add({
-      targets: tooltip,
-      alpha: 0,
-      duration: 150,
-      onComplete: () => tooltip.setVisible(false),
-    });
-  }
-
-  /** Calculates distance from a point to the nearest edge of a prop body. */
-  private distToZoneEdge(
-    px: number,
-    py: number,
-    propVisual: Phaser.GameObjects.Image | undefined,
-    fallbackSprite: Phaser.Physics.Arcade.Sprite,
-  ): number {
-    if (propVisual && 'body' in propVisual && propVisual.body) {
-      const body = propVisual.body as Phaser.Physics.Arcade.StaticBody;
-      const bx = body.x;
-      const by = body.y;
-      const bw = body.width;
-      const bh = body.height;
-
-      const cx = Math.max(bx, Math.min(px, bx + bw));
-      const cy = Math.max(by, Math.min(py, by + bh));
-      const dx = px - cx;
-      const dy = py - cy;
-      return Math.sqrt(dx * dx + dy * dy);
-    }
-    const dx = px - fallbackSprite.x;
-    const dy = py - fallbackSprite.y;
-    return Math.sqrt(dx * dx + dy * dy);
-  }
-
-  /** Activates or deactivates the glow effect on an interactive prop. */
-  private setPropGlow(visual: Phaser.GameObjects.Image | undefined, active: boolean): void {
-    if (!visual?.preFX) return;
-    const fx = visual.preFX.list;
-    const glow = fx.find((f) => (f as { type?: number }).type === 4) as Phaser.FX.Glow | undefined;
-    if (!glow) return;
-
-    this.scene.tweens.killTweensOf(glow);
-    if (active) {
-      this.scene.tweens.add({
-        targets: glow,
-        outerStrength: 4,
-        duration: 200,
-        ease: 'Sine.easeOut',
       });
     } else {
-      this.scene.tweens.add({
-        targets: glow,
-        outerStrength: 0,
-        duration: 300,
-        ease: 'Sine.easeIn',
+      this.interactZones.push({
+        x: prop.position.x,
+        y: prop.position.y,
+        displayLabel: prop.actionLabel ?? prop.action,
+        action: prop.action,
+        actionTarget: prop.actionTarget,
+        propVisual: visual,
       });
     }
   }
 
-  private handleInteraction(zone: InteractZone): void {
-    if (zone.action === 'shop') {
-      if (this.sceneDef?.kind === 'shop') {
-        this.scene.scene.launch('ShopScene');
-      } else {
-        this.scene.cameras.main.fade(500, 0, 0, 0, false, (_cam: unknown, progress: number) => {
-          if (progress >= 1) {
-            this.director.transitionTo('core:shop', this.scene);
-          }
-        });
-      }
-    } else if (zone.action === 'upgrade') {
-      this.scene.scene.launch('UpgradeScene');
+  /** Lerp the glow envelope toward its target. Call once per frame. */
+  updateGlow(dt: number): void {
+    const speed = 4;
+    if (this.glowEnvelope < this.glowTarget) {
+      this.glowEnvelope = Math.min(this.glowTarget, this.glowEnvelope + speed * dt);
+    } else if (this.glowEnvelope > this.glowTarget) {
+      this.glowEnvelope = Math.max(this.glowTarget, this.glowEnvelope - speed * dt);
+      if (this.glowEnvelope < 0.001) this.glowingMeshes.clear();
     }
   }
 
-  private createPromptText(): void {
-    const cam = this.scene.cameras.main;
-    this.promptText = this.scene.add.text(cam.width / 2, cam.height - 60, '', {
-      fontFamily: '"Courier New", monospace',
-      fontSize: '24px',
-      color: '#ffffff',
-      stroke: '#000000',
-      strokeThickness: 4,
-      align: 'center',
-    });
-    this.promptText.setOrigin(0.5, 0.5);
-    this.promptText.setScrollFactor(0);
-    this.promptText.setDepth(900);
-    this.promptText.setVisible(false);
+  /** Apply a pulsing yellow glow to a prop (respects texture alpha). */
+  private highlightProp(visual: AbstractMesh | TransformNode | undefined): void {
+    this.clearHighlight();
+    if (!visual) return;
+    if (!this.glowLayer) {
+      this.glowLayer = new GlowLayer('propGlow', this.scene, {
+        blurKernelSize: 32,
+      });
+      this.glowLayer.intensity = 0.6;
+      this.glowLayer.customEmissiveColorSelector = (mesh, _subMesh, _material, result) => {
+        if (this.glowingMeshes.has(mesh as Mesh) && this.glowEnvelope > 0.001) {
+          const pulse = 0.1 + 0.1 * Math.sin(performance.now() * 0.004);
+          const v = pulse * this.glowEnvelope;
+          result.set(v, v * 0.85, v * 0.2, 1);
+        } else {
+          result.set(0, 0, 0, 0);
+        }
+      };
+    }
+    this.glowTarget = 1;
+    const addMesh = (m: AbstractMesh) => {
+      if (!m.getTotalVertices || m.getTotalVertices() <= 0) return;
+      this.glowingMeshes.add(m as Mesh);
+    };
+    if ('getTotalVertices' in visual) addMesh(visual as AbstractMesh);
+    for (const m of visual.getChildMeshes(false)) addMesh(m);
   }
 
-  private enterExit(exit: ExitZone): void {
-    this.scene.cameras.main.fade(500, 0, 0, 0, false, (_cam: unknown, progress: number) => {
-      if (progress >= 1) {
-        this.director.transitionTo(exit.to, this.scene);
-      }
-    });
+  /** Fade out and remove glow from highlighted meshes. */
+  private clearHighlight(): void {
+    this.glowTarget = 0;
+    // Meshes stay in the set until envelope reaches zero so the fade-out renders
+    if (this.glowEnvelope < 0.001) this.glowingMeshes.clear();
+  }
+
+  private getInteractThreshold(): number {
+    const gen = this.sceneDef?.generation;
+    let roomMin = 400;
+    if (gen && 'width' in gen && 'height' in gen) {
+      roomMin = Math.min(gen.width as number, gen.height as number);
+    }
+    return Math.max(32, Math.min(64, roomMin * 0.22));
   }
 }

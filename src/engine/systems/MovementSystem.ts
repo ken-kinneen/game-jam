@@ -1,13 +1,24 @@
 import type { Entity } from '../entities/Entity';
 import { Movement } from '../entities/components/Movement';
 import type { StatSheet } from '../stats/StatSheet';
+import type { CollisionWorld } from '../rendering/CollisionWorld';
+import { WORLD_SCALE } from '../entities/EntityFactory';
 
 /**
  * Isaac-style movement: velocity-based with acceleration toward intent, friction on release.
- * All tuning numbers come from the entity's StatSheet/Movement component, never hardcoded.
+ * Applies position via CollisionWorld slide (XZ plane). Speeds are in old pixel units/sec.
  */
 export class MovementSystem {
-  /** Update an entity's movement toward the given intent vector (should be normalized or zero). */
+  private collision: CollisionWorld | null = null;
+  private bodyRadius = 0.35;
+
+  /** Attach the shared collision world used for wall sliding. */
+  setCollisionWorld(world: CollisionWorld, bodyRadiusWorld = 0.35): void {
+    this.collision = world;
+    this.bodyRadius = bodyRadiusWorld;
+  }
+
+  /** Update an entity's movement toward the given intent vector (normalized or zero). */
   update(entity: Entity, intentX: number, intentY: number, dt: number): void {
     const movement = entity.getComponent<Movement>('movement');
     if (!movement) return;
@@ -26,9 +37,22 @@ export class MovementSystem {
       movement.velocityY = moveToward(movement.velocityY, 0, movement.friction * dt);
     }
 
-    const body = entity.sprite.body as Phaser.Physics.Arcade.Body;
-    if (body) {
-      body.setVelocity(movement.velocityX, movement.velocityY);
+    const dx = movement.velocityX * dt * WORLD_SCALE;
+    const dz = movement.velocityY * dt * WORLD_SCALE;
+
+    if (this.collision) {
+      const next = this.collision.moveCircle(entity.x, entity.y, this.bodyRadius, dx, dz);
+      entity.x = next.x;
+      entity.y = next.z;
+    } else {
+      entity.x += dx;
+      entity.y += dz;
+    }
+
+    // Keep feet on ground (billboards centered on Y; GLB models already grounded)
+    if (!entity.getComponent('modelAnim')) {
+      const h = entity.displayHeight * Math.abs(entity.mesh.scaling.y);
+      entity.mesh.position.y = h / 2 + entity.appliedOffsetY * WORLD_SCALE;
     }
   }
 

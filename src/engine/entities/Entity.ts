@@ -1,16 +1,53 @@
+import type { AbstractMesh } from '@babylonjs/core';
 import type { EntityDef } from '../schemas/entity.schema';
 
-/** Thin wrapper: Phaser sprite + a components map, identified by def ID. */
+/**
+ * Thin wrapper: Babylon mesh + components map, identified by def ID.
+ * Game-plane accessors `x`/`y` map to mesh position X/Z (Y is up).
+ */
 export class Entity {
   readonly id: string;
   readonly defId: string;
   readonly components = new Map<string, unknown>();
-  sprite: Phaser.Physics.Arcade.Sprite;
+  mesh: AbstractMesh;
 
-  constructor(id: string, defId: string, sprite: Phaser.Physics.Arcade.Sprite) {
+  /** Display size in world units (billboard). */
+  displayWidth = 1;
+  displayHeight = 1;
+
+  /** Current spritesheet cell for animation systems. */
+  frameIndex = 0;
+  /** Frames per second for the active walk/idle clip. */
+  animFps = 8;
+  /** Flip billboard on X for side-facing. */
+  flipX = false;
+  /** Rotation around up-axis for lean (radians). */
+  leanRotation = 0;
+  /** Extra Y offset applied by procedural anim (undone next frame). */
+  appliedOffsetY = 0;
+  /** Whether this entity is still active in the world. */
+  active = true;
+
+  constructor(id: string, defId: string, mesh: AbstractMesh) {
     this.id = id;
     this.defId = defId;
-    this.sprite = sprite;
+    this.mesh = mesh;
+  }
+
+  /** Game-plane X (Babylon X). */
+  get x(): number {
+    return this.mesh.position.x;
+  }
+  set x(v: number) {
+    this.mesh.position.x = v;
+  }
+
+  /** Game-plane Y (Babylon Z). */
+  get y(): number {
+    return this.mesh.position.z;
+  }
+  set y(v: number) {
+    this.mesh.position.z = v;
   }
 
   /** Get a typed component by name. */
@@ -28,8 +65,21 @@ export class Entity {
     return this.components.has(name);
   }
 
-  /** Destroy the entity's Phaser objects. */
+  /** Scale billboard uniformly / non-uniformly. */
+  setScale(sx: number, sy?: number): void {
+    const y = sy ?? sx;
+    this.mesh.scaling.x = this.flipX ? -Math.abs(sx) : Math.abs(sx);
+    this.mesh.scaling.y = y;
+  }
+
+  /** Destroy the entity's mesh and model animation groups. */
   destroy(): void {
-    this.sprite.destroy();
+    this.active = false;
+    const modelAnim = this.getComponent<{ dispose: () => void }>('modelAnim');
+    modelAnim?.dispose();
+    this.mesh.dispose();
   }
 }
+
+// Re-export for callers that still reference EntityDef through Entity module
+export type { EntityDef };

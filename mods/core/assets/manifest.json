@@ -15,7 +15,12 @@
     "frameWidth": 128,
     "frameHeight": 128
   },
+  "models/player_walk": {
+    "file": "models/player_walk.glb",
+    "type": "model"
+  },
   "tilesets/cave_floor": { "file": "sprites/tilesets/cave_floor.png", "type": "image" },
+  "tilesets/cave_wall": { "file": "sprites/tilesets/cave_wall.png", "type": "image" },
   "furniture/locker_cabinet": { "file": "sprites/furniture/locker_cabinet.png", "type": "image" },
   "furniture/desk": { "file": "sprites/furniture/desk.png", "type": "image" },
   "furniture/bed": { "file": "sprites/furniture/bed.png", "type": "image" },
@@ -47,5 +52,12 @@
   "furniture/bed_4": { "file": "sprites/furniture/bed_4.png", "type": "image" },
   "furniture/bed_5": { "file": "sprites/furniture/bed_5.png", "type": "image" },
   "furniture/bed_6": { "file": "sprites/furniture/bed_6.png", "type": "image" },
-  "furniture/toolbox": { "file": "sprites/furniture/toolbox.png", "type": "image" }
+  "furniture/toolbox": { "file": "sprites/furniture/toolbox.png", "type": "image" },
+  "models/placeholders/bed": { "file": "models/placeholders/bed.glb", "type": "model" },
+  "models/placeholders/desk": { "file": "models/placeholders/desk.glb", "type": "model" },
+  "models/placeholders/shelves": { "file": "models/placeholders/shelves.glb", "type": "model" },
+  "models/placeholders/workbench": { "file": "models/placeholders/workbench.glb", "type": "model" },
+  "models/placeholders/cabinet": { "file": "models/placeholders/cabinet.glb", "type": "model" },
+  "models/placeholders/crate": { "file": "models/placeholders/crate.glb", "type": "model" },
+  "models/placeholders/barrel": { "file": "models/placeholders/barrel.glb", "type": "model" }
 }

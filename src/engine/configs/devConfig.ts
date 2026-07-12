@@ -13,9 +13,20 @@ export const devConfig: ConfigSection = {
         { value: 'core:home', label: 'Home' },
         { value: 'core:cave', label: 'Cave' },
         { value: 'core:shop', label: 'Shop' },
-        { value: 'core:demo', label: 'FX Demo' },
       ],
-      defaultValue: 'core:cave',
+      defaultValue: 'core:home',
+    },
+    {
+      key: 'showDebugButtons',
+      label: 'Debug Quick Buttons',
+      type: 'boolean',
+      defaultValue: true,
+    },
+    {
+      key: 'showRenderProbe',
+      label: 'Render Probe (bottom-left)',
+      type: 'boolean',
+      defaultValue: false,
     },
   ],
 };

@@ -3,6 +3,7 @@
   "type": "upgrade",
   "name": "Ember Light",
   "sprite": "placeholder",
+  "description": "Warm ember glow. Feels like a campfire you can carry.",
   "rarity": "rare",
   "cost": { "core:rusty_can": 6 },
   "effects": [

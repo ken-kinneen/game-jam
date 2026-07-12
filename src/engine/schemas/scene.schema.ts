@@ -98,26 +98,38 @@ const ShopSchema = z.object({
 /** Built-in Phaser preFX effects that can be applied to props via JSON. */
 const PropFxSchema = z.enum(['shine', 'glow', 'shadow', 'bloom']);
 
-const PropSchema = z.object({
-  image: z.string(),
-  position: z.object({ x: z.number(), y: z.number() }),
-  /** Raw scale factor. Ignored when `height` is set. */
-  scale: z.number().positive().default(1),
-  /** Desired display height in pixels; overrides `scale`. */
-  height: z.number().positive().optional(),
-  depth: z.number().default(2),
-  collides: z.boolean().default(false),
-  /** Visual rotation in degrees. Arcade physics bodies stay axis-aligned. */
-  angle: z.number().default(0),
-  /** If set, this prop acts as an interaction point when the player presses E nearby. */
-  action: z.enum(['shop', 'exit', 'upgrade']).optional(),
-  /** For exit actions: the scene to transition to. */
-  actionTarget: z.string().optional(),
-  /** Label shown in the [E] prompt when near this prop. */
-  actionLabel: z.string().optional(),
-  /** Phaser preFX effects to apply permanently to this prop. */
-  fx: z.array(PropFxSchema).default([]),
-});
+const PropSchema = z
+  .object({
+    /** Billboard sprite key. Optional when `model` is set. */
+    image: z.string().optional(),
+    /** GLB/GLTF model asset key. Preferred over `image` when both are set. */
+    model: z.string().min(1).optional(),
+    position: z.object({ x: z.number(), y: z.number() }),
+    /** Raw scale factor for billboards. Ignored when `height` is set. */
+    scale: z.number().positive().default(1),
+    /** Desired display height in pixels (billboard or model). Overrides `scale`. */
+    height: z.number().positive().optional(),
+    depth: z.number().default(2),
+    collides: z.boolean().default(false),
+    /** Visual rotation in degrees. Collision boxes stay axis-aligned. */
+    angle: z.number().default(0),
+    /** If set, this prop acts as an interaction point when the player presses E nearby. */
+    action: z.enum(['shop', 'exit', 'upgrade']).optional(),
+    /** For exit actions: the scene to transition to. */
+    actionTarget: z.string().optional(),
+    /** Label shown in the [E] prompt when near this prop. */
+    actionLabel: z.string().optional(),
+    /** Hex color tint applied to all meshes in this prop. */
+    tint: z
+      .string()
+      .regex(/^#[0-9a-fA-F]{6}$/)
+      .optional(),
+    /** Legacy FX tags (unused in Babylon path). */
+    fx: z.array(PropFxSchema).default([]),
+  })
+  .refine((p) => Boolean(p.model || p.image), {
+    message: 'Prop requires `model` and/or `image`',
+  });
 
 /** Schema for scene content definitions. */
 export const SceneDefSchema = z.object({

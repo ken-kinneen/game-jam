@@ -3,6 +3,8 @@
   "type": "entity",
   "name": "Player",
   "sprite": "player/walk",
+  "model": "models/player_walk",
+  "displayScale": 2,
   "components": {
     "health": { "max": 100 },
     "movement": { "maxSpeed": 200 },

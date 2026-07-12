@@ -39,7 +39,12 @@ export const EntityDefSchema = z.object({
   id: z.string().regex(/^[a-z0-9_]+:[a-z0-9_]+$/),
   type: z.literal('entity'),
   name: z.string().min(1),
+  /** Billboard spritesheet/image key (required for 2D art path). */
   sprite: z.string().min(1),
+  /** Optional GLB/GLTF model asset key for future 3D mesh entities. */
+  model: z.string().min(1).optional(),
+  /** Multiplier on the default display height (default 1). */
+  displayScale: z.number().positive().default(1),
   components: z
     .object({
       health: HealthComponentSchema.optional(),

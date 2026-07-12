@@ -10,23 +10,28 @@
     "tileSize": 128,
     "tileImage": "tilesets/shop_floor"
   },
-  "exits": [
-    {
-      "to": "core:home",
-      "condition": "always",
-      "label": "Leave Shop",
-      "position": { "x": 384, "y": 540 }
-    }
-  ],
-  "shops": [{ "label": "Upgrades", "position": { "x": 384, "y": 280 } }],
+  "exits": [],
+  "shops": [],
   "props": [
     {
-      "image": "furniture/locker_cabinet",
-      "position": { "x": 384, "y": 100 },
-      "scale": 0.2,
-      "depth": 2,
-      "collides": true
+      "model": "models/placeholders/workbench",
+      "position": { "x": 384, "y": 200 },
+      "height": 43,
+      "collides": true,
+      "tint": "#8B6914",
+      "action": "shop",
+      "actionLabel": "Shop"
+    },
+    {
+      "image": "furniture/hatch_grate",
+      "position": { "x": 384, "y": 500 },
+      "scale": 0.12,
+      "depth": 0,
+      "collides": false,
+      "action": "exit",
+      "actionTarget": "core:home",
+      "actionLabel": "Return Home"
     }
   ],
-  "playerSpawn": { "x": 384, "y": 450 }
+  "playerSpawn": { "x": 384, "y": 400 }
 }

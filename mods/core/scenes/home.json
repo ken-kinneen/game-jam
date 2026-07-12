@@ -4,245 +4,38 @@
   "kind": "home",
   "generation": {
     "method": "tileFloor",
-    "width": 512,
-    "height": 512,
+    "width": 400,
+    "height": 400,
     "wallThickness": 25,
     "tileSize": 80,
     "tileImage": "tilesets/home_floor_18"
   },
   "props": [
     {
-      "image": "furniture/bed_3",
-      "position": {
-        "x": 104,
-        "y": 155
-      },
-      "scale": 0.3,
-      "depth": 2,
-      "collides": true,
-      "angle": 0
+      "image": "furniture/hatch_grate",
+      "position": { "x": 120, "y": 320 },
+      "scale": 0.12,
+      "depth": 0,
+      "collides": false,
+      "action": "exit",
+      "actionTarget": "core:cave",
+      "actionLabel": "Enter Cave"
     },
     {
-      "image": "furniture/bed_8",
-      "position": {
-        "x": 410,
-        "y": 243
-      },
-      "scale": 0.3,
+      "image": "furniture/workbench",
+      "position": { "x": 300, "y": 120 },
+      "scale": 0.12,
       "depth": 2,
       "collides": true,
-      "angle": 90
-    },
-    {
-      "image": "furniture/bed_11",
-      "position": {
-        "x": 119,
-        "y": 396
-      },
-      "scale": 0.28,
-      "depth": 2,
-      "collides": true,
-      "angle": 0
-    },
-    {
-      "image": "furniture/bed_4",
-      "position": {
-        "x": 2,
-        "y": 455
-      },
-      "scale": 0.2,
-      "depth": 2,
-      "collides": true,
-      "angle": 90
-    },
-    {
-      "image": "furniture/bed_5",
-      "position": {
-        "x": 0,
-        "y": 324
-      },
-      "scale": 0.22,
-      "depth": 2,
-      "collides": true,
-      "angle": 90
-    },
-    {
-      "image": "furniture/bed_4",
-      "position": {
-        "x": 117,
-        "y": 0
-      },
-      "scale": 0.22,
-      "depth": 2,
-      "collides": true,
-      "angle": 0
-    },
-    {
-      "image": "furniture/bed_5",
-      "position": {
-        "x": 0,
-        "y": 184
-      },
-      "scale": 0.22,
-      "depth": 2,
-      "collides": true,
-      "angle": 90
-    },
-    {
-      "image": "furniture/bed_2",
-      "position": {
-        "x": 0,
-        "y": 65
-      },
-      "scale": 0.22,
-      "depth": 2,
-      "collides": true,
-      "angle": 90
-    },
-    {
-      "image": "furniture/bed_5",
-      "position": {
-        "x": 253,
-        "y": 0
-      },
-      "scale": 0.22,
-      "depth": 2,
-      "collides": true,
-      "angle": 0
-    },
-    {
-      "image": "furniture/bed_4",
-      "position": {
-        "x": 390,
-        "y": 0
-      },
-      "scale": 0.21,
-      "depth": 2,
-      "collides": true,
-      "angle": 0
-    },
-    {
-      "image": "furniture/bed_2",
-      "position": {
-        "x": 512,
-        "y": 0
-      },
-      "scale": 0.2,
-      "depth": 2,
-      "collides": true,
-      "angle": 0
-    },
-    {
-      "image": "furniture/bed_4",
-      "position": {
-        "x": 512,
-        "y": 114
-      },
-      "scale": 0.24,
-      "depth": 2,
-      "collides": true,
-      "angle": 270
-    },
-    {
-      "image": "furniture/bed_5",
-      "position": {
-        "x": 512,
-        "y": 269
-      },
-      "scale": 0.26,
-      "depth": 2,
-      "collides": true,
-      "angle": 270
-    },
-    {
-      "image": "furniture/bed_5",
-      "position": {
-        "x": 512,
-        "y": 438
-      },
-      "scale": 0.26,
-      "depth": 2,
-      "collides": true,
-      "angle": 270
-    },
-    {
-      "image": "furniture/bed_4",
-      "position": {
-        "x": 405,
-        "y": 512
-      },
-      "scale": 0.22,
-      "depth": 2,
-      "collides": true,
-      "angle": 0
-    },
-    {
-      "image": "furniture/bed_5",
-      "position": {
-        "x": 118,
-        "y": 512
-      },
-      "scale": 0.25,
-      "depth": 2,
-      "collides": true,
-      "angle": 0
-    },
-    {
-      "image": "furniture/bed_4",
-      "position": {
-        "x": 268,
-        "y": 512
-      },
-      "scale": 0.23,
-      "depth": 2,
-      "collides": true,
-      "angle": 0
-    },
-    {
-      "image": "furniture/bed_6",
-      "position": {
-        "x": 403,
-        "y": 409
-      },
-      "scale": 0.3,
-      "depth": 2,
-      "collides": true,
-      "angle": 0
-    },
-    {
-      "image": "furniture/toolbox",
-      "position": {
-        "x": 405,
-        "y": 92
-      },
-      "scale": 0.22,
-      "depth": 2,
-      "collides": true,
-      "angle": 90
+      "action": "exit",
+      "actionTarget": "core:shop",
+      "actionLabel": "Crafting Bench"
     }
   ],
-  "exits": [
-    {
-      "to": "core:cave",
-      "condition": "always",
-      "label": "Exit",
-      "position": {
-        "x": 117,
-        "y": 357
-      }
-    }
-  ],
-  "shops": [
-    {
-      "label": "Shop",
-      "position": {
-        "x": 370,
-        "y": 237
-      }
-    }
-  ],
+  "exits": [],
+  "shops": [],
   "playerSpawn": {
-    "x": 257,
-    "y": 248
+    "x": 200,
+    "y": 200
   }
 }

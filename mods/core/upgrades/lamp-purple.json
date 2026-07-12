@@ -3,6 +3,7 @@
   "type": "upgrade",
   "name": "Violet Glow",
   "sprite": "placeholder",
+  "description": "A violet tint that makes the cave feel less empty — or more haunted.",
   "rarity": "rare",
   "cost": { "core:rusty_can": 6 },
   "effects": [

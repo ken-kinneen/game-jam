@@ -1,6 +1,6 @@
-import PhaserRaycaster from 'phaser-raycaster';
+import type { Scene } from '@babylonjs/core';
 import { Entity } from '../entities/Entity';
-import { EntityFactory } from '../entities/EntityFactory';
+import { EntityFactory, WORLD_SCALE } from '../entities/EntityFactory';
 import { Movement } from '../entities/components/Movement';
 import { Animator } from '../entities/components/Animator';
 import { MovementSystem } from '../systems/MovementSystem';
@@ -18,18 +18,27 @@ import { inventoryManager } from '../core/InventoryManager';
 import type { CaveMap } from '../generation/caveGenerator';
 import type { StatSheet } from '../stats/StatSheet';
 import type { SceneDef } from '../schemas/scene.schema';
-import { spawnFxStatues } from './spawnFxStatues';
 import { ZoneManager } from './zoneManager';
 import { buildSceneRoom } from './roomBuilder';
 import { LampRenderer } from './lampRenderer';
 import { spawnGroundItems, spawnFuelItems, spawnProceduralItems } from './itemSpawner';
 import { AmbienceSystem } from '../systems/AmbienceSystem';
+import type { IsometricCamera } from '../rendering/IsometricCamera';
+import { CollisionWorld } from '../rendering/CollisionWorld';
+import { WallFader } from '../rendering/WallFader';
+
+export interface GameSceneOverlays {
+  openShop: () => void;
+  openUpgrade: () => void;
+  setPrompt: (text: string | null) => void;
+  ensureHud: (sceneId: string) => void;
+}
 
 /**
  * ONE generic GameScene configured by a SceneDef.
- * No HomeScene.ts, no Cave1Scene.ts — just data-driven setup.
+ * Builds a Babylon scene graph from JSON — no HomeScene/CaveScene classes.
  */
-export class GameScene extends Phaser.Scene {
+export class GameScene {
   private player!: Entity;
   private movementSystem!: MovementSystem;
   private animationSystem!: AnimationSystem;
@@ -42,13 +51,16 @@ export class GameScene extends Phaser.Scene {
   private zoneManager!: ZoneManager;
   private lampRenderer!: LampRenderer;
   private ambienceSystem!: AmbienceSystem;
+  private collision = new CollisionWorld();
+  private wallFader: WallFader | null = null;
 
   private sceneDefId = 'core:home';
   private sceneDef: SceneDef | undefined;
-  private wallLayer: Phaser.Tilemaps.TilemapLayer | null = null;
-  private wallGroup: Phaser.Physics.Arcade.StaticGroup | null = null;
   private proceduralCaveMap: CaveMap | null = null;
   private proceduralEntry: { x: number; y: number } | null = null;
+  private pixelWidth = 640;
+  private pixelHeight = 480;
+  private roomDisposables: { dispose: () => void }[] = [];
 
   private unsubConfig: (() => void) | null = null;
   private unsubFuel: (() => void) | null = null;
@@ -56,72 +68,125 @@ export class GameScene extends Phaser.Scene {
   private unsubShop: (() => void)[] = [];
   private shopOpen = false;
   private isCave = false;
+  private alive = false;
 
-  declare raycasterPlugin: PhaserRaycaster;
-
-  constructor() {
-    super({ key: 'GameScene' });
+  constructor(
+    private babylonScene: Scene,
+    private camera: IsometricCamera,
+    private overlays: GameSceneOverlays,
+    director: SceneDirector,
+  ) {
+    this.director = director;
   }
 
-  init(data: { sceneId?: string }) {
-    this.sceneDefId = data.sceneId ?? 'core:home';
-  }
+  /** Load / rebuild the world for a scene def id. */
+  async start(sceneId: string): Promise<void> {
+    this.shutdown();
+    this.sceneDefId = sceneId;
+    this.alive = true;
 
-  create() {
     this.movementSystem = new MovementSystem();
     this.animationSystem = new AnimationSystem(configManager);
     this.proceduralAnimSystem = new ProceduralAnimSystem(configManager);
-    this.pickupSystem = new PickupSystem(registry, eventBus, this, configManager);
+    this.pickupSystem = new PickupSystem(registry, eventBus, configManager);
     this.lampSystem = new LampSystem(eventBus, configManager);
-    this.soundSystem = new SoundSystem(this, eventBus, configManager, registry);
-    this.inputMap = new InputMap(this);
-    this.director = new SceneDirector(registry, eventBus);
+    this.soundSystem = new SoundSystem(this.babylonScene, eventBus, configManager, registry);
+    this.inputMap = new InputMap();
 
     this.sceneDef = registry.get('scene', this.sceneDefId);
     this.isCave = this.sceneDef?.kind === 'cave';
     this.director.syncState(this.sceneDefId, this.isCave);
+    this.camera.setCaveMode(this.isCave);
     this.shopOpen = false;
 
-    const room = buildSceneRoom(this, this.sceneDef, this.isCave);
-    this.wallLayer = room.wallLayer;
-    this.wallGroup = room.wallGroup;
+    console.log('[GameScene] Building room for:', this.sceneDefId, 'isCave:', this.isCave);
+    const room = buildSceneRoom(this.babylonScene, this.sceneDef, this.isCave);
     this.proceduralCaveMap = room.caveMap;
     this.proceduralEntry = room.caveEntry;
+    this.pixelWidth = room.pixelWidth;
+    this.pixelHeight = room.pixelHeight;
+    this.roomDisposables = room.disposables;
+    this.collision.setWalls(room.walls);
+    this.collision.setBounds(0, room.pixelWidth * WORLD_SCALE, 0, room.pixelHeight * WORLD_SCALE);
+    console.log(
+      '[GameScene] Room built:',
+      room.pixelWidth,
+      'x',
+      room.pixelHeight,
+      'walls:',
+      room.walls.length,
+      'meshes:',
+      this.babylonScene.meshes.length,
+    );
 
-    this.zoneManager = new ZoneManager(this, this.sceneDef, this.director, undefined);
+    this.zoneManager = new ZoneManager(
+      this.babylonScene,
+      this.sceneDef,
+      this.director,
+      undefined,
+      this.overlays,
+      this.collision,
+    );
     this.zoneManager.reset();
 
-    this.spawnPlayer(this.sceneDef);
+    await this.spawnPlayer(this.sceneDef);
+    console.log(
+      '[GameScene] Player at:',
+      this.player.x.toFixed(2),
+      this.player.y.toFixed(2),
+      'mesh Y:',
+      this.player.mesh.position.y.toFixed(2),
+    );
     this.zoneManager.setPlayer(this.player);
+
+    const radiusPct = configManager.get<number>('player', 'bodyRadiusPercent');
+    const bodyR = Math.min(this.player.displayWidth, this.player.displayHeight) * radiusPct * 0.5;
+    this.movementSystem.setCollisionWorld(this.collision, Math.max(0.15, bodyR));
 
     if (this.isCave) {
       if (this.proceduralCaveMap) {
-        spawnProceduralItems(this, registry, this.pickupSystem, this.proceduralCaveMap);
+        spawnProceduralItems(
+          this.babylonScene,
+          registry,
+          this.pickupSystem,
+          this.proceduralCaveMap,
+        );
       } else {
-        spawnGroundItems(this, registry, this.pickupSystem);
-        spawnFuelItems(this, registry, this.pickupSystem);
+        spawnGroundItems(
+          this.babylonScene,
+          registry,
+          this.pickupSystem,
+          this.pixelWidth,
+          this.pixelHeight,
+        );
+        spawnFuelItems(
+          this.babylonScene,
+          registry,
+          this.pickupSystem,
+          this.pixelWidth,
+          this.pixelHeight,
+        );
       }
-    }
-
-    this.setupCollisions();
-
-    if (this.sceneDef?.kind === 'demo') {
-      spawnFxStatues(this);
     }
 
     this.zoneManager.spawnAll();
 
     this.lampRenderer = new LampRenderer(
-      this,
+      this.babylonScene,
       this.lampSystem,
       this.director,
       this.isCave,
-      this.wallGroup,
       this.player,
+      room.wallMeshes,
     );
     this.lampRenderer.create();
 
-    this.ambienceSystem = new AmbienceSystem(this, this.player, this.isCave);
+    this.ambienceSystem = new AmbienceSystem(this.babylonScene, this.player, this.isCave);
+    this.ambienceSystem.create(this.proceduralCaveMap);
+
+    if (room.wallMeshes.length > 0) {
+      this.wallFader = new WallFader(this.babylonScene, room.wallMeshes);
+    }
 
     if (this.isCave) {
       this.unsubFuel = eventBus.on('item:picked_up', ({ itemId }) => {
@@ -155,9 +220,6 @@ export class GameScene extends Phaser.Scene {
 
     this.applyCameraConfig();
     this.applyPlayerConfig();
-    this.applyAudioConfig();
-
-    this.ambienceSystem.create(this.proceduralCaveMap);
 
     const savedColor = configManager.get<string>('lamp', 'glowColorName');
     if (savedColor && savedColor !== 'default') {
@@ -167,7 +229,6 @@ export class GameScene extends Phaser.Scene {
     this.unsubConfig = configManager.onChange((sectionId, key) => {
       if (sectionId === 'camera') this.applyCameraConfig();
       if (sectionId === 'player') this.applyPlayerConfig();
-      if (sectionId === 'audio') this.applyAudioConfig();
       if (sectionId === 'lamp' && key === 'glowColorName') {
         this.lampRenderer.setLampColor(configManager.get<string>('lamp', 'glowColorName'));
       }
@@ -176,33 +237,25 @@ export class GameScene extends Phaser.Scene {
       }
     });
 
-    if (!this.scene.isActive('UIScene')) {
-      this.scene.launch('UIScene', { sceneId: this.sceneDefId });
-    }
-
-    this.input.keyboard?.on('keydown-F3', () => {
-      this.physics.world.debugGraphic?.setVisible(!this.physics.world.debugGraphic?.visible);
-      if (!this.physics.world.debugGraphic) {
-        this.physics.world.createDebugGraphic();
-      }
-    });
-
+    this.overlays.ensureHud(this.sceneDefId);
     eventBus.emit('scene:enter', { sceneId: this.sceneDefId });
   }
 
-  update(_time: number, delta: number) {
-    const dt = delta / 1000;
+  /** Per-frame update. */
+  update(dt: number): void {
+    if (!this.alive) return;
 
     if (this.isCave) {
       this.lampSystem.update(dt);
     }
 
     if (!this.shopOpen) {
-      const move = this.inputMap.getMoveVector();
+      const raw = this.inputMap.getMoveVector();
+      const move = this.camera.rotateInput(raw.x, raw.y);
       this.movementSystem.update(this.player, move.x, move.y, dt);
       this.animationSystem.update(this.player, dt);
       this.proceduralAnimSystem.update(this.player, dt);
-      this.pickupSystem.update(this.player);
+      this.pickupSystem.update(this.player, dt);
 
       this.zoneManager.checkExitOverlap();
       this.zoneManager.checkInteractOverlap();
@@ -212,106 +265,88 @@ export class GameScene extends Phaser.Scene {
       }
     }
 
+    this.zoneManager.updateGlow(dt);
     this.lampRenderer.update(this.zoneManager.propShadows);
     this.ambienceSystem.update();
+    this.wallFader?.update(this.player.x, this.player.displayHeight * 0.5, this.player.y, dt);
+    this.camera.update();
+    this.inputMap.endFrame();
   }
 
-  /** Expose player stats so ShopScene can apply upgrades. */
+  /** Expose player stats so shop UI can apply upgrades. */
   getPlayerStats(): StatSheet {
     const stats = this.player.getComponent<StatSheet>('stats');
     if (!stats) throw new Error('Player has no stats component');
     return stats;
   }
 
-  shutdown() {
+  /** Tear down the current world. */
+  shutdown(): void {
+    if (!this.alive && !this.player) return;
+    this.alive = false;
     this.unsubConfig?.();
     this.unsubFuel?.();
     this.unsubInventory?.();
     this.soundSystem?.destroy();
+    this.inputMap?.destroy();
+    this.lampRenderer?.destroy();
+    this.ambienceSystem?.destroy();
+    this.wallFader?.dispose();
+    this.wallFader = null;
+    this.pickupSystem?.clear();
+    this.zoneManager?.reset();
     for (const unsub of this.unsubShop) unsub();
     this.unsubShop = [];
+    for (const d of this.roomDisposables) d.dispose();
+    this.roomDisposables = [];
+    this.player?.destroy();
   }
 
-  private spawnPlayer(sceneDef: SceneDef | undefined): void {
+  private async spawnPlayer(sceneDef: SceneDef | undefined): Promise<void> {
     const playerDef = registry.getOrThrow('entity', 'core:player');
     const spawnX = this.proceduralEntry?.x ?? sceneDef?.playerSpawn?.x ?? 320;
     const spawnY = this.proceduralEntry?.y ?? sceneDef?.playerSpawn?.y ?? 240;
 
-    this.player = EntityFactory.create(this, playerDef, spawnX, spawnY);
+    this.player = await EntityFactory.create(this.babylonScene, playerDef, spawnX, spawnY);
     this.player.setComponent('playerControlled', true);
-    this.player.sprite.setDepth(10);
-
-    this.player.sprite.preFX?.setPadding(10);
-    this.player.sprite.preFX?.addShadow(2, 3, 0.1, 0.5, 0x000000, 6, 0.5);
-
-    const body = this.player.sprite.body as Phaser.Physics.Arcade.Body;
-    body.setCollideWorldBounds(true);
-
-    const radiusPct = configManager.get<number>('player', 'bodyRadiusPercent');
-    body.setCircle(
-      Math.min(this.player.sprite.width, this.player.sprite.height) * radiusPct,
-      this.player.sprite.width * ((1 - radiusPct * 2) / 2),
-      this.player.sprite.height * ((1 - radiusPct * 2) / 2),
-    );
 
     if (this.isStaticCamera()) {
-      this.centerCameraOnRoom(sceneDef);
+      this.camera.centerOn(
+        (this.pixelWidth * WORLD_SCALE) / 2,
+        (this.pixelHeight * WORLD_SCALE) / 2,
+      );
     } else {
-      this.cameras.main.startFollow(this.player.sprite, false, 0.1, 0.1);
+      this.camera.follow(this.player.mesh);
     }
   }
 
-  /** Small rooms (shop, home) get a fixed camera instead of player-follow. */
   private isStaticCamera(): boolean {
     return this.sceneDef?.generation.method === 'background';
   }
 
-  /** Centers the camera on the room so the entire background is visible. */
-  private centerCameraOnRoom(sceneDef: SceneDef | undefined): void {
-    const cam = this.cameras.main;
-    cam.stopFollow();
-
-    const gen = sceneDef?.generation;
-    if (gen?.method === 'background' && gen.image && this.textures.exists(gen.image)) {
-      const frame = this.textures.get(gen.image).getSourceImage();
-      const scale = gen.scale ?? 1;
-      const roomW = frame.width * scale;
-      const roomH = frame.height * scale;
-      cam.centerOn(roomW / 2, roomH / 2);
-    }
-  }
-
   private applyCameraConfig(): void {
-    const cam = this.cameras.main;
-    cam.setZoom(configManager.get<number>('camera', 'zoom'));
-    cam.setLerp(
-      configManager.get<number>('camera', 'lerpX'),
-      configManager.get<number>('camera', 'lerpY'),
-    );
-    cam.roundPixels = configManager.get<boolean>('camera', 'roundPixels');
-
-    const dzW = configManager.get<number>('camera', 'deadzoneWidth');
-    const dzH = configManager.get<number>('camera', 'deadzoneHeight');
-    if (dzW > 0 || dzH > 0) {
-      cam.setDeadzone(dzW, dzH);
-    } else {
-      cam.setDeadzone(undefined as unknown as number, undefined as unknown as number);
-    }
+    this.camera.applyConfig();
   }
 
   private applyPlayerConfig(): void {
     if (!this.player) return;
 
-    const targetHeight =
-      this.sceneDef?.playerHeight ?? configManager.get<number>('player', 'height');
-    const frameHeight = this.player.sprite.height;
-    const scale = targetHeight / frameHeight;
-    this.player.sprite.setScale(scale);
+    // GLB models keep their fitted scale; only tune speed/stats/collision
+    if (!this.player.getComponent('modelAnim')) {
+      const targetHeightPx =
+        this.sceneDef?.playerHeight ?? configManager.get<number>('player', 'height');
+      const worldH = targetHeightPx * WORLD_SCALE;
+      const baseH = this.player.displayHeight || worldH;
+      const scale = worldH / baseH;
+      this.player.displayHeight = worldH;
+      this.player.displayWidth = (this.player.displayWidth / baseH) * worldH;
+      this.player.setScale(scale, scale);
 
-    const animator = this.player.getComponent<Animator>('animator');
-    if (animator) {
-      animator.baseScaleX = scale;
-      animator.baseScaleY = scale;
+      const animator = this.player.getComponent<Animator>('animator');
+      if (animator) {
+        animator.baseScaleX = scale;
+        animator.baseScaleY = scale;
+      }
     }
 
     const maxSpeed =
@@ -330,32 +365,8 @@ export class GameScene extends Phaser.Scene {
       stats.setBase('pickupRadius', configManager.get<number>('player', 'pickupRadius'));
     }
 
-    const body = this.player.sprite.body as Phaser.Physics.Arcade.Body;
-    if (body) {
-      const radiusPct = configManager.get<number>('player', 'bodyRadiusPercent');
-      const w = this.player.sprite.width * scale;
-      const h = this.player.sprite.height * scale;
-      body.setCircle(
-        Math.min(w, h) * radiusPct,
-        w * ((1 - radiusPct * 2) / 2),
-        h * ((1 - radiusPct * 2) / 2),
-      );
-    }
-  }
-
-  private applyAudioConfig(): void {
-    if (this.sound) {
-      this.sound.volume = configManager.get<number>('audio', 'masterVolume');
-      this.sound.mute = configManager.get<boolean>('audio', 'mute');
-    }
-  }
-
-  private setupCollisions(): void {
-    if (this.wallLayer && this.player) {
-      this.physics.add.collider(this.player.sprite, this.wallLayer);
-    }
-    if (this.wallGroup && this.player) {
-      this.physics.add.collider(this.player.sprite, this.wallGroup);
-    }
+    const radiusPct = configManager.get<number>('player', 'bodyRadiusPercent');
+    const bodyR = Math.min(this.player.displayWidth, this.player.displayHeight) * radiusPct * 0.5;
+    this.movementSystem.setCollisionWorld(this.collision, Math.max(0.15, bodyR));
   }
 }

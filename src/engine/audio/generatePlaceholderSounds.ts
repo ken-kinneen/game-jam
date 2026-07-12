@@ -1,7 +1,6 @@
 /**
  * Generates procedural placeholder sound effects using Web Audio API.
- * Each sound is synthesized into a WAV blob, then registered with Phaser's audio cache.
- * Replace with real assets by adding files to mods/core/assets/ and updating the manifest.
+ * Returns blob URLs keyed by asset id for registration with Babylon Sound.
  */
 
 interface ToneParams {
@@ -226,24 +225,21 @@ const RECIPES: SoundRecipe[] = [
 ];
 
 /**
- * Generate all placeholder sounds and register them with Phaser's sound manager.
- * Call during BootScene.create() after normal asset loading.
+ * Generate placeholder SFX blob URLs for any recipe keys not already loaded.
+ * Returns a map of asset key → blob URL.
  */
-export async function generatePlaceholderSounds(scene: Phaser.Scene): Promise<void> {
+export async function generatePlaceholderSoundUrls(
+  existingKeys: Set<string>,
+): Promise<Map<string, string>> {
   const sampleRate = 44100;
+  const out = new Map<string, string>();
 
   for (const recipe of RECIPES) {
-    if (scene.cache.audio.has(recipe.key)) continue;
-
+    if (existingKeys.has(recipe.key)) continue;
     const wav = await renderSound(sampleRate, recipe.duration, recipe.build);
     const blob = new Blob([wav], { type: 'audio/wav' });
-    const url = URL.createObjectURL(blob);
-
-    await new Promise<void>((resolve, reject) => {
-      scene.load.audio(recipe.key, url);
-      scene.load.once(`filecomplete-audio-${recipe.key}`, () => resolve());
-      scene.load.once('loaderror', () => reject(new Error(`Failed to load ${recipe.key}`)));
-      scene.load.start();
-    });
+    out.set(recipe.key, URL.createObjectURL(blob));
   }
+
+  return out;
 }

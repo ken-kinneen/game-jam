@@ -1,7 +1,9 @@
+import { Sound, type Scene } from '@babylonjs/core';
 import type { EventBus, GameEvents } from '../core/EventBus';
 import type { ConfigManager } from '../core/ConfigManager';
 import type { ContentRegistry } from '../core/ContentRegistry';
 import type { SoundDef } from '../schemas/sound.schema';
+import { assetStore } from '../rendering/AssetStore';
 
 interface ActiveBinding {
   unsub: () => void;
@@ -17,7 +19,7 @@ export class SoundSystem {
   private unsubConfig: (() => void) | null = null;
 
   constructor(
-    private scene: Phaser.Scene,
+    private scene: Scene,
     private eventBus: EventBus,
     private config: ConfigManager,
     private registry: ContentRegistry,
@@ -75,11 +77,14 @@ export class SoundSystem {
     const [minRate, maxRate] = def.pitchRange;
     const rate = minRate + Math.random() * (maxRate - minRate);
 
+    const sound = assetStore.getSound(def.asset);
+    if (!sound) return false;
+
     try {
-      this.scene.sound.play(def.asset, {
-        volume: finalVol,
-        rate,
-      });
+      sound.setVolume(finalVol);
+      sound.setPlaybackRate(rate);
+      if (sound.isPlaying) sound.stop();
+      sound.play();
     } catch {
       return false;
     }
@@ -98,9 +103,27 @@ export class SoundSystem {
   }
 
   private applyVolume(): void {
-    if (this.scene.sound) {
-      this.scene.sound.volume = this.config.get<number>('audio', 'masterVolume');
-      this.scene.sound.mute = this.config.get<boolean>('audio', 'mute');
-    }
+    // Per-sound volume is applied on play; master mute gates playDef.
+    void this.scene;
   }
+}
+
+/** Register a Sound into the asset store from a URL (file or blob). */
+export function registerSoundFromUrl(scene: Scene, key: string, url: string): Promise<Sound> {
+  return new Promise((resolve, reject) => {
+    const sound = new Sound(
+      key,
+      url,
+      scene,
+      () => {
+        assetStore.setSound(key, sound);
+        resolve(sound);
+      },
+      { autoplay: false, loop: false },
+    );
+    // Babylon doesn't always call error callback; timeout soft-fail
+    setTimeout(() => {
+      if (!assetStore.getSound(key)) reject(new Error(`Sound load timeout: ${key}`));
+    }, 5000);
+  });
 }

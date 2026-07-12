@@ -3,6 +3,7 @@
   "type": "upgrade",
   "name": "Blue Flame",
   "sprite": "placeholder",
+  "description": "Cold copper salts in the reservoir. The circle turns ice-blue.",
   "rarity": "rare",
   "cost": { "core:rusty_can": 6 },
   "effects": [

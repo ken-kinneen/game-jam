@@ -1,7 +1,6 @@
 /**
  * Generates a seamless (tileable) floor texture using 4D toroidal noise
- * sampling, then renders it via Phaser's TileSprite (GL_REPEAT).
- * The result is a continuous organic surface with no visible seams or patterns.
+ * sampling. Canvas helpers remain for DynamicTexture / tooling use.
  */
 
 /** Definition for a single tile type in the palette. */
@@ -145,7 +144,7 @@ function seamlessFbm(nx: number, ny: number, octaves: number, baseScale: number)
 }
 
 /** Dispatches to the appropriate texture generator based on style.texture. */
-function generateSeamlessTileCanvas(size: number, style: FloorStyle): HTMLCanvasElement {
+export function generateSeamlessTileCanvas(size: number, style: FloorStyle): HTMLCanvasElement {
   switch (style.texture) {
     case 'wood':
       return generateWoodTile(size, style);
@@ -348,147 +347,8 @@ function generateMarbleTile(size: number, style: FloorStyle): HTMLCanvasElement 
   return canvas;
 }
 
-/**
- * Draws a tiled floor onto a Phaser scene. Supports:
- * - A single tileImage (seamless via GL_REPEAT)
- * - A grid map where each cell references a tile def from a palette
- * - A single defaultTile filling the whole floor
- */
-export function buildTileFloorGraphics(
-  scene: Phaser.Scene,
-  config: {
-    width: number;
-    height: number;
-    tileSize: number;
-    tileImage?: string;
-    defaultTile: FloorTileDef;
-    map?: number[][];
-    tiles: FloorTileDef[];
-    wallThickness: number;
-  },
-): { width: number; height: number } {
-  const { width, height, tileSize, tileImage, defaultTile, map, tiles, wallThickness } = config;
-
-  if (tileImage && scene.textures.exists(tileImage)) {
-    const tileSprite = scene.add.tileSprite(width / 2, height / 2, width, height, tileImage);
-    const tex = scene.textures.get(tileImage);
-    const srcWidth = tex.getSourceImage().width;
-    const scale = tileSize / srcWidth;
-    tileSprite.setTileScale(scale, scale);
-    tileSprite.setDepth(-1);
-  } else if (map && map.length > 0 && tiles.length > 0) {
-    renderTileMap(scene, width, height, tileSize, map, tiles, defaultTile, wallThickness);
-  } else {
-    renderSingleTile(scene, width, height, tileSize, defaultTile);
-  }
-
-  drawWalls(scene, width, height, wallThickness);
-
-  scene.physics.world.setBounds(
-    wallThickness,
-    wallThickness,
-    width - wallThickness * 2,
-    height - wallThickness * 2,
-  );
-
-  return { width, height };
-}
-
-/** Fills the entire floor with a single seamless tile type. */
-function renderSingleTile(
-  scene: Phaser.Scene,
-  width: number,
-  height: number,
-  tileSize: number,
-  tileDef: FloorTileDef,
-): void {
-  const potSize = nearestPOT(tileSize);
-  const texKey = tileTexKey(tileDef, potSize);
-
-  if (!scene.textures.exists(texKey)) {
-    const canvas = generateSeamlessTileCanvas(potSize, tileDef);
-    scene.textures.addCanvas(texKey, canvas);
-  }
-
-  const tileSprite = scene.add.tileSprite(width / 2, height / 2, width, height, texKey);
-  tileSprite.setDepth(-1);
-}
-
-/** Renders a grid map of different tile types onto a single canvas. */
-function renderTileMap(
-  scene: Phaser.Scene,
-  width: number,
-  height: number,
-  tileSize: number,
-  map: number[][],
-  tiles: FloorTileDef[],
-  defaultTile: FloorTileDef,
-  wallThickness: number,
-): void {
-  const potSize = nearestPOT(tileSize);
-
-  // Pre-generate all unique tile canvases
-  const tileCanvases = new Map<string, HTMLCanvasElement>();
-  const allDefs = [defaultTile, ...tiles];
-  for (const def of allDefs) {
-    const key = tileTexKey(def, potSize);
-    if (!tileCanvases.has(key)) {
-      tileCanvases.set(key, generateSeamlessTileCanvas(potSize, def));
-    }
-  }
-
-  // Composite onto a full-size canvas
-  const fullCanvas = document.createElement('canvas');
-  fullCanvas.width = width;
-  fullCanvas.height = height;
-  const ctx = fullCanvas.getContext('2d')!;
-
-  const cols = Math.ceil((width - wallThickness * 2) / potSize);
-  const rows = Math.ceil((height - wallThickness * 2) / potSize);
-
-  for (let row = 0; row < rows; row++) {
-    for (let col = 0; col < cols; col++) {
-      const mapRow = map[row % map.length];
-      const tileIdx = mapRow[col % mapRow.length];
-      const def = tileIdx < tiles.length ? tiles[tileIdx] : defaultTile;
-      const key = tileTexKey(def, potSize);
-      const tileCanvas = tileCanvases.get(key)!;
-
-      const dx = wallThickness + col * potSize;
-      const dy = wallThickness + row * potSize;
-      ctx.drawImage(tileCanvas, dx, dy);
-    }
-  }
-
-  const compositeKey = `__tileMapFloor_${width}_${height}`;
-  if (scene.textures.exists(compositeKey)) {
-    scene.textures.remove(compositeKey);
-  }
-  scene.textures.addCanvas(compositeKey, fullCanvas);
-  const img = scene.add.image(width / 2, height / 2, compositeKey);
-  img.setDepth(-1);
-}
-
-/** Generates a unique cache key for a tile definition. */
-function tileTexKey(def: FloorTileDef, size: number): string {
-  return `__tile_${def.texture}_${def.baseColor}_${def.accentColor}_${def.variant}_${size}`;
-}
-
-/** Rounds up to nearest power of two (required for GL_REPEAT). */
-function nearestPOT(n: number): number {
-  let v = Math.max(32, n);
-  v--;
-  v |= v >> 1;
-  v |= v >> 2;
-  v |= v >> 4;
-  v |= v >> 8;
-  v |= v >> 16;
-  v++;
-  return v;
-}
-
 /** Generates a seamless wall tile canvas with a darker, rougher surface. */
-function generateSeamlessWallCanvas(size: number): HTMLCanvasElement {
+export function generateSeamlessWallCanvas(size: number): HTMLCanvasElement {
   const canvas = document.createElement('canvas');
   canvas.width = size;
   canvas.height = size;
@@ -528,137 +388,9 @@ function generateSeamlessWallCanvas(size: number): HTMLCanvasElement {
 }
 
 /**
- * Draws walls that look like raised ledges seen from above.
- * Each wall has: a top face (dark textured), a visible inner face (lighter
- * vertical surface), and a shadow cast onto the floor.
+ * Procedural floor helpers (canvas-only). Babylon roomBuilder uses asset textures
+ * for tileFloor; these generators remain for tooling / future DynamicTexture use.
  */
-function drawWalls(
-  scene: Phaser.Scene,
-  width: number,
-  height: number,
-  wallThickness: number,
-): void {
-  if (wallThickness <= 0) return;
-
-  const potSize = nearestPOT(64);
-  const texKey = '__seamlessWall_' + potSize;
-
-  if (!scene.textures.exists(texKey)) {
-    const wallCanvas = generateSeamlessWallCanvas(potSize);
-    scene.textures.addCanvas(texKey, wallCanvas);
-  }
-
-  // The "ledge" — how many pixels of visible inner face each wall shows.
-  // This is the strip between the wall top and the floor that sells the height.
-  const ledge = Math.max(3, Math.round(wallThickness * 0.22));
-
-  const ix = wallThickness;
-  const iy = wallThickness;
-  const iw = width - wallThickness * 2;
-  const ih = height - wallThickness * 2;
-
-  // ── 1. Wall top faces (the flat surface you look down on) ──
-  const topW = scene.add.tileSprite(width / 2, wallThickness / 2, width, wallThickness, texKey);
-  topW.setDepth(0);
-  const botW = scene.add.tileSprite(
-    width / 2,
-    height - wallThickness / 2,
-    width,
-    wallThickness,
-    texKey,
-  );
-  botW.setDepth(0);
-  const lefW = scene.add.tileSprite(wallThickness / 2, height / 2, wallThickness, height, texKey);
-  lefW.setDepth(0);
-  const rigW = scene.add.tileSprite(
-    width - wallThickness / 2,
-    height / 2,
-    wallThickness,
-    height,
-    texKey,
-  );
-  rigW.setDepth(0);
-
-  // Darken the wall tops slightly — they're the "top" of a thick slab
-  const topDarken = scene.add.graphics();
-  topDarken.setDepth(0);
-  topDarken.fillStyle(0x000000, 0.15);
-  topDarken.fillRect(0, 0, width, wallThickness);
-  topDarken.fillRect(0, height - wallThickness, width, wallThickness);
-  topDarken.fillRect(0, wallThickness, wallThickness, ih);
-  topDarken.fillRect(width - wallThickness, wallThickness, wallThickness, ih);
-
-  // ── 2. Inner face ledges (the vertical surface visible from above) ──
-  // These are lighter strips along the inner edge of each wall.
-  // Light comes from upper-left, so:
-  //   top wall inner face (facing down): medium-lit
-  //   left wall inner face (facing right): medium-lit
-  //   bottom wall inner face (facing up): brightest (catches light)
-  //   right wall inner face (facing left): brightest
-
-  const faces = scene.add.graphics();
-  faces.setDepth(1);
-
-  // Top wall inner face — medium brightness, gradient lighter at top → darker at bottom
-  faces.fillGradientStyle(0x6b6358, 0x6b6358, 0x3d3830, 0x3d3830, 1, 1, 1, 1);
-  faces.fillRect(ix, iy, iw, ledge);
-
-  // Left wall inner face — medium brightness
-  faces.fillGradientStyle(0x6b6358, 0x3d3830, 0x6b6358, 0x3d3830, 1, 1, 1, 1);
-  faces.fillRect(ix, iy, ledge, ih);
-
-  // Bottom wall inner face — brightest (catches overhead light)
-  faces.fillGradientStyle(0x4a4438, 0x4a4438, 0x7a7266, 0x7a7266, 1, 1, 1, 1);
-  faces.fillRect(ix, iy + ih - ledge, iw, ledge);
-
-  // Right wall inner face — brightest
-  faces.fillGradientStyle(0x4a4438, 0x7a7266, 0x4a4438, 0x7a7266, 1, 1, 1, 1);
-  faces.fillRect(ix + iw - ledge, iy, ledge, ih);
-
-  // Corner miters where ledge faces meet — fill with darkest shade
-  faces.fillStyle(0x2e2a24, 1);
-  faces.fillRect(ix, iy, ledge, ledge); // TL
-  faces.fillRect(ix + iw - ledge, iy, ledge, ledge); // TR
-  faces.fillRect(ix, iy + ih - ledge, ledge, ledge); // BL
-  faces.fillRect(ix + iw - ledge, iy + ih - ledge, ledge, ledge); // BR
-
-  // ── 3. Shadow cast onto the floor ──
-  const shadowSize = Math.max(8, Math.round(wallThickness * 0.8));
-  const shadows = scene.add.graphics();
-  shadows.setDepth(1);
-
-  // Top wall shadow — strongest (light from above-left hits this wall)
-  shadows.fillGradientStyle(0x000000, 0x000000, 0x000000, 0x000000, 0.5, 0.5, 0, 0);
-  shadows.fillRect(ix, iy + ledge, iw, shadowSize);
-
-  // Left wall shadow — strong
-  shadows.fillGradientStyle(0x000000, 0x000000, 0x000000, 0x000000, 0.5, 0, 0.5, 0);
-  shadows.fillRect(ix + ledge, iy, shadowSize, ih);
-
-  // Bottom wall shadow — subtle (facing light)
-  shadows.fillGradientStyle(0x000000, 0x000000, 0x000000, 0x000000, 0, 0, 0.2, 0.2);
-  shadows.fillRect(ix, iy + ih - ledge - shadowSize, iw, shadowSize);
-
-  // Right wall shadow — subtle
-  shadows.fillGradientStyle(0x000000, 0x000000, 0x000000, 0x000000, 0, 0.2, 0, 0.2);
-  shadows.fillRect(ix + iw - ledge - shadowSize, iy, shadowSize, ih);
-
-  // Corner shadow vignettes
-  const cs = Math.max(10, Math.round(wallThickness * 1.0));
-
-  // TL corner — darkest
-  shadows.fillGradientStyle(0x000000, 0x000000, 0x000000, 0x000000, 0.55, 0, 0, 0);
-  shadows.fillRect(ix + ledge, iy + ledge, cs, cs);
-
-  // TR corner
-  shadows.fillGradientStyle(0x000000, 0x000000, 0x000000, 0x000000, 0, 0.35, 0, 0);
-  shadows.fillRect(ix + iw - ledge - cs, iy + ledge, cs, cs);
-
-  // BL corner
-  shadows.fillGradientStyle(0x000000, 0x000000, 0x000000, 0x000000, 0, 0, 0.35, 0);
-  shadows.fillRect(ix + ledge, iy + ih - ledge - cs, cs, cs);
-
-  // BR corner — lightest
-  shadows.fillGradientStyle(0x000000, 0x000000, 0x000000, 0x000000, 0, 0, 0, 0.2);
-  shadows.fillRect(ix + iw - ledge - cs, iy + ih - ledge - cs, cs, cs);
+export function buildTileFloorGraphics(_config: unknown): { width: number; height: number } {
+  return { width: 0, height: 0 };
 }

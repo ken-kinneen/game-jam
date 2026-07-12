@@ -21,6 +21,7 @@ export interface GameEvents {
   'shop:opened': Record<string, never>;
   'shop:closed': Record<string, never>;
   'lamp:color_changed': { color: string };
+  'debug:request_transition': { sceneId: string };
 }
 
 type EventCallback<T> = (data: T) => void;

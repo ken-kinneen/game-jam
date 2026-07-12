@@ -1,14 +1,6 @@
-import Phaser from 'phaser';
-import PhaserRaycaster from 'phaser-raycaster';
 import { ModLoader, type AssetManifest } from './engine/core/ModLoader';
 import { registry } from './engine/core/ContentRegistry';
 import { configManager } from './engine/core/ConfigManager';
-import { BootScene } from './engine/scenes/BootScene';
-import { GameScene } from './engine/scenes/GameScene';
-import { UIScene } from './engine/scenes/UIScene';
-import { ShopScene } from './engine/scenes/ShopScene';
-import { UpgradeScene } from './engine/scenes/UpgradeScene';
-import { CutsceneScene } from './engine/scenes/CutsceneScene';
 import { DebugPanel } from './ui/DebugPanel';
 import { cameraConfig } from './engine/configs/cameraConfig';
 import { playerConfig } from './engine/configs/playerConfig';
@@ -16,10 +8,14 @@ import { audioConfig } from './engine/configs/audioConfig';
 import { lampConfig } from './engine/configs/lampConfig';
 import { devConfig } from './engine/configs/devConfig';
 import { animationConfig } from './engine/configs/animationConfig';
+import { BabylonEngine } from './engine/rendering/BabylonEngine';
+import { IsometricCamera } from './engine/rendering/IsometricCamera';
+import { RenderProbe } from './engine/rendering/RenderProbe';
+import { SceneManager } from './engine/scenes/SceneManager';
+import { loadAssets } from './engine/scenes/BootScene';
 
 import coreMod from '../mods/core/mod.json';
 import coreManifest from '../mods/core/assets/manifest.json';
-
 import playerDef from '../mods/core/entities/player.json';
 import rustyCan from '../mods/core/items/rusty-can.json';
 import bananaPeel from '../mods/core/items/banana-peel.json';
@@ -27,7 +23,7 @@ import plasticBag from '../mods/core/items/plastic-bag.json';
 import homeScene from '../mods/core/scenes/home.json';
 import caveScene from '../mods/core/scenes/cave.json';
 import shopScene from '../mods/core/scenes/shop.json';
-import demoScene from '../mods/core/scenes/demo.json';
+
 import homeTrash from '../mods/core/loot-tables/home-trash.json';
 import caveTrash from '../mods/core/loot-tables/cave-trash.json';
 import oilCan from '../mods/core/items/oil-can.json';
@@ -46,7 +42,10 @@ import sndCaveEnter from '../mods/core/sounds/cave-enter.json';
 import sndCaveExit from '../mods/core/sounds/cave-exit.json';
 import sndPlayerDeath from '../mods/core/sounds/player-death.json';
 
+console.log('[TRASHED] main.ts module loaded — all imports resolved');
+
 async function boot() {
+  console.log('[TRASHED] boot() called');
   const loader = new ModLoader();
 
   const defFiles = [
@@ -60,7 +59,6 @@ async function boot() {
     { filename: 'scenes/home.json', data: homeScene },
     { filename: 'scenes/cave.json', data: caveScene },
     { filename: 'scenes/shop.json', data: shopScene },
-    { filename: 'scenes/demo.json', data: demoScene },
     { filename: 'loot-tables/home-trash.json', data: homeTrash },
     { filename: 'loot-tables/cave-trash.json', data: caveTrash },
     { filename: 'upgrades/quick-feet.json', data: quickFeet },
@@ -99,39 +97,54 @@ async function boot() {
   const debugPanel = new DebugPanel(configManager);
   debugPanel.mount();
 
-  const manifests = [{ basePath: 'mods/core/assets', manifest: coreManifest as AssetManifest }];
+  const container = document.getElementById('game-container');
+  if (!container) throw new Error('#game-container missing');
 
-  const dpr = Math.min(window.devicePixelRatio || 1, 2);
-  const game = new Phaser.Game({
-    type: Phaser.AUTO,
-    parent: 'game-container',
-    width: Math.round(960 * dpr),
-    height: Math.round(720 * dpr),
-    pixelArt: true,
-    scale: {
-      mode: Phaser.Scale.FIT,
-      autoCenter: Phaser.Scale.CENTER_BOTH,
-    },
-    physics: {
-      default: 'arcade',
-      arcade: {
-        gravity: { x: 0, y: 0 },
-        debug: false,
-      },
-    },
-    plugins: {
-      scene: [
-        {
-          key: 'PhaserRaycaster',
-          plugin: PhaserRaycaster,
-          mapping: 'raycasterPlugin',
-        },
-      ],
-    },
-    scene: [BootScene, GameScene, UIScene, ShopScene, UpgradeScene, CutsceneScene],
+  const engine = new BabylonEngine(container);
+  const camera = new IsometricCamera(engine.scene, engine.canvas);
+  const probe = new RenderProbe(engine.scene, engine.engine, camera.camera);
+  const syncProbe = () => probe.setVisible(configManager.get<boolean>('dev', 'showRenderProbe'));
+  syncProbe();
+  configManager.onChange((sectionId, key) => {
+    if (sectionId === 'dev' && key === 'showRenderProbe') syncProbe();
   });
 
-  game.scene.start('BootScene', { manifests });
+  // Paint immediately so load never looks like a frozen black screen
+  let scenes: SceneManager | null = null;
+  engine.start((dt) => {
+    scenes?.update(dt);
+    probe.update();
+  });
+
+  console.log('Babylon engine created, loading assets...');
+  const manifests = [{ basePath: 'mods/core/assets', manifest: coreManifest as AssetManifest }];
+  await loadAssets(engine.scene, manifests);
+  console.log('Assets loaded');
+
+  scenes = new SceneManager(engine.scene, camera);
+  const startScene = configManager.get<string>('dev', 'startScene');
+  console.log('Starting scene:', startScene);
+  await scenes.start(startScene);
+
+  const t = camera.camera.getTarget();
+  probe.markAt(t.x, 1.5, t.z);
+  console.log(
+    '[boot] post-start meshes=',
+    engine.scene.meshes.length,
+    'camTarget=',
+    t.x.toFixed(1),
+    t.z.toFixed(1),
+  );
+
+  engine.canvas.focus();
+  console.log('Render loop running');
 }
 
-boot();
+boot().catch((err) => {
+  console.error('Boot failed', err);
+  const msg = document.createElement('pre');
+  msg.style.cssText =
+    'position:fixed;inset:20px;color:red;font-size:16px;z-index:9999;white-space:pre-wrap;';
+  msg.textContent = `BOOT FAILED:\n${err?.stack ?? err}`;
+  document.body.appendChild(msg);
+});

@@ -6,6 +6,8 @@ export interface RunState {
   isInCave: boolean;
 }
 
+type TransitionHandler = (opts: { sceneId: string; viaCutscene: boolean }) => void;
+
 /** Manages scene transitions and run state (home = persistent, cave = ephemeral). */
 export class SceneDirector {
   private state: RunState = {
@@ -13,12 +15,19 @@ export class SceneDirector {
     isInCave: false,
   };
 
+  private onTransition: TransitionHandler | null = null;
+
   constructor(
     private registry: ContentRegistry,
     private eventBus: EventBus,
   ) {}
 
-  /** Sync state with the actual scene that was loaded (e.g. from BootScene). */
+  /** Register the SceneManager callback that performs the actual load. */
+  setTransitionHandler(handler: TransitionHandler): void {
+    this.onTransition = handler;
+  }
+
+  /** Sync state with the actual scene that was loaded. */
   syncState(sceneId: string, isCave: boolean): void {
     this.state.currentSceneId = sceneId;
     this.state.isInCave = isCave;
@@ -35,7 +44,7 @@ export class SceneDirector {
   }
 
   /** Transition to a new scene by def ID. */
-  transitionTo(sceneId: string, phaserScene: Phaser.Scene): void {
+  transitionTo(sceneId: string): void {
     const sceneDef = this.registry.get('scene', sceneId);
     if (!sceneDef) {
       console.error(`Scene def not found: ${sceneId}`);
@@ -49,27 +58,17 @@ export class SceneDirector {
     this.state.currentSceneId = sceneId;
     this.state.isInCave = sceneDef.kind === 'cave';
 
-    if (leavingCave) {
-      phaserScene.scene.start('CutsceneScene', {
-        video: 'cutscene_cave_exit',
-        nextSceneId: sceneId,
-      });
-    } else {
-      phaserScene.scene.restart({ sceneId });
-    }
+    this.onTransition?.({ sceneId, viaCutscene: leavingCave });
   }
 
   /** Reset run state when returning home from a cave. */
-  returnHome(phaserScene: Phaser.Scene): void {
+  returnHome(): void {
     if (this.state.isInCave) {
       this.state.currentSceneId = 'core:home';
       this.state.isInCave = false;
-      phaserScene.scene.start('CutsceneScene', {
-        video: 'cutscene_cave_exit',
-        nextSceneId: 'core:home',
-      });
+      this.onTransition?.({ sceneId: 'core:home', viaCutscene: true });
     } else {
-      this.transitionTo('core:home', phaserScene);
+      this.transitionTo('core:home');
     }
   }
 }

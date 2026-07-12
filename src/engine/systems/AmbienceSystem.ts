@@ -1,178 +1,152 @@
+import {
+  Scene,
+  Color3,
+  Color4,
+  HemisphericLight,
+  ParticleSystem,
+  Texture,
+  Vector3,
+  DefaultRenderingPipeline,
+} from '@babylonjs/core';
 import type { Entity } from '../entities/Entity';
 import type { CaveMap } from '../generation/caveGenerator';
+import { Movement } from '../entities/components/Movement';
 
-const CAVE_TILE_PX = 16;
-
-/**
- * Visual ambience: camera post-FX, floating dust particles,
- * footstep dust, and wall ambient-occlusion overlay.
- */
+/** Cave/home atmosphere: fog, vignette/bloom pipeline, dust + footstep particles. */
 export class AmbienceSystem {
-  private dustEmitter: Phaser.GameObjects.Particles.ParticleEmitter | null = null;
-  private footstepEmitter: Phaser.GameObjects.Particles.ParticleEmitter | null = null;
-  private dustTimer: Phaser.Time.TimerEvent | null = null;
+  private dust: ParticleSystem | null = null;
+  private footsteps: ParticleSystem | null = null;
+  private pipeline: DefaultRenderingPipeline | null = null;
+  private dustTimer = 0;
+  private footstepFrames = 0;
 
   constructor(
-    private scene: Phaser.Scene,
+    private scene: Scene,
     private player: Entity,
     private isCave: boolean,
   ) {}
 
-  create(caveMap: CaveMap | null): void {
-    this.applyCameraFX();
+  /** Create lights/fog/particles for the current scene kind. */
+  create(_caveMap: CaveMap | null): void {
+    this.scene.fogMode = Scene.FOGMODE_NONE;
+    const hemi = this.scene.lights.find((l) => l instanceof HemisphericLight) as
+      HemisphericLight | undefined;
     if (this.isCave) {
-      this.createDustParticles();
-      this.createFootstepParticles();
-      if (caveMap) {
-        this.paintAmbientOcclusion(caveMap);
+      this.scene.clearColor = new Color4(0.0, 0.0, 0.0, 1);
+      this.scene.ambientColor = new Color3(0, 0, 0);
+      // No ambient light — the player's lantern is the only source
+      if (hemi) hemi.setEnabled(false);
+    } else {
+      this.scene.clearColor = new Color4(0.25, 0.45, 0.65, 1);
+      if (hemi) {
+        hemi.setEnabled(true);
+        hemi.intensity = 1.4;
+        hemi.groundColor = new Color3(0.3, 0.25, 0.2);
       }
     }
+
+    this.pipeline = new DefaultRenderingPipeline('ambience', true, this.scene);
+    this.pipeline.bloomEnabled = this.isCave;
+    this.pipeline.bloomThreshold = 0.4;
+    this.pipeline.bloomWeight = 0.45;
+    this.pipeline.imageProcessingEnabled = true;
+    if (this.pipeline.imageProcessing) {
+      this.pipeline.imageProcessing.vignetteEnabled = true;
+      this.pipeline.imageProcessing.vignetteWeight = this.isCave ? 1.2 : 0.3;
+      this.pipeline.imageProcessing.vignetteColor = new Color4(0, 0, 0, 0);
+    }
+
+    this.dust = this.makeDust();
+    this.footsteps = this.makeFootsteps();
   }
 
+  /** Emit dust and footstep particles based on player motion. */
   update(): void {
-    this.updateFootsteps();
-  }
-
-  // -- camera post-FX ---------------------------------------------------
-
-  private applyCameraFX(): void {
-    const cam = this.scene.cameras.main;
-    if (!cam.postFX) return;
-
-    try {
-      cam.postFX.addVignette(0.5, 0.5, 0.88, 0.38);
-      if (this.isCave) {
-        cam.postFX.addBloom(0xffffff, 1, 1, 0.6, 1.15);
-      }
-    } catch {
-      // PostFX not available (Canvas renderer or missing pipeline)
+    this.dustTimer += 1;
+    if (this.dust && this.dustTimer >= 11) {
+      this.dustTimer = 0;
+      const px = this.player.x + (Math.random() - 0.5) * 8;
+      const pz = this.player.y + (Math.random() - 0.5) * 8;
+      this.dust.emitter = new Vector3(px, 1.5, pz);
+      this.dust.manualEmitCount = 1;
     }
-  }
 
-  // -- floating dust motes -----------------------------------------------
-
-  private createDustParticles(): void {
-    const tex = this.getOrCreateDustTexture();
-    this.dustEmitter = this.scene.add.particles(0, 0, tex, {
-      lifespan: { min: 4000, max: 8000 },
-      speed: { min: 2, max: 8 },
-      scale: { start: 0.3, end: 0.0 },
-      alpha: { start: 0.25, end: 0 },
-      angle: { min: 0, max: 360 },
-      frequency: -1,
-      blendMode: Phaser.BlendModes.ADD,
-      emitting: false,
-    });
-    this.dustEmitter.setDepth(801);
-    this.dustTimer = this.scene.time.addEvent({
-      delay: 180,
-      loop: true,
-      callback: () => this.emitDustMote(),
-    });
-  }
-
-  private emitDustMote(): void {
-    if (!this.dustEmitter) return;
-    const cam = this.scene.cameras.main;
-    const spread = Math.max(cam.width, cam.height) / (2 * cam.zoom);
-    const cx = cam.scrollX + cam.width / (2 * cam.zoom);
-    const cy = cam.scrollY + cam.height / (2 * cam.zoom);
-    const x = cx + (Math.random() - 0.5) * spread * 2;
-    const y = cy + (Math.random() - 0.5) * spread * 2;
-    this.dustEmitter.emitParticleAt(x, y, 1);
-  }
-
-  // -- footstep dust -----------------------------------------------------
-
-  private createFootstepParticles(): void {
-    const tex = this.getOrCreateDustTexture();
-    this.footstepEmitter = this.scene.add.particles(0, 0, tex, {
-      lifespan: 600,
-      speed: { min: 4, max: 14 },
-      scale: { start: 0.4, end: 0.0 },
-      alpha: { start: 0.35, end: 0 },
-      angle: { min: 160, max: 200 },
-      gravityY: 8,
-      frequency: -1,
-      quantity: 2,
-      tint: 0x998877,
-    });
-    this.footstepEmitter.setDepth(9);
-  }
-
-  private updateFootsteps(): void {
-    if (!this.footstepEmitter) return;
-    const body = this.player.sprite.body as Phaser.Physics.Arcade.Body | null;
-    if (!body) return;
-    const moving = Math.abs(body.velocity.x) > 5 || Math.abs(body.velocity.y) > 5;
-
-    if (moving) {
-      const px = this.player.sprite.x;
-      const py = this.player.sprite.y + this.player.sprite.displayHeight * 0.35;
-      if (this.scene.time.now % 6 < 2) {
-        this.footstepEmitter.emitParticleAt(px, py, 2);
+    const movement = this.player.getComponent<Movement>('movement');
+    const speed = movement ? Math.hypot(movement.velocityX, movement.velocityY) : 0;
+    if (this.footsteps && speed > 5) {
+      this.footstepFrames++;
+      if (this.footstepFrames >= 6) {
+        this.footstepFrames = 0;
+        this.footsteps.emitter = new Vector3(this.player.x, 0.05, this.player.y);
+        this.footsteps.manualEmitCount = 2;
       }
     }
   }
 
-  // -- wall ambient occlusion -------------------------------------------
-
-  private paintAmbientOcclusion(caveMap: CaveMap): void {
-    const T = CAVE_TILE_PX;
-    const aoRadius = 3;
-
-    const gfx = this.scene.add.graphics();
-    gfx.setDepth(-1);
-
-    for (let gy = 0; gy < caveMap.height; gy++) {
-      for (let gx = 0; gx < caveMap.width; gx++) {
-        if (caveMap.grid[gy][gx] !== 1) continue;
-
-        let wallNeighbors = 0;
-        for (let dy = -aoRadius; dy <= aoRadius; dy++) {
-          for (let dx = -aoRadius; dx <= aoRadius; dx++) {
-            if (dx === 0 && dy === 0) continue;
-            const ny = gy + dy;
-            const nx = gx + dx;
-            if (ny < 0 || ny >= caveMap.height || nx < 0 || nx >= caveMap.width) {
-              wallNeighbors++;
-            } else if (caveMap.grid[ny][nx] === 0) {
-              const dist = Math.sqrt(dx * dx + dy * dy);
-              wallNeighbors += 1 / dist;
-            }
-          }
-        }
-
-        if (wallNeighbors > 0.5) {
-          const maxInfluence = 6;
-          const intensity = Math.min(wallNeighbors / maxInfluence, 1);
-          const alpha = intensity * 0.35;
-          gfx.fillStyle(0x000000, alpha);
-          gfx.fillRect(gx * T, gy * T, T, T);
-        }
-      }
-    }
+  /** Dispose particle systems and post-process pipeline. */
+  destroy(): void {
+    this.dust?.dispose();
+    this.footsteps?.dispose();
+    this.pipeline?.dispose();
+    this.dust = null;
+    this.footsteps = null;
+    this.pipeline = null;
   }
 
-  // -- shared texture ----------------------------------------------------
+  private makeDust(): ParticleSystem {
+    const ps = new ParticleSystem('dust', 40, this.scene);
+    ps.particleTexture = this.makeParticleTexture();
+    ps.minSize = 0.05;
+    ps.maxSize = 0.12;
+    ps.minLifeTime = 1.2;
+    ps.maxLifeTime = 2.5;
+    ps.emitRate = 0;
+    ps.color1 = new Color4(1, 1, 1, 0.25);
+    ps.color2 = new Color4(0.8, 0.8, 0.9, 0.1);
+    ps.colorDead = new Color4(0, 0, 0, 0);
+    ps.gravity = new Vector3(0, -0.05, 0);
+    ps.direction1 = new Vector3(-0.1, 0.2, -0.1);
+    ps.direction2 = new Vector3(0.1, 0.4, 0.1);
+    ps.blendMode = ParticleSystem.BLENDMODE_STANDARD;
+    ps.start();
+    return ps;
+  }
 
-  private getOrCreateDustTexture(): string {
-    const key = '__dust_mote';
-    if (this.scene.textures.exists(key)) return key;
+  private makeFootsteps(): ParticleSystem {
+    const ps = new ParticleSystem('footsteps', 20, this.scene);
+    ps.particleTexture = this.makeParticleTexture();
+    ps.minSize = 0.04;
+    ps.maxSize = 0.08;
+    ps.minLifeTime = 0.3;
+    ps.maxLifeTime = 0.6;
+    ps.emitRate = 0;
+    ps.color1 = new Color4(0.5, 0.45, 0.35, 0.35);
+    ps.color2 = new Color4(0.4, 0.35, 0.3, 0.15);
+    ps.colorDead = new Color4(0, 0, 0, 0);
+    ps.gravity = new Vector3(0, 0.2, 0);
+    ps.direction1 = new Vector3(-0.2, 0.3, -0.2);
+    ps.direction2 = new Vector3(0.2, 0.5, 0.2);
+    ps.start();
+    return ps;
+  }
 
+  private makeParticleTexture(): Texture {
     const size = 16;
-    const c = document.createElement('canvas');
-    c.width = size;
-    c.height = size;
-    const ctx = c.getContext('2d')!;
-    const half = size / 2;
-    const g = ctx.createRadialGradient(half, half, 0, half, half, half);
-    g.addColorStop(0, 'rgba(255,255,255,0.8)');
-    g.addColorStop(0.4, 'rgba(255,255,255,0.3)');
+    const canvas = document.createElement('canvas');
+    canvas.width = size;
+    canvas.height = size;
+    const ctx = canvas.getContext('2d')!;
+    const g = ctx.createRadialGradient(8, 8, 0, 8, 8, 8);
+    g.addColorStop(0, 'rgba(255,255,255,1)');
     g.addColorStop(1, 'rgba(255,255,255,0)');
     ctx.fillStyle = g;
     ctx.fillRect(0, 0, size, size);
-    this.scene.textures.addCanvas(key, c);
-    return key;
+    return new Texture(
+      'data:image/png;base64,' + canvas.toDataURL('image/png').split(',')[1],
+      this.scene,
+      true,
+      false,
+      Texture.BILINEAR_SAMPLINGMODE,
+    );
   }
 }

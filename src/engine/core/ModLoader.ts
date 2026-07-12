@@ -22,7 +22,15 @@ const SCHEMA_MAP: Record<string, { type: DefType; schema: ZodSchema }> = {
 
 export interface ManifestEntry {
   file: string;
-  type: 'image' | 'spritesheet' | 'audio' | 'tilemap' | 'tilemapJSON';
+  type:
+    | 'image'
+    | 'spritesheet'
+    | 'audio'
+    | 'tilemap'
+    | 'tilemapJSON'
+    | 'model'
+    | 'texture'
+    | 'material';
   frameWidth?: number;
   frameHeight?: number;
 }
