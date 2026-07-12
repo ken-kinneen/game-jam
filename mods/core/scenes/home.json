@@ -25,57 +25,24 @@
     {
       "image": "furniture/bed_8",
       "position": {
-        "x": 287,
-        "y": 114
+        "x": 410,
+        "y": 243
       },
       "scale": 0.3,
       "depth": 2,
       "collides": true,
-      "angle": 0
-    },
-    {
-      "image": "furniture/bed_10",
-      "position": {
-        "x": 424,
-        "y": 143
-      },
-      "scale": 0.24,
-      "depth": 1,
-      "collides": true,
-      "angle": 0
+      "angle": 90
     },
     {
       "image": "furniture/bed_11",
       "position": {
-        "x": 190,
-        "y": 394
+        "x": 119,
+        "y": 396
       },
       "scale": 0.28,
       "depth": 2,
       "collides": true,
       "angle": 0
-    },
-    {
-      "image": "furniture/bed_15",
-      "position": {
-        "x": 414,
-        "y": 283
-      },
-      "scale": 0.21,
-      "depth": 2,
-      "collides": true,
-      "angle": 90
-    },
-    {
-      "image": "furniture/bed_13",
-      "position": {
-        "x": 416,
-        "y": 411
-      },
-      "scale": 0.18,
-      "depth": 2,
-      "collides": true,
-      "angle": 90
     },
     {
       "image": "furniture/bed_4",
@@ -230,6 +197,28 @@
       "depth": 2,
       "collides": true,
       "angle": 0
+    },
+    {
+      "image": "furniture/bed_6",
+      "position": {
+        "x": 403,
+        "y": 409
+      },
+      "scale": 0.3,
+      "depth": 2,
+      "collides": true,
+      "angle": 0
+    },
+    {
+      "image": "furniture/toolbox",
+      "position": {
+        "x": 405,
+        "y": 92
+      },
+      "scale": 0.22,
+      "depth": 2,
+      "collides": true,
+      "angle": 90
     }
   ],
   "exits": [
@@ -238,8 +227,8 @@
       "condition": "always",
       "label": "Exit",
       "position": {
-        "x": 189,
-        "y": 390
+        "x": 117,
+        "y": 357
       }
     }
   ],
@@ -247,13 +236,13 @@
     {
       "label": "Shop",
       "position": {
-        "x": 297,
-        "y": 111
+        "x": 370,
+        "y": 237
       }
     }
   ],
   "playerSpawn": {
-    "x": 273,
+    "x": 257,
     "y": 248
   }
 }
