@@ -1,8 +1,10 @@
 import type { Entity } from '../entities/Entity';
 import type { SceneDef } from '../schemas/scene.schema';
 import type { DepthSortSystem } from '../systems/DepthSortSystem';
+import { PropRenderer3D } from '../rendering/PropRenderer3D';
 
 export type PropShadow = { shadow: Phaser.GameObjects.Image; source: Phaser.GameObjects.Image };
+export type Prop3DInstance = { renderer: PropRenderer3D; x: number; y: number };
 
 export interface SpawnPropsOptions {
   scene: Phaser.Scene;
@@ -20,6 +22,11 @@ export interface SpawnPropsOptions {
   ) => void;
 }
 
+export interface SpawnPropsResult {
+  propShadows: PropShadow[];
+  props3d: Prop3DInstance[];
+}
+
 /** Spawns scene props and returns shadow pairs for lamp rendering. */
 export function spawnSceneProps(
   scene: Phaser.Scene,
@@ -35,12 +42,58 @@ export function spawnSceneProps(
     visual?: Phaser.GameObjects.Image,
   ) => void,
   depthSort?: DepthSortSystem,
-): PropShadow[] {
+): SpawnPropsResult {
   const propShadows: PropShadow[] = [];
+  const props3d: Prop3DInstance[] = [];
   const props = sceneDef?.props ?? [];
 
   for (const prop of props) {
     const pos = prop.position;
+
+    // 3D rendered prop
+    if (prop.render3d) {
+      const config = typeof prop.render3d === 'object' ? prop.render3d : {};
+      const displaySize = prop.height ?? 96;
+      const renderer = new PropRenderer3D(scene, `${prop.image}_${pos.x}_${pos.y}`, {
+        shape: (config as { shape?: 'table' | 'box' | 'cylinder' }).shape ?? 'table',
+        color: (config as { color?: number }).color,
+        modelUrl: (config as { modelUrl?: string }).modelUrl,
+        size: Math.min(Math.max(displaySize, 96), 256),
+      });
+
+      const texKey = renderer.getTextureKey();
+      const img = scene.add.image(pos.x, pos.y, texKey);
+      img.setDisplaySize(displaySize, displaySize);
+      img.setDepth(prop.depth);
+
+      if (prop.collides && player) {
+        const sprite = scene.physics.add.staticImage(pos.x, pos.y, texKey);
+        sprite.setDisplaySize(displaySize, displaySize);
+        sprite.setDepth(prop.depth);
+        sprite.refreshBody();
+        const body = sprite.body as Phaser.Physics.Arcade.StaticBody;
+        const shrink = 0.6;
+        body.setSize(body.width * shrink, body.height * shrink);
+        body.setOffset(
+          (sprite.displayWidth - body.width) / 2,
+          (sprite.displayHeight - body.height) / 2,
+        );
+        scene.physics.add.collider(player.sprite, sprite);
+        img.destroy();
+        renderer.linkSprite(sprite);
+        if (depthSort) depthSort.register(sprite);
+      } else {
+        renderer.linkSprite(img);
+        if (depthSort) depthSort.register(img);
+      }
+
+      props3d.push({ renderer, x: pos.x, y: pos.y });
+
+      if (prop.action) {
+        onPropAction(prop);
+      }
+      continue;
+    }
 
     if (!scene.textures.exists(prop.image)) {
       console.warn(`Prop image "${prop.image}" not found, skipping`);
@@ -121,7 +174,7 @@ export function spawnSceneProps(
     }
   }
 
-  return propShadows;
+  return { propShadows, props3d };
 }
 
 /** Adds a soft elliptical contact shadow beneath a prop sprite. */

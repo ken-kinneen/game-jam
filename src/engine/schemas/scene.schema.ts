@@ -117,6 +117,17 @@ const PropSchema = z.object({
   actionLabel: z.string().optional(),
   /** Phaser preFX effects to apply permanently to this prop. */
   fx: z.array(PropFxSchema).default([]),
+  /** Render as a real-time 3D object with dynamic lamp shadows. */
+  render3d: z
+    .union([
+      z.boolean(),
+      z.object({
+        shape: z.enum(['table', 'box', 'cylinder']).default('box'),
+        color: z.number().optional(),
+        modelUrl: z.string().optional(),
+      }),
+    ])
+    .optional(),
 });
 
 /** Schema for scene content definitions. */

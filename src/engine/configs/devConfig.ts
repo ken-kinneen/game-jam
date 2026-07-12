@@ -15,7 +15,7 @@ export const devConfig: ConfigSection = {
         { value: 'core:shop', label: 'Shop' },
         { value: 'core:demo', label: 'FX Demo' },
       ],
-      defaultValue: 'core:cave',
+      defaultValue: 'core:home',
     },
   ],
 };

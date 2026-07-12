@@ -3,7 +3,7 @@ import type { Entity } from '../entities/Entity';
 import type { SceneDef } from '../schemas/scene.schema';
 import type { SceneDirector } from './SceneDirector';
 import type { DepthSortSystem } from '../systems/DepthSortSystem';
-import { spawnSceneProps, type PropShadow } from './propSpawner';
+import { spawnSceneProps, type PropShadow, type Prop3DInstance } from './propSpawner';
 
 export interface ExitZone {
   sprite: Phaser.Physics.Arcade.Sprite;
@@ -28,6 +28,7 @@ export type { PropShadow } from './propSpawner';
 /** Manages exit/interact zones, props, tooltips, and proximity prompts. */
 export class ZoneManager {
   readonly propShadows: PropShadow[] = [];
+  readonly props3d: Prop3DInstance[] = [];
   private exitZones: ExitZone[] = [];
   private interactZones: InteractZone[] = [];
   private activeExit: ExitZone | null = null;
@@ -49,6 +50,7 @@ export class ZoneManager {
     this.activeExit = null;
     this.activeInteract = null;
     this.propShadows.length = 0;
+    this.props3d.length = 0;
   }
 
   /** Sets the player reference after spawn. */
@@ -60,15 +62,15 @@ export class ZoneManager {
   spawnAll(): void {
     this.spawnExitZones();
     this.spawnShopZones();
-    this.propShadows.push(
-      ...spawnSceneProps(
-        this.scene,
-        this.sceneDef,
-        this.player,
-        (prop, visual) => this.registerPropInteraction(prop, visual),
-        this.depthSort,
-      ),
+    const result = spawnSceneProps(
+      this.scene,
+      this.sceneDef,
+      this.player,
+      (prop, visual) => this.registerPropInteraction(prop, visual),
+      this.depthSort,
     );
+    this.propShadows.push(...result.propShadows);
+    this.props3d.push(...result.props3d);
     this.createPromptText();
   }
 

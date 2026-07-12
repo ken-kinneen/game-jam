@@ -238,6 +238,16 @@ export class GameScene extends Phaser.Scene {
 
     this.depthSort.update();
     this.lampRenderer.update(this.zoneManager.propShadows);
+
+    // Update 3D props with lamp position for dynamic shadows
+    if (this.zoneManager.props3d.length > 0) {
+      const lampX = this.player.sprite.x;
+      const lampY = this.player.sprite.y;
+      for (const p of this.zoneManager.props3d) {
+        p.renderer.updateLampPosition(p.x, p.y, lampX, lampY);
+      }
+    }
+
     this.ambienceSystem.update();
     this.ambientAudio.update();
   }

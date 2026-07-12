@@ -28,10 +28,13 @@
         "x": 412,
         "y": 244
       },
-      "scale": 0.3,
+      "height": 135,
       "depth": 2,
       "collides": true,
-      "angle": 90
+      "angle": 90,
+      "render3d": {
+        "modelUrl": "mods/core/assets/models/bench.glb"
+      }
     },
     {
       "image": "furniture/bed_11",
