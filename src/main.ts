@@ -15,6 +15,7 @@ import { playerConfig } from './engine/configs/playerConfig';
 import { audioConfig } from './engine/configs/audioConfig';
 import { lampConfig } from './engine/configs/lampConfig';
 import { devConfig } from './engine/configs/devConfig';
+import { animationConfig } from './engine/configs/animationConfig';
 
 import coreMod from '../mods/core/mod.json';
 import coreManifest from '../mods/core/assets/manifest.json';
@@ -92,6 +93,7 @@ async function boot() {
   configManager.register(audioConfig);
   configManager.register(lampConfig);
   configManager.register(devConfig);
+  configManager.register(animationConfig);
   configManager.loadPersisted();
 
   const debugPanel = new DebugPanel(configManager);

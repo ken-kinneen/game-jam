@@ -1,18 +1,17 @@
 import type { Entity } from '../entities/Entity';
 import { Movement } from '../entities/components/Movement';
 import { Animator } from '../entities/components/Animator';
+import type { ConfigManager } from '../core/ConfigManager';
 
-const MOVING_THRESHOLD = 4; // px/s — below this, treat as idle (avoids animation jitter near zero)
+const MOVING_THRESHOLD = 4;
+const DECEL_HOLD_MS = 120;
 
-/**
- * Derives facing direction from an entity's current velocity (not input intent, so
- * it reflects acceleration/friction the same way movement itself does — no separate
- * "facing" state to fall out of sync) and plays the matching idle/walk animation.
- * No-ops for entities without both a Movement and an Animator component, so this is
- * safe to run over every entity unconditionally.
- */
 export class AnimationSystem {
-  update(entity: Entity): void {
+  private decelTimer = 0;
+
+  constructor(private configManager?: ConfigManager) {}
+
+  update(entity: Entity, dt: number): void {
     const movement = entity.getComponent<Movement>('movement');
     const animator = entity.getComponent<Animator>('animator');
     if (!movement || !animator) return;
@@ -21,8 +20,7 @@ export class AnimationSystem {
     const isMoving = speed > MOVING_THRESHOLD;
 
     if (isMoving) {
-      // Predominant axis decides direction; a diagonal move still needs one
-      // unambiguous facing, matching the sheet's 3 rows (down/up/side).
+      this.decelTimer = 0;
       if (Math.abs(movement.velocityY) >= Math.abs(movement.velocityX)) {
         animator.direction = movement.velocityY > 0 ? 'down' : 'up';
       } else {
@@ -37,12 +35,32 @@ export class AnimationSystem {
       entity.sprite.setFlipX(false);
     }
 
+    // Hold the walk animation briefly after stopping so it doesn't snap mid-stride
+    const wasWalking = animator.currentAnimKey?.includes('_walk_') ?? false;
+    if (!isMoving && wasWalking && this.decelTimer < DECEL_HOLD_MS) {
+      this.decelTimer += dt * 1000;
+      // Slow the walk to minimum fps during decel hold
+      if (this.configManager) {
+        const minFps = this.configManager.get<number>('animation', 'walkFpsMin');
+        entity.sprite.anims.msPerFrame = 1000 / minFps;
+      }
+      return;
+    }
+
     const state = isMoving ? 'walk' : 'idle';
     const key = `${animator.animIdPrefix}_${state}_${animator.direction}`;
 
     if (animator.currentAnimKey !== key) {
       entity.sprite.play(key, true);
       animator.currentAnimKey = key;
+    }
+
+    if (state === 'walk' && this.configManager) {
+      const minFps = this.configManager.get<number>('animation', 'walkFpsMin');
+      const maxFps = this.configManager.get<number>('animation', 'walkFpsMax');
+      const speedRatio = Math.min(speed / movement.maxSpeed, 1);
+      const fps = minFps + speedRatio * (maxFps - minFps);
+      entity.sprite.anims.msPerFrame = 1000 / fps;
     }
   }
 }

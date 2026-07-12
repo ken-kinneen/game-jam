@@ -3,6 +3,7 @@ import { Inventory } from '../entities/components/Inventory';
 import type { StatSheet } from '../stats/StatSheet';
 import type { ContentRegistry } from '../core/ContentRegistry';
 import { type EventBus } from '../core/EventBus';
+import type { ConfigManager } from '../core/ConfigManager';
 
 interface GroundItem {
   sprite: Phaser.Physics.Arcade.Sprite;
@@ -17,6 +18,8 @@ export class PickupSystem {
   constructor(
     private registry: ContentRegistry,
     private eventBus: EventBus,
+    private scene?: Phaser.Scene,
+    private configManager?: ConfigManager,
   ) {}
 
   /** Register a ground item sprite for pickup detection. */
@@ -60,7 +63,7 @@ export class PickupSystem {
           });
 
           if (added >= item.qty) {
-            item.sprite.destroy();
+            this.flyTowardPlayer(item.sprite, player);
             this.groundItems.splice(i, 1);
           } else {
             item.qty -= added;
@@ -73,6 +76,29 @@ export class PickupSystem {
         }
       }
     }
+  }
+
+  private flyTowardPlayer(sprite: Phaser.Physics.Arcade.Sprite, player: Entity): void {
+    const body = sprite.body as Phaser.Physics.Arcade.Body | null;
+    if (body) body.enable = false;
+
+    if (!this.scene || !this.configManager) {
+      sprite.destroy();
+      return;
+    }
+
+    const duration = this.configManager.get<number>('animation', 'pickupFlyDuration');
+    this.scene.tweens.add({
+      targets: sprite,
+      x: player.sprite.x,
+      y: player.sprite.y - 8,
+      scaleX: 0.3,
+      scaleY: 0.3,
+      alpha: 0,
+      duration,
+      ease: 'Quad.easeIn',
+      onComplete: () => sprite.destroy(),
+    });
   }
 
   /** Remove all tracked ground items (scene teardown). */

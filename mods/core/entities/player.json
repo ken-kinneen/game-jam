@@ -9,9 +9,9 @@
     "inventory": { "capacity": 20 },
     "animations": {
       "directions": ["down", "up", "side"],
-      "framesPerRow": 5,
+      "framesPerRow": 6,
       "idleFrame": 0,
-      "walkFrames": [1, 2, 3, 4],
+      "walkFrames": [1, 2, 3, 4, 5],
       "frameRate": 8
     },
     "stats": {

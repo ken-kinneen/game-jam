@@ -2,8 +2,10 @@ import PhaserRaycaster from 'phaser-raycaster';
 import { Entity } from '../entities/Entity';
 import { EntityFactory } from '../entities/EntityFactory';
 import { Movement } from '../entities/components/Movement';
+import { Animator } from '../entities/components/Animator';
 import { MovementSystem } from '../systems/MovementSystem';
 import { AnimationSystem } from '../systems/AnimationSystem';
+import { ProceduralAnimSystem } from '../systems/ProceduralAnimSystem';
 import { PickupSystem } from '../systems/PickupSystem';
 import { LampSystem } from '../systems/LampSystem';
 import { SoundSystem } from '../systems/SoundSystem';
@@ -31,6 +33,7 @@ export class GameScene extends Phaser.Scene {
   private player!: Entity;
   private movementSystem!: MovementSystem;
   private animationSystem!: AnimationSystem;
+  private proceduralAnimSystem!: ProceduralAnimSystem;
   private pickupSystem!: PickupSystem;
   private lampSystem!: LampSystem;
   private soundSystem!: SoundSystem;
@@ -66,8 +69,9 @@ export class GameScene extends Phaser.Scene {
 
   create() {
     this.movementSystem = new MovementSystem();
-    this.animationSystem = new AnimationSystem();
-    this.pickupSystem = new PickupSystem(registry, eventBus);
+    this.animationSystem = new AnimationSystem(configManager);
+    this.proceduralAnimSystem = new ProceduralAnimSystem(configManager);
+    this.pickupSystem = new PickupSystem(registry, eventBus, this, configManager);
     this.lampSystem = new LampSystem(eventBus, configManager);
     this.soundSystem = new SoundSystem(this, eventBus, configManager, registry);
     this.inputMap = new InputMap(this);
@@ -196,7 +200,8 @@ export class GameScene extends Phaser.Scene {
     if (!this.shopOpen) {
       const move = this.inputMap.getMoveVector();
       this.movementSystem.update(this.player, move.x, move.y, dt);
-      this.animationSystem.update(this.player);
+      this.animationSystem.update(this.player, dt);
+      this.proceduralAnimSystem.update(this.player, dt);
       this.pickupSystem.update(this.player);
 
       this.zoneManager.checkExitOverlap();
@@ -302,6 +307,12 @@ export class GameScene extends Phaser.Scene {
     const frameHeight = this.player.sprite.height;
     const scale = targetHeight / frameHeight;
     this.player.sprite.setScale(scale);
+
+    const animator = this.player.getComponent<Animator>('animator');
+    if (animator) {
+      animator.baseScaleX = scale;
+      animator.baseScaleY = scale;
+    }
 
     const maxSpeed =
       this.sceneDef?.playerMaxSpeed ?? configManager.get<number>('player', 'maxSpeed');
