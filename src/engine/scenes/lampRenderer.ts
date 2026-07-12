@@ -7,6 +7,19 @@ import type { SceneDirector } from './SceneDirector';
 
 const GLOW_TEX_SIZE = 256;
 
+/** Damped spring for lamp sway — reacts to player acceleration. */
+interface LampSway {
+  offsetX: number;
+  offsetY: number;
+  velX: number;
+  velY: number;
+}
+
+const SWAY_STIFFNESS = 35;
+const SWAY_DAMPING = 8;
+const SWAY_FORCE_SCALE = 0.6;
+const SWAY_MAX_OFFSET = 8;
+
 const GLOW_COLORS: Record<string, [string, string, string, string]> = {
   default: [
     'rgba(255,200,100,0.4)',
@@ -44,6 +57,11 @@ export class LampRenderer {
   private ray!: PhaserRaycaster.Raycaster.Ray;
   private warmGlow!: Phaser.GameObjects.Sprite;
   private lampColor = 'default';
+  private sway: LampSway = { offsetX: 0, offsetY: 0, velX: 0, velY: 0 };
+  private prevPlayerX = 0;
+  private prevPlayerY = 0;
+  private prevVelX = 0;
+  private prevVelY = 0;
 
   constructor(
     private readonly scene: Phaser.Scene & { raycasterPlugin: PhaserRaycaster },
@@ -59,7 +77,9 @@ export class LampRenderer {
     this.wallGroup = wallGroup;
   }
 
-  /** Creates FOW render texture, eraser, and warm glow sprite. */
+  private pointLight: Phaser.GameObjects.Light | null = null;
+
+  /** Creates FOW render texture, eraser, warm glow sprite, and point light. */
   create(): void {
     const GS = GLOW_TEX_SIZE;
     const wb = this.scene.physics.world.bounds;
@@ -130,25 +150,53 @@ export class LampRenderer {
     this.warmGlow.setOrigin(0.5, 0.5);
 
     this.displayedRadius = configManager.get<number>('lamp', 'glowRadiusMax');
+
+    this.setupPointLight();
   }
 
-  /** Updates FOW eraser, warm glow, and prop shadows each frame. */
+  /** Creates a Phaser point light for the Light2D pipeline on supported sprites. */
+  private setupPointLight(): void {
+    try {
+      this.scene.lights.enable();
+      this.scene.lights.setAmbientColor(0x222222);
+      this.pointLight = this.scene.lights.addLight(
+        this.player.sprite.x,
+        this.player.sprite.y,
+        configManager.get<number>('lamp', 'glowRadiusMax') * 1.5,
+        0xffc864,
+        1.5,
+      );
+    } catch {
+      this.pointLight = null;
+    }
+  }
+
+  /** Enable Light2D pipeline on a sprite so it reacts to the point light. */
+  enableLightPipeline(sprite: Phaser.GameObjects.Image | Phaser.GameObjects.Sprite): void {
+    try {
+      sprite.setPipeline('Light2D');
+    } catch {
+      // Pipeline not available (Canvas renderer fallback)
+    }
+  }
+
+  /** Updates FOW eraser, warm glow, lamp sway, and prop shadows each frame. */
   update(propShadows: PropShadow[]): void {
     const ratio = this.lampSystem.ratio;
     const critical = configManager.get<number>('lamp', 'criticalThreshold');
     const rMax = configManager.get<number>('lamp', 'glowRadiusMax');
     const rMin = configManager.get<number>('lamp', 'glowRadiusMin');
     const t = this.scene.time.now;
+    const dt = this.scene.game.loop.delta / 1000;
 
     const curved = Math.pow(ratio, 2.5);
     let targetRadius = rMin + (rMax - rMin) * curved;
 
-    const baseFlicker =
-      Math.sin(t * 0.005) * 1.5 + Math.sin(t * 0.013) * 1.0 + Math.sin(t * 0.029) * 0.5;
+    // Subtle flicker — barely visible, just enough to feel organic
+    const baseFlicker = Math.sin(t * 0.003) * 0.5 + Math.sin(t * 0.011) * 0.3;
 
     if (ratio > 0 && ratio < critical) {
-      const panicFlicker =
-        Math.sin(t * 0.04) * 5 + Math.sin(t * 0.071) * 3 + (Math.random() - 0.5) * 4;
+      const panicFlicker = Math.sin(t * 0.025) * 2 + (Math.random() - 0.5) * 1.5;
       targetRadius += panicFlicker;
     } else if (ratio > 0) {
       targetRadius += baseFlicker;
@@ -162,22 +210,67 @@ export class LampRenderer {
     const px = this.player.sprite.x;
     const py = this.player.sprite.y;
 
+    this.updateSway(px, py, dt);
+
+    const lampX = px + this.sway.offsetX;
+    const lampY = py + this.sway.offsetY;
+
     const wb = this.scene.physics.world.bounds;
     this.fow.clear();
     this.fow.fill(0x000000, this.darknessAlpha);
     if (this.displayedRadius > 0) {
       const eraserScale = (this.displayedRadius * 2) / 256;
       this.fowEraser.setScale(eraserScale);
-      this.fow.erase(this.fowEraser, px - wb.x, py - wb.y);
+      this.fow.erase(this.fowEraser, lampX - wb.x, lampY - wb.y);
     }
 
-    this.updatePropShadows(propShadows, px, py, this.displayedRadius);
+    this.updatePropShadows(propShadows, lampX, lampY, this.displayedRadius);
 
-    this.warmGlow.setPosition(px, py);
-    const glowAlphaFlicker = 0.7 + Math.sin(t * 0.006) * 0.1 + Math.sin(t * 0.017) * 0.08;
+    this.warmGlow.setPosition(lampX, lampY);
     const glowScale = this.displayedRadius / (GLOW_TEX_SIZE * 0.25);
     this.warmGlow.setScale(Math.max(glowScale, 0.01));
-    this.warmGlow.setAlpha(ratio > 0 ? glowAlphaFlicker : 0);
+    this.warmGlow.setAlpha(ratio > 0 ? 0.75 : 0);
+
+    if (this.pointLight) {
+      this.pointLight.setPosition(lampX, lampY);
+      this.pointLight.radius = this.displayedRadius * 1.5;
+      this.pointLight.intensity = ratio > 0 ? 1.4 + Math.sin(t * 0.004) * 0.05 : 0;
+    }
+  }
+
+  /** Damped spring simulation — lamp trails behind player acceleration. */
+  private updateSway(px: number, py: number, dt: number): void {
+    const velX = (px - this.prevPlayerX) / Math.max(dt, 0.001);
+    const velY = (py - this.prevPlayerY) / Math.max(dt, 0.001);
+
+    // React to acceleration (change in velocity), not velocity itself
+    const accelX = velX - (this.prevVelX ?? 0);
+    const accelY = velY - (this.prevVelY ?? 0);
+    this.prevPlayerX = px;
+    this.prevPlayerY = py;
+    this.prevVelX = velX;
+    this.prevVelY = velY;
+
+    // Player acceleration pushes the lamp in the opposite direction
+    const forceX = -accelX * SWAY_FORCE_SCALE;
+    const forceY = -accelY * SWAY_FORCE_SCALE;
+
+    // Spring pulls lamp back to center
+    const springX = -SWAY_STIFFNESS * this.sway.offsetX;
+    const springY = -SWAY_STIFFNESS * this.sway.offsetY;
+
+    // Damping resists motion
+    const dampX = -SWAY_DAMPING * this.sway.velX;
+    const dampY = -SWAY_DAMPING * this.sway.velY;
+
+    this.sway.velX += (springX + dampX + forceX) * dt;
+    this.sway.velY += (springY + dampY + forceY) * dt;
+    this.sway.offsetX += this.sway.velX * dt;
+    this.sway.offsetY += this.sway.velY * dt;
+
+    // Clamp to prevent wild swings on frame spikes
+    this.sway.offsetX = Phaser.Math.Clamp(this.sway.offsetX, -SWAY_MAX_OFFSET, SWAY_MAX_OFFSET);
+    this.sway.offsetY = Phaser.Math.Clamp(this.sway.offsetY, -SWAY_MAX_OFFSET, SWAY_MAX_OFFSET);
   }
 
   /** Changes the warm glow color and rebuilds the glow texture. */

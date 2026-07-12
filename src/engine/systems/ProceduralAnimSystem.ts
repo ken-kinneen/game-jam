@@ -2,12 +2,23 @@ import type { Entity } from '../entities/Entity';
 import { Movement } from '../entities/components/Movement';
 import { Animator } from '../entities/components/Animator';
 import type { ConfigManager } from '../core/ConfigManager';
+import type { EventBus } from '../core/EventBus';
 
 const MOVING_THRESHOLD = 4;
 const ACCEL_THRESHOLD = 30;
 
 export class ProceduralAnimSystem {
-  constructor(private configManager: ConfigManager) {}
+  private fuelRatio = 1;
+  private prevBobPhase = 0;
+
+  constructor(
+    private configManager: ConfigManager,
+    private eventBus?: EventBus,
+  ) {}
+
+  setFuelRatio(ratio: number): void {
+    this.fuelRatio = ratio;
+  }
 
   update(entity: Entity, dt: number): void {
     if (!this.configManager.get<boolean>('animation', 'enabled')) {
@@ -26,18 +37,21 @@ export class ProceduralAnimSystem {
     let scaleMultX = 1;
     let scaleMultY = 1;
 
-    // --- Idle breathing ---
-    // Scale-only: scaleY oscillates (body expands/contracts upward).
-    // No Y position offset — feet stay planted via scale compensation below.
+    // --- Idle breathing (speeds up under stress / low fuel) ---
     if (!isMoving) {
-      const breathSpeed = this.configManager.get<number>('animation', 'breathSpeed');
+      const baseBreathSpeed = this.configManager.get<number>('animation', 'breathSpeed');
       const breathScale = this.configManager.get<number>('animation', 'breathScaleAmt');
+
+      // Breath quickens as fuel drops: 1x at full, up to 2.2x when critical
+      const stressMult = 1 + (1 - this.fuelRatio) * 1.2;
+      const breathSpeed = baseBreathSpeed * stressMult;
 
       animator.breathPhase += breathSpeed * dt;
       const breathSin = Math.sin(animator.breathPhase * Math.PI * 2);
 
-      scaleMultY += breathSin * breathScale;
-      scaleMultX -= breathSin * breathScale * 0.5;
+      const stressScale = breathScale * (1 + (1 - this.fuelRatio) * 0.5);
+      scaleMultY += breathSin * stressScale;
+      scaleMultX -= breathSin * stressScale * 0.5;
     } else {
       animator.breathPhase = 0;
     }
@@ -49,6 +63,14 @@ export class ProceduralAnimSystem {
       const animFps = 1000 / msPerFrame;
       const bobFreqHz = animFps / 2;
       animator.bobPhase += bobFreqHz * dt;
+
+      // Emit footstep event on each bob cycle (foot hits ground)
+      const prevCycle = Math.floor(this.prevBobPhase);
+      const curCycle = Math.floor(animator.bobPhase);
+      if (curCycle > prevCycle && this.eventBus) {
+        this.eventBus.emit('player:footstep', {});
+      }
+      this.prevBobPhase = animator.bobPhase;
 
       // Squash scaleY down on foot contact — feet stay planted via compensation
       const bobSin = Math.abs(Math.sin(animator.bobPhase * Math.PI));
@@ -108,11 +130,17 @@ export class ProceduralAnimSystem {
     scaleMultX *= animator.squashX;
     scaleMultY *= animator.squashY;
 
-    // --- Lean ---
+    // --- Lean (weighted character leans into direction of travel) ---
     const leanFactor = this.configManager.get<number>('animation', 'leanFactor');
     const leanSmoothing = this.configManager.get<number>('animation', 'leanSmoothing');
     const targetLean = movement.velocityX * leanFactor * (1 / movement.maxSpeed);
     animator.leanAngle = lerp(animator.leanAngle, targetLean, leanSmoothing * dt);
+
+    // Forward pitch: very subtle scaleY compression when moving (carrying weight)
+    if (isMoving) {
+      const speedRatio = speed / movement.maxSpeed;
+      scaleMultY -= speedRatio * 0.003;
+    }
 
     // --- Apply all transforms ---
     const finalScaleY = animator.baseScaleY * scaleMultY;

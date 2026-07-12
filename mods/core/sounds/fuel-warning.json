@@ -1,0 +1,10 @@
+{
+  "id": "core:fuel_warning",
+  "type": "sound",
+  "name": "Low Fuel Warning",
+  "asset": "sfx/fuel_warning",
+  "volume": 0.6,
+  "pitchRange": [1.0, 1.0],
+  "cooldown": 5000,
+  "triggers": [{ "event": "lamp:fuel_critical" }]
+}

@@ -45,6 +45,12 @@ import sndUpgradeAcquired from '../mods/core/sounds/upgrade-acquired.json';
 import sndCaveEnter from '../mods/core/sounds/cave-enter.json';
 import sndCaveExit from '../mods/core/sounds/cave-exit.json';
 import sndPlayerDeath from '../mods/core/sounds/player-death.json';
+import sndFootstep from '../mods/core/sounds/footstep.json';
+import sndLampCrackle from '../mods/core/sounds/lamp-crackle.json';
+import sndWireSpark from '../mods/core/sounds/wire-spark.json';
+import sndFuelWarning from '../mods/core/sounds/fuel-warning.json';
+import sndRelayReset from '../mods/core/sounds/relay-reset.json';
+import sndTransformerHum from '../mods/core/sounds/transformer-hum.json';
 
 async function boot() {
   const loader = new ModLoader();
@@ -75,6 +81,12 @@ async function boot() {
     { filename: 'sounds/cave-enter.json', data: sndCaveEnter },
     { filename: 'sounds/cave-exit.json', data: sndCaveExit },
     { filename: 'sounds/player-death.json', data: sndPlayerDeath },
+    { filename: 'sounds/footstep.json', data: sndFootstep },
+    { filename: 'sounds/lamp-crackle.json', data: sndLampCrackle },
+    { filename: 'sounds/wire-spark.json', data: sndWireSpark },
+    { filename: 'sounds/fuel-warning.json', data: sndFuelWarning },
+    { filename: 'sounds/relay-reset.json', data: sndRelayReset },
+    { filename: 'sounds/transformer-hum.json', data: sndTransformerHum },
   ];
 
   const { errors } = loader.loadMod(coreMod, defFiles, coreManifest, 'mods/core/assets', registry);
@@ -103,7 +115,7 @@ async function boot() {
 
   const dpr = Math.min(window.devicePixelRatio || 1, 2);
   const game = new Phaser.Game({
-    type: Phaser.AUTO,
+    type: Phaser.WEBGL,
     parent: 'game-container',
     width: Math.round(960 * dpr),
     height: Math.round(720 * dpr),

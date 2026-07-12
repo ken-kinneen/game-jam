@@ -9,6 +9,7 @@ export class LampSystem {
   private fuel: number;
   private maxFuel: number;
   private extinguished = false;
+  private wasCritical = false;
 
   constructor(
     private eventBus: EventBus,
@@ -26,11 +27,19 @@ export class LampSystem {
     this.fuel = Math.max(0, this.fuel - burnRate * dt);
     this.maxFuel = this.config.get<number>('lamp', 'maxFuel');
 
+    const currentRatio = this.maxFuel > 0 ? this.fuel / this.maxFuel : 0;
     this.eventBus.emit('lamp:fuel_changed', {
       fuel: this.fuel,
       maxFuel: this.maxFuel,
-      ratio: this.maxFuel > 0 ? this.fuel / this.maxFuel : 0,
+      ratio: currentRatio,
     });
+
+    const critical = this.config.get<number>('lamp', 'criticalThreshold');
+    const isCritical = currentRatio > 0 && currentRatio < critical;
+    if (isCritical && !this.wasCritical) {
+      this.eventBus.emit('lamp:fuel_critical', { ratio: currentRatio });
+    }
+    this.wasCritical = isCritical;
 
     if (this.fuel <= 0) {
       this.extinguished = true;

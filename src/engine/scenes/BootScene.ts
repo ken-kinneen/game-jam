@@ -1,5 +1,6 @@
 import type { AssetManifest, ManifestEntry } from '../core/ModLoader';
 import { generatePlaceholderSounds } from '../audio/generatePlaceholderSounds';
+import { generateAmbientPlaceholders } from '../audio/generateAmbientPlaceholders';
 import { configManager } from '../core/ConfigManager';
 
 /**
@@ -31,6 +32,7 @@ export class BootScene extends Phaser.Scene {
   async create() {
     this.validateLoads();
     await generatePlaceholderSounds(this);
+    await generateAmbientPlaceholders(this);
     const startScene = configManager.get<string>('dev', 'startScene');
     this.scene.start('GameScene', { sceneId: startScene });
   }

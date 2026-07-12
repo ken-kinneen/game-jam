@@ -1,0 +1,10 @@
+{
+  "id": "core:wire_spark",
+  "type": "sound",
+  "name": "Wire Spark",
+  "asset": "sfx/wire_spark",
+  "volume": 0.5,
+  "pitchRange": [0.8, 1.2],
+  "cooldown": 2000,
+  "triggers": [{ "event": "wire:spark" }]
+}

@@ -2,6 +2,7 @@ import { eventBus } from '../core/EventBus';
 import type { Entity } from '../entities/Entity';
 import type { SceneDef } from '../schemas/scene.schema';
 import type { SceneDirector } from './SceneDirector';
+import type { DepthSortSystem } from '../systems/DepthSortSystem';
 import { spawnSceneProps, type PropShadow } from './propSpawner';
 
 export interface ExitZone {
@@ -38,6 +39,7 @@ export class ZoneManager {
     private readonly sceneDef: SceneDef | undefined,
     private readonly director: SceneDirector,
     private player: Entity | undefined,
+    private readonly depthSort?: DepthSortSystem,
   ) {}
 
   /** Resets zone state for a fresh scene load. */
@@ -59,8 +61,12 @@ export class ZoneManager {
     this.spawnExitZones();
     this.spawnShopZones();
     this.propShadows.push(
-      ...spawnSceneProps(this.scene, this.sceneDef, this.player, (prop, visual) =>
-        this.registerPropInteraction(prop, visual),
+      ...spawnSceneProps(
+        this.scene,
+        this.sceneDef,
+        this.player,
+        (prop, visual) => this.registerPropInteraction(prop, visual),
+        this.depthSort,
       ),
     );
     this.createPromptText();

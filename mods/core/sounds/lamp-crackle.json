@@ -1,0 +1,10 @@
+{
+  "id": "core:lamp_crackle",
+  "type": "sound",
+  "name": "Lamp Crackle",
+  "asset": "sfx/lamp_crackle",
+  "volume": 0.2,
+  "pitchRange": [0.9, 1.1],
+  "cooldown": 3000,
+  "triggers": [{ "event": "lamp:fuel_changed" }]
+}

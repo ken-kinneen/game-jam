@@ -223,6 +223,121 @@ const RECIPES: SoundRecipe[] = [
       synthesizeNoise(ctx, 1.5, 0.2, 0.05, 0.8);
     },
   },
+  {
+    key: 'sfx/footstep',
+    duration: 0.15,
+    build: (ctx) => {
+      synthesizeNoise(ctx, 0.15, 0.3, 0.005, 0.1);
+      synthesize(ctx, {
+        frequency: 80,
+        duration: 0.1,
+        type: 'sine',
+        attack: 0.005,
+        decay: 0.08,
+        volume: 0.4,
+      });
+    },
+  },
+  {
+    key: 'sfx/lamp_crackle',
+    duration: 0.4,
+    build: (ctx) => {
+      synthesizeNoise(ctx, 0.4, 0.15, 0.02, 0.25);
+      synthesize(ctx, {
+        frequency: 200,
+        duration: 0.2,
+        type: 'sawtooth',
+        attack: 0.01,
+        decay: 0.15,
+        volume: 0.1,
+        slide: -100,
+      });
+    },
+  },
+  {
+    key: 'sfx/wire_spark',
+    duration: 0.3,
+    build: (ctx) => {
+      synthesizeNoise(ctx, 0.1, 0.6, 0.005, 0.05);
+      synthesize(ctx, {
+        frequency: 2000,
+        duration: 0.3,
+        type: 'square',
+        attack: 0.005,
+        decay: 0.2,
+        volume: 0.3,
+        slide: -1500,
+      });
+    },
+  },
+  {
+    key: 'sfx/fuel_warning',
+    duration: 0.8,
+    build: (ctx) => {
+      synthesize(ctx, {
+        frequency: 60,
+        duration: 0.4,
+        type: 'sine',
+        attack: 0.05,
+        decay: 0.3,
+        volume: 0.7,
+      });
+      synthesize(ctx, {
+        frequency: 55,
+        duration: 0.4,
+        type: 'sine',
+        attack: 0.05,
+        decay: 0.3,
+        volume: 0.5,
+      });
+    },
+  },
+  {
+    key: 'sfx/relay_reset',
+    duration: 1.5,
+    build: (ctx) => {
+      synthesize(ctx, {
+        frequency: 100,
+        duration: 0.2,
+        type: 'square',
+        attack: 0.01,
+        decay: 0.1,
+        volume: 0.6,
+      });
+      synthesize(ctx, {
+        frequency: 60,
+        duration: 1.5,
+        type: 'sine',
+        attack: 0.2,
+        decay: 0.8,
+        volume: 0.8,
+        slide: 40,
+      });
+      synthesizeNoise(ctx, 0.5, 0.3, 0.01, 0.3);
+    },
+  },
+  {
+    key: 'sfx/transformer_hum',
+    duration: 0.6,
+    build: (ctx) => {
+      synthesize(ctx, {
+        frequency: 60,
+        duration: 0.6,
+        type: 'sine',
+        attack: 0.1,
+        decay: 0.3,
+        volume: 0.4,
+      });
+      synthesize(ctx, {
+        frequency: 120,
+        duration: 0.6,
+        type: 'sine',
+        attack: 0.1,
+        decay: 0.3,
+        volume: 0.2,
+      });
+    },
+  },
 ];
 
 /**

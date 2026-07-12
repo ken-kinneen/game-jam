@@ -21,6 +21,11 @@ export interface GameEvents {
   'shop:opened': Record<string, never>;
   'shop:closed': Record<string, never>;
   'lamp:color_changed': { color: string };
+  'lamp:fuel_critical': { ratio: number };
+  'player:footstep': Record<string, never>;
+  'wire:spark': { x: number; y: number };
+  'relay:nearby': { relayId: string; distance: number };
+  'relay:reset': { relayId: string };
 }
 
 type EventCallback<T> = (data: T) => void;

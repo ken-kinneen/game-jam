@@ -159,6 +159,11 @@ function buildBackgroundRoom(scene: Phaser.Scene, sceneDef: SceneDef, isCave: bo
   const bg = scene.add.image(width / 2, height / 2, imageKey);
   bg.setScale(scale);
   bg.setDepth(-1);
+  try {
+    bg.setPipeline('Light2D');
+  } catch {
+    /* no-op */
+  }
 
   scene.physics.world.setBounds(
     wallInset,
@@ -233,6 +238,11 @@ function buildProceduralCave(
     const tileScale = (TILE * floorTileScale) / srcW;
     floorTile.setTileScale(tileScale, tileScale);
     floorTile.setDepth(-2);
+    try {
+      floorTile.setPipeline('Light2D');
+    } catch {
+      /* no-op */
+    }
   } else {
     const fallback = scene.add.rectangle(canvasW / 2, canvasH / 2, canvasW, canvasH, 0x252525);
     fallback.setDepth(-2);

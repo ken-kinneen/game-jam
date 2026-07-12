@@ -1,0 +1,10 @@
+{
+  "id": "core:relay_reset",
+  "type": "sound",
+  "name": "Relay Box Reset",
+  "asset": "sfx/relay_reset",
+  "volume": 0.8,
+  "pitchRange": [0.95, 1.05],
+  "cooldown": 0,
+  "triggers": [{ "event": "relay:reset" }]
+}

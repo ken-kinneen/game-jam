@@ -1,0 +1,10 @@
+{
+  "id": "core:footstep",
+  "type": "sound",
+  "name": "Footstep",
+  "asset": "sfx/footstep",
+  "volume": 0.3,
+  "pitchRange": [0.85, 1.15],
+  "cooldown": 200,
+  "triggers": [{ "event": "player:footstep" }]
+}

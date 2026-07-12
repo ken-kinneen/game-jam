@@ -24,6 +24,9 @@ import { buildSceneRoom } from './roomBuilder';
 import { LampRenderer } from './lampRenderer';
 import { spawnGroundItems, spawnFuelItems, spawnProceduralItems } from './itemSpawner';
 import { AmbienceSystem } from '../systems/AmbienceSystem';
+import { AmbientAudioSystem } from '../systems/AmbientAudioSystem';
+import { DepthSortSystem } from '../systems/DepthSortSystem';
+import { CharacterController3D } from '../rendering/CharacterController3D';
 
 /**
  * ONE generic GameScene configured by a SceneDef.
@@ -42,6 +45,9 @@ export class GameScene extends Phaser.Scene {
   private zoneManager!: ZoneManager;
   private lampRenderer!: LampRenderer;
   private ambienceSystem!: AmbienceSystem;
+  private ambientAudio!: AmbientAudioSystem;
+  private depthSort!: DepthSortSystem;
+  private char3d: CharacterController3D | null = null;
 
   private sceneDefId = 'core:home';
   private sceneDef: SceneDef | undefined;
@@ -70,10 +76,11 @@ export class GameScene extends Phaser.Scene {
   create() {
     this.movementSystem = new MovementSystem();
     this.animationSystem = new AnimationSystem(configManager);
-    this.proceduralAnimSystem = new ProceduralAnimSystem(configManager);
+    this.proceduralAnimSystem = new ProceduralAnimSystem(configManager, eventBus);
     this.pickupSystem = new PickupSystem(registry, eventBus, this, configManager);
     this.lampSystem = new LampSystem(eventBus, configManager);
     this.soundSystem = new SoundSystem(this, eventBus, configManager, registry);
+    this.depthSort = new DepthSortSystem();
     this.inputMap = new InputMap(this);
     this.director = new SceneDirector(registry, eventBus);
 
@@ -88,11 +95,19 @@ export class GameScene extends Phaser.Scene {
     this.proceduralCaveMap = room.caveMap;
     this.proceduralEntry = room.caveEntry;
 
-    this.zoneManager = new ZoneManager(this, this.sceneDef, this.director, undefined);
+    this.zoneManager = new ZoneManager(
+      this,
+      this.sceneDef,
+      this.director,
+      undefined,
+      this.depthSort,
+    );
     this.zoneManager.reset();
 
     this.spawnPlayer(this.sceneDef);
     this.zoneManager.setPlayer(this.player);
+
+    this.tryLoad3DCharacter();
 
     if (this.isCave) {
       if (this.proceduralCaveMap) {
@@ -122,6 +137,8 @@ export class GameScene extends Phaser.Scene {
     this.lampRenderer.create();
 
     this.ambienceSystem = new AmbienceSystem(this, this.player, this.isCave);
+    this.ambientAudio = new AmbientAudioSystem(this, eventBus, configManager);
+    this.ambientAudio.create();
 
     if (this.isCave) {
       this.unsubFuel = eventBus.on('item:picked_up', ({ itemId }) => {
@@ -195,13 +212,20 @@ export class GameScene extends Phaser.Scene {
 
     if (this.isCave) {
       this.lampSystem.update(dt);
+      this.proceduralAnimSystem.setFuelRatio(this.lampSystem.ratio);
     }
 
     if (!this.shopOpen) {
       const move = this.inputMap.getMoveVector();
       this.movementSystem.update(this.player, move.x, move.y, dt);
-      this.animationSystem.update(this.player, dt);
-      this.proceduralAnimSystem.update(this.player, dt);
+
+      if (this.char3d?.isActive) {
+        this.char3d.update(dt);
+      } else {
+        this.animationSystem.update(this.player, dt);
+        this.proceduralAnimSystem.update(this.player, dt);
+      }
+
       this.pickupSystem.update(this.player);
 
       this.zoneManager.checkExitOverlap();
@@ -212,8 +236,10 @@ export class GameScene extends Phaser.Scene {
       }
     }
 
+    this.depthSort.update();
     this.lampRenderer.update(this.zoneManager.propShadows);
     this.ambienceSystem.update();
+    this.ambientAudio.update();
   }
 
   /** Expose player stats so ShopScene can apply upgrades. */
@@ -228,6 +254,8 @@ export class GameScene extends Phaser.Scene {
     this.unsubFuel?.();
     this.unsubInventory?.();
     this.soundSystem?.destroy();
+    this.ambientAudio?.destroy();
+    this.char3d?.destroy();
     for (const unsub of this.unsubShop) unsub();
     this.unsubShop = [];
   }
@@ -243,6 +271,14 @@ export class GameScene extends Phaser.Scene {
 
     this.player.sprite.preFX?.setPadding(10);
     this.player.sprite.preFX?.addShadow(2, 3, 0.1, 0.5, 0x000000, 6, 0.5);
+
+    try {
+      this.player.sprite.setPipeline('Light2D');
+    } catch {
+      // Light2D not available
+    }
+
+    this.depthSort.register(this.player.sprite);
 
     const body = this.player.sprite.body as Phaser.Physics.Arcade.Body;
     body.setCollideWorldBounds(true);
@@ -348,6 +384,64 @@ export class GameScene extends Phaser.Scene {
       this.sound.volume = configManager.get<number>('audio', 'masterVolume');
       this.sound.mute = configManager.get<boolean>('audio', 'mute');
     }
+  }
+
+  /**
+   * Attempt to load a 3D character model.
+   * Tries multi-file Mixamo FBX first (Walk + Idle), then single-file fallbacks.
+   */
+  private tryLoad3DCharacter(): void {
+    this.char3d = new CharacterController3D(this, 128);
+
+    const tryLoad = async (): Promise<void> => {
+      // Try multi-file Mixamo setup (Walk.fbx + Idle.fbx)
+      const multiFiles = [
+        { url: 'mods/core/assets/models/Walk.fbx', name: 'walk' },
+        { url: 'mods/core/assets/models/Idle.fbx', name: 'idle' },
+      ];
+
+      const available: { url: string; name: string }[] = [];
+      for (const file of multiFiles) {
+        try {
+          const resp = await fetch(file.url, { method: 'HEAD' });
+          if (resp.ok) available.push(file);
+        } catch {
+          /* skip */
+        }
+      }
+
+      if (available.length > 0) {
+        const success = await this.char3d!.load(available);
+        if (success) {
+          this.char3d!.attach(this.player);
+          return;
+        }
+      }
+
+      // Fallback: single file
+      const fallbacks = [
+        'mods/core/assets/models/character.fbx',
+        'mods/core/assets/models/character.glb',
+      ];
+      for (const url of fallbacks) {
+        try {
+          const resp = await fetch(url, { method: 'HEAD' });
+          if (!resp.ok) continue;
+        } catch {
+          continue;
+        }
+
+        const success = await this.char3d!.load(url);
+        if (success) {
+          this.char3d!.attach(this.player);
+          return;
+        }
+      }
+
+      this.char3d = null;
+    };
+
+    tryLoad();
   }
 
   private setupCollisions(): void {

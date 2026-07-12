@@ -376,6 +376,11 @@ export function buildTileFloorGraphics(
     const scale = tileSize / srcWidth;
     tileSprite.setTileScale(scale, scale);
     tileSprite.setDepth(-1);
+    try {
+      tileSprite.setPipeline('Light2D');
+    } catch {
+      /* no-op */
+    }
   } else if (map && map.length > 0 && tiles.length > 0) {
     renderTileMap(scene, width, height, tileSize, map, tiles, defaultTile, wallThickness);
   } else {
@@ -412,6 +417,11 @@ function renderSingleTile(
 
   const tileSprite = scene.add.tileSprite(width / 2, height / 2, width, height, texKey);
   tileSprite.setDepth(-1);
+  try {
+    tileSprite.setPipeline('Light2D');
+  } catch {
+    /* no-op */
+  }
 }
 
 /** Renders a grid map of different tile types onto a single canvas. */

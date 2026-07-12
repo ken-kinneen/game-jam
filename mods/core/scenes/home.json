@@ -25,8 +25,8 @@
     {
       "image": "furniture/bed_8",
       "position": {
-        "x": 410,
-        "y": 243
+        "x": 412,
+        "y": 244
       },
       "scale": 0.3,
       "depth": 2,
@@ -201,10 +201,10 @@
     {
       "image": "furniture/bed_6",
       "position": {
-        "x": 403,
-        "y": 409
+        "x": 421,
+        "y": 417
       },
-      "scale": 0.3,
+      "scale": 0.25,
       "depth": 2,
       "collides": true,
       "angle": 0

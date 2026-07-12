@@ -1,0 +1,10 @@
+{
+  "id": "core:transformer_hum",
+  "type": "sound",
+  "name": "Transformer Proximity Hum",
+  "asset": "sfx/transformer_hum",
+  "volume": 0.4,
+  "pitchRange": [0.98, 1.02],
+  "cooldown": 8000,
+  "triggers": [{ "event": "relay:nearby" }]
+}

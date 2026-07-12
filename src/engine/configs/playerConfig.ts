@@ -21,7 +21,7 @@ export const playerConfig: ConfigSection = {
       min: 20,
       max: 600,
       step: 10,
-      defaultValue: 60,
+      defaultValue: 52,
     },
     {
       key: 'acceleration',
@@ -30,7 +30,7 @@ export const playerConfig: ConfigSection = {
       min: 200,
       max: 6000,
       step: 100,
-      defaultValue: 2000,
+      defaultValue: 900,
     },
     {
       key: 'friction',
@@ -39,7 +39,7 @@ export const playerConfig: ConfigSection = {
       min: 200,
       max: 6000,
       step: 100,
-      defaultValue: 1600,
+      defaultValue: 2200,
     },
     {
       key: 'pickupRadius',

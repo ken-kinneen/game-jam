@@ -37,7 +37,7 @@ export const animationConfig: ConfigSection = {
       min: 0.5,
       max: 4,
       step: 0.1,
-      defaultValue: 1.5,
+      defaultValue: 0.9,
     },
     {
       key: 'breathScaleAmt',
@@ -46,7 +46,7 @@ export const animationConfig: ConfigSection = {
       min: 0,
       max: 0.05,
       step: 0.002,
-      defaultValue: 0.015,
+      defaultValue: 0.012,
     },
     {
       key: 'breathBobAmt',
@@ -65,7 +65,7 @@ export const animationConfig: ConfigSection = {
       min: 0,
       max: 6,
       step: 0.25,
-      defaultValue: 2,
+      defaultValue: 0.6,
     },
     // -- stop settle --
     {
@@ -103,7 +103,7 @@ export const animationConfig: ConfigSection = {
       min: 0,
       max: 0.3,
       step: 0.01,
-      defaultValue: 0.12,
+      defaultValue: 0.06,
     },
     {
       key: 'squashRecovery',
@@ -122,7 +122,7 @@ export const animationConfig: ConfigSection = {
       min: 0,
       max: 0.05,
       step: 0.005,
-      defaultValue: 0.02,
+      defaultValue: 0.03,
     },
     {
       key: 'leanSmoothing',
@@ -131,7 +131,7 @@ export const animationConfig: ConfigSection = {
       min: 2,
       max: 20,
       step: 1,
-      defaultValue: 10,
+      defaultValue: 6,
     },
     // -- pickup --
     {

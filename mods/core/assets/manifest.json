@@ -47,5 +47,21 @@
   "furniture/bed_4": { "file": "sprites/furniture/bed_4.png", "type": "image" },
   "furniture/bed_5": { "file": "sprites/furniture/bed_5.png", "type": "image" },
   "furniture/bed_6": { "file": "sprites/furniture/bed_6.png", "type": "image" },
-  "furniture/toolbox": { "file": "sprites/furniture/toolbox.png", "type": "image" }
+  "furniture/toolbox": { "file": "sprites/furniture/toolbox.png", "type": "image" },
+
+  "sfx/item_pickup": { "file": "audio/sfx/item_pickup.ogg", "type": "audio" },
+  "sfx/footstep": { "file": "audio/sfx/footstep.ogg", "type": "audio" },
+  "sfx/lamp_crackle": { "file": "audio/sfx/lamp_crackle.ogg", "type": "audio" },
+  "sfx/wire_spark": { "file": "audio/sfx/wire_spark.ogg", "type": "audio" },
+  "sfx/fuel_warning": { "file": "audio/sfx/fuel_warning.ogg", "type": "audio" },
+  "sfx/relay_reset": { "file": "audio/sfx/relay_reset.ogg", "type": "audio" },
+  "sfx/transformer_hum": { "file": "audio/sfx/transformer_hum.ogg", "type": "audio" },
+  "sfx/upgrade_acquired": { "file": "audio/sfx/upgrade_acquired.ogg", "type": "audio" },
+  "sfx/cave_enter": { "file": "audio/sfx/cave_enter.ogg", "type": "audio" },
+  "sfx/cave_exit": { "file": "audio/sfx/cave_exit.ogg", "type": "audio" },
+  "sfx/player_death": { "file": "audio/sfx/player_death.ogg", "type": "audio" },
+
+  "ambience/hut_room": { "file": "audio/ambience/hut_room.ogg", "type": "audio" },
+  "ambience/corridor_hum": { "file": "audio/ambience/corridor_hum.ogg", "type": "audio" },
+  "ambience/electrical_drone": { "file": "audio/ambience/electrical_drone.ogg", "type": "audio" }
 }
