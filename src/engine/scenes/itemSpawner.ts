@@ -274,47 +274,48 @@ function addItemEffects(scene: Phaser.Scene, sprite: Phaser.Physics.Arcade.Sprit
 }
 
 function addGoldenEffect(scene: Phaser.Scene, sprite: Phaser.Physics.Arcade.Sprite): void {
-  // Permanent gold tint
   sprite.setTint(0xffd700);
 
-  // Slow sheen: briefly flash bright white-gold, then ease back
-  scene.time.addEvent({
-    delay: 3000,
-    loop: true,
-    callback: () => {
-      if (!sprite.active) return;
-      scene.tweens.addCounter({
-        from: 0,
-        to: 100,
-        duration: 300,
-        ease: 'Sine.easeIn',
-        onUpdate: (t) => {
-          const v = t.getValue() ?? 0;
-          const r = Math.round(0xff + ((0xff - 0xff) * v) / 100);
-          const g = Math.round(0xd7 + ((0xfe - 0xd7) * v) / 100);
-          const b = Math.round(0x00 + ((0xf0 - 0x00) * v) / 100);
-          sprite.setTint(Phaser.Display.Color.GetColor(r, g, b));
-        },
-        onComplete: () => {
-          scene.tweens.addCounter({
-            from: 100,
-            to: 0,
-            duration: 600,
-            ease: 'Sine.easeOut',
-            onUpdate: (t) => {
-              const v = t.getValue() ?? 0;
-              const r = Math.round(0xff + ((0xff - 0xff) * v) / 100);
-              const g = Math.round(0xd7 + ((0xfe - 0xd7) * v) / 100);
-              const b = Math.round(0x00 + ((0xf0 - 0x00) * v) / 100);
-              sprite.setTint(Phaser.Display.Color.GetColor(r, g, b));
-            },
-          });
-        },
-      });
-    },
+  // Reflective sheen line that sweeps across the sprite, masked to its shape
+  createSheenTexture(scene);
+  const w = sprite.displayWidth;
+  const h = sprite.displayHeight;
+  const sheen = scene.add.image(sprite.x, sprite.y, '__sheen');
+  sheen.setDisplaySize(w * 0.35, h * 1.6);
+  sheen.setAngle(20);
+  sheen.setAlpha(0);
+  sheen.setDepth(sprite.depth + 1);
+  sheen.setBlendMode(Phaser.BlendModes.ADD);
+  const mask = sprite.createBitmapMask();
+  sheen.setMask(mask);
+
+  const sweep = () => {
+    if (!sprite.active) return;
+    sheen.x = sprite.x - w;
+    sheen.y = sprite.y;
+    sheen.setAlpha(0);
+    scene.tweens.add({
+      targets: sheen,
+      x: sprite.x + w,
+      duration: 1200,
+      ease: 'Sine.easeInOut',
+      onStart: () => {
+        sheen.setAlpha(0.7);
+      },
+      onComplete: () => {
+        sheen.setAlpha(0);
+        scene.time.delayedCall(1800, sweep);
+      },
+    });
+  };
+  scene.time.delayedCall(500, sweep);
+
+  sprite.on('destroy', () => {
+    sheen.destroy();
+    mask.destroy();
   });
 
-  // A few slow-drifting gold sparkles, not a ring — just occasional glints
+  // Sparse gold sparkles
   createSparkleTexture(scene);
   const particles = scene.add.particles(sprite.x, sprite.y, '__sparkle', {
     speed: { min: 5, max: 15 },
@@ -335,7 +336,7 @@ function addGoldenEffect(scene: Phaser.Scene, sprite: Phaser.Physics.Arcade.Spri
     particles.destroy();
   });
 
-  // Warm gold glow light
+  // Warm gold glow
   try {
     const glow = scene.lights.addLight(sprite.x, sprite.y, 50, GOLD_GLOW, 0.5);
     scene.tweens.add({
@@ -352,6 +353,25 @@ function addGoldenEffect(scene: Phaser.Scene, sprite: Phaser.Physics.Arcade.Spri
   } catch {
     /* lights not available */
   }
+}
+
+function createSheenTexture(scene: Phaser.Scene): void {
+  if (scene.textures.exists('__sheen')) return;
+  const w = 16;
+  const h = 64;
+  const cvs = document.createElement('canvas');
+  cvs.width = w;
+  cvs.height = h;
+  const ctx = cvs.getContext('2d')!;
+  const grad = ctx.createLinearGradient(0, 0, w, 0);
+  grad.addColorStop(0, 'rgba(255,255,255,0)');
+  grad.addColorStop(0.3, 'rgba(255,250,220,0.4)');
+  grad.addColorStop(0.5, 'rgba(255,255,255,0.9)');
+  grad.addColorStop(0.7, 'rgba(255,250,220,0.4)');
+  grad.addColorStop(1, 'rgba(255,255,255,0)');
+  ctx.fillStyle = grad;
+  ctx.fillRect(0, 0, w, h);
+  scene.textures.addCanvas('__sheen', cvs);
 }
 
 function createSparkleTexture(scene: Phaser.Scene): void {

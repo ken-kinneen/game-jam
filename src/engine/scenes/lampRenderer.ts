@@ -85,12 +85,15 @@ function drawCone(
     grad.addColorStop(1, 'rgba(255,255,255,0)');
   }
 
+  ctx.save();
+  ctx.filter = 'blur(8px)';
   ctx.beginPath();
   ctx.moveTo(cx, cy);
   ctx.arc(cx, cy, reach, -halfAngle, halfAngle);
   ctx.closePath();
   ctx.fillStyle = grad;
   ctx.fill();
+  ctx.restore();
 }
 
 /** Renders fog-of-war darkness, directional lamp cone, and prop shadows. */

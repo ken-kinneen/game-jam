@@ -138,12 +138,12 @@
       "angle": 0
     },
     {
-      "image": "furniture/barrel",
+      "image": "furniture/can_2",
       "position": {
-        "x": 128,
-        "y": 704
+        "x": 107,
+        "y": 689
       },
-      "scale": 0.22,
+      "scale": 0.18,
       "depth": 2,
       "collides": true,
       "angle": 0
@@ -346,8 +346,8 @@
     {
       "itemId": "core:battery",
       "position": {
-        "x": 352,
-        "y": 416
+        "x": 397,
+        "y": 311
       },
       "image": "furniture/battery"
     },
@@ -360,76 +360,44 @@
       "image": "furniture/oilcan"
     },
     {
-      "itemId": "core:battery",
-      "position": {
-        "x": 192,
-        "y": 688
-      },
-      "image": "furniture/battery"
-    },
-    {
       "itemId": "core:oil_can",
       "position": {
-        "x": 288,
-        "y": 752
+        "x": 210,
+        "y": 880
       },
       "image": "furniture/oilcan"
     },
     {
-      "itemId": "core:fuel_bottle",
-      "position": {
-        "x": 128,
-        "y": 764
-      },
-      "image": "furniture/bottle"
-    },
-    {
       "itemId": "core:battery",
       "position": {
-        "x": 352,
-        "y": 704
+        "x": 379,
+        "y": 686
       },
       "image": "furniture/battery"
     },
     {
-      "itemId": "core:rusty_can",
-      "position": {
-        "x": 250,
-        "y": 700
-      },
-      "image": "furniture/can_2"
-    },
-    {
-      "itemId": "core:oil_can",
-      "position": {
-        "x": 160,
-        "y": 736
-      },
-      "image": "furniture/oilcan_2"
-    },
-    {
       "itemId": "core:battery",
       "position": {
-        "x": 880,
-        "y": 582
+        "x": 875,
+        "y": 591
       },
       "image": "furniture/battery"
     },
     {
       "itemId": "core:fuel_bottle",
       "position": {
-        "x": 824,
-        "y": 1088
+        "x": 964,
+        "y": 1139
       },
       "image": "furniture/bottle_2"
     },
     {
-      "itemId": "core:fuel_bottle",
+      "itemId": "core:banana_peel",
       "position": {
-        "x": 480,
-        "y": 1584
+        "x": 472,
+        "y": 1310
       },
-      "image": "furniture/bottle"
+      "image": "furniture/banana_2"
     },
     {
       "itemId": "core:battery",
