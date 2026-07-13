@@ -48,6 +48,14 @@
   "furniture/bed_5": { "file": "sprites/furniture/bed_5.png", "type": "image" },
   "furniture/bed_6": { "file": "sprites/furniture/bed_6.png", "type": "image" },
   "furniture/toolbox": { "file": "sprites/furniture/toolbox.png", "type": "image" },
+  "furniture/transformer_box": {
+    "file": "sprites/furniture/transformer_box.png",
+    "type": "image"
+  },
+  "effects/power_cable": {
+    "file": "sprites/effects/power_cable.png",
+    "type": "image"
+  },
 
   "sfx/item_pickup": { "file": "audio/sfx/item_pickup.ogg", "type": "audio" },
   "sfx/footstep": { "file": "audio/sfx/footstep.ogg", "type": "audio" },

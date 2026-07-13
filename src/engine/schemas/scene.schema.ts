@@ -128,6 +128,8 @@ const PropSchema = z.object({
   height: z.number().positive().optional(),
   depth: z.number().default(2),
   collides: z.boolean().default(false),
+  /** Scale of the physical collision body relative to the displayed prop. */
+  collisionScale: z.number().min(0.1).max(1).optional(),
   /** Visual rotation in degrees. Arcade physics bodies stay axis-aligned. */
   angle: z.number().default(0),
   /** If set, this prop acts as an interaction point when the player presses E nearby. */
@@ -136,6 +138,12 @@ const PropSchema = z.object({
   actionTarget: z.string().optional(),
   /** Label shown in the [E] prompt when near this prop. */
   actionLabel: z.string().optional(),
+  /** Overrides the scene-wide interaction reach for this prop. */
+  interactionRadius: z.number().positive().optional(),
+  /** Visual feedback used when the player is close enough to interact. */
+  interactionHighlight: z.enum(['glow', 'tint', 'none']).default('glow'),
+  /** Skip the Light2D normal-map pipeline while retaining cave fog lighting. */
+  unlit: z.boolean().default(false),
   /** Phaser preFX effects to apply permanently to this prop. */
   fx: z.array(PropFxSchema).default([]),
   /** Render as a real-time 3D object with dynamic lamp shadows. */
@@ -160,6 +168,24 @@ const GroundItemSchema = z.object({
   angle: z.number().optional(),
 });
 
+const PowerCableSchema = z.object({
+  sampleDistance: z.number().positive().default(18),
+  poweredRadius: z.number().positive().default(30),
+  fuelBurnMultiplier: z.number().min(0).max(1).default(0.5),
+});
+
+const TransformerQuestSchema = z.object({
+  type: z.literal('activate_all_transformers'),
+  title: z.string().min(1).default('Restore the power grid'),
+  completionText: z.string().min(1).default('POWER GRID RESTORED'),
+  exitTitle: z.string().min(1).default('Return to the cave entrance'),
+  completionScene: z.string().min(1).default('core:home'),
+  /** Optional cable trail that becomes powered whenever a transformer is activated. */
+  powerCable: PowerCableSchema.optional(),
+  /** Transformer count required before the cave mapping system comes online. */
+  minimapUnlockAt: z.number().int().positive().optional(),
+});
+
 /** Schema for scene content definitions. */
 export const SceneDefSchema = z.object({
   id: z.string().regex(/^[a-z0-9_]+:[a-z0-9_]+$/),
@@ -171,6 +197,8 @@ export const SceneDefSchema = z.object({
   exits: z.array(ExitSchema).default([]),
   shops: z.array(ShopSchema).default([]),
   props: z.array(PropSchema).default([]),
+  /** Optional scene objective backed by a dedicated engine quest system. */
+  quest: TransformerQuestSchema.optional(),
   groundItems: z.array(GroundItemSchema).default([]),
   playerSpawn: z.object({ x: z.number(), y: z.number() }).optional(),
   /** Per-scene override for player max speed. Falls back to playerConfig default. */

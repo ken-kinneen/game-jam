@@ -20,11 +20,11 @@ export class LampSystem {
   }
 
   /** Call every frame with delta in seconds. */
-  update(dt: number): void {
+  update(dt: number, burnMultiplier = 1): void {
     if (this.extinguished) return;
 
     const burnRate = this.config.get<number>('lamp', 'burnRate');
-    this.fuel = Math.max(0, this.fuel - burnRate * dt);
+    this.fuel = Math.max(0, this.fuel - burnRate * Math.max(0, burnMultiplier) * dt);
     this.maxFuel = this.config.get<number>('lamp', 'maxFuel');
 
     const currentRatio = this.maxFuel > 0 ? this.fuel / this.maxFuel : 0;

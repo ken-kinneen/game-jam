@@ -3,6 +3,11 @@ export interface CaveGridPoint {
   readonly y: number;
 }
 
+export interface CaveWorldPoint {
+  readonly x: number;
+  readonly y: number;
+}
+
 /** Grid data shared by cave generation, the player scene, and the HUD minimap. */
 export interface CaveMinimapMap {
   readonly width: number;
@@ -18,6 +23,8 @@ export interface CaveMinimapSnapshot {
   readonly playerX: number;
   readonly playerY: number;
   readonly visibilityRadius: number;
+  readonly poweredCableSegments?: readonly (readonly CaveWorldPoint[])[];
+  readonly cableRevision?: number;
 }
 
 const MIN_REVEAL_RADIUS = 1;

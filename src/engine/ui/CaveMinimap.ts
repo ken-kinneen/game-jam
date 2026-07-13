@@ -24,6 +24,7 @@ export class CaveMinimap {
   private map: CaveMinimapMap | null = null;
   private exploration: CaveExploration | null = null;
   private active = false;
+  private unlocked = true;
   private expanded = false;
   private mapX = 0;
   private mapY = 0;
@@ -34,6 +35,8 @@ export class CaveMinimap {
   private cellScale = FOLLOW_CELL_SIZE;
   private lastPlayerX = 0;
   private lastPlayerY = 0;
+  private poweredCableSegments: CaveMinimapSnapshot['poweredCableSegments'] = [];
+  private cableRevision = -1;
 
   constructor(private readonly scene: Phaser.Scene) {
     this.backdrop = scene.add.graphics().setScrollFactor(0).setDepth(109);
@@ -64,8 +67,15 @@ export class CaveMinimap {
     this.applyVisibility();
   }
 
+  setUnlocked(unlocked: boolean): void {
+    this.unlocked = unlocked;
+    if (!unlocked) this.expanded = false;
+    this.applyLayout();
+    this.applyVisibility();
+  }
+
   setExpanded(expanded: boolean): void {
-    const next = this.active && expanded;
+    const next = this.active && this.unlocked && expanded;
     if (this.expanded === next) return;
 
     this.expanded = next;
@@ -89,12 +99,21 @@ export class CaveMinimap {
     if (snapshot.map !== this.map) this.setMap(snapshot.map);
     if (!this.exploration) return;
 
+    const cableChanged = (snapshot.cableRevision ?? -1) !== this.cableRevision;
+    if (cableChanged) {
+      this.cableRevision = snapshot.cableRevision ?? -1;
+      this.poweredCableSegments = snapshot.poweredCableSegments ?? [];
+    }
+
     this.positionMap(snapshot.playerX, snapshot.playerY);
     const revealRadius = lightRadiusToRevealRadius(
       snapshot.visibilityRadius,
       snapshot.map.tileSize,
     );
-    if (this.exploration.revealAtWorld(snapshot.playerX, snapshot.playerY, revealRadius)) {
+    if (
+      cableChanged ||
+      this.exploration.revealAtWorld(snapshot.playerX, snapshot.playerY, revealRadius)
+    ) {
       this.drawExploredMap();
     }
     this.drawPlayer(snapshot.playerX, snapshot.playerY);
@@ -105,6 +124,8 @@ export class CaveMinimap {
 
     this.map = map;
     this.exploration = map ? new CaveExploration(map) : null;
+    this.poweredCableSegments = [];
+    this.cableRevision = -1;
     this.mapGraphics.clear();
     this.markerGraphics.clear();
     this.applyLayout();
@@ -218,6 +239,22 @@ export class CaveMinimap {
         this.drawLocation(exit.x, exit.y, 0xe8b84b);
       }
     }
+    this.drawPoweredCable();
+  }
+
+  private drawPoweredCable(): void {
+    if (!this.map) return;
+    const scale = this.cellScale / this.map.tileSize;
+    for (const segment of this.poweredCableSegments ?? []) {
+      if (segment.length < 2) continue;
+      this.mapGraphics.lineStyle(Math.max(1.5, this.cellScale * 0.35), 0xffb52e, 0.95);
+      this.mapGraphics.beginPath();
+      this.mapGraphics.moveTo(segment[0].x * scale, segment[0].y * scale);
+      for (let i = 1; i < segment.length; i++) {
+        this.mapGraphics.lineTo(segment[i].x * scale, segment[i].y * scale);
+      }
+      this.mapGraphics.strokePath();
+    }
   }
 
   private drawLocation(x: number, y: number, color: number): void {
@@ -254,7 +291,7 @@ export class CaveMinimap {
   }
 
   private applyVisibility(): void {
-    this.setVisible(this.active && this.map !== null);
+    this.setVisible(this.active && this.unlocked && this.map !== null);
   }
 
   private setVisible(visible: boolean): void {

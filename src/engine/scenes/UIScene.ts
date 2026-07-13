@@ -22,6 +22,8 @@ export class UIScene extends Phaser.Scene {
   private trashText!: Phaser.GameObjects.Text;
   private statusText!: Phaser.GameObjects.Text;
   private lampWarning!: Phaser.GameObjects.Text;
+  private questText!: Phaser.GameObjects.Text;
+  private cableEfficiencyText!: Phaser.GameObjects.Text;
   private homeTitle!: Phaser.GameObjects.Text;
   private caveMinimap!: CaveMinimap;
 
@@ -30,6 +32,8 @@ export class UIScene extends Phaser.Scene {
   private statusTimer: Phaser.Time.TimerEvent | null = null;
 
   private isCave = false;
+  private minimapUnlocked = true;
+  private minimapUnlockAt: number | null = null;
   private initialSceneId: string | undefined;
 
   constructor() {
@@ -53,7 +57,7 @@ export class UIScene extends Phaser.Scene {
 
     const activeSceneId = this.initialSceneId ?? 'core:home';
     const sceneDef = registry.get('scene', activeSceneId);
-    this.setMode(sceneDef?.kind === 'cave');
+    this.setMode(sceneDef?.kind === 'cave', sceneDef?.quest?.minimapUnlockAt);
   }
 
   update() {
@@ -77,11 +81,13 @@ export class UIScene extends Phaser.Scene {
     }
   }
 
-  private setMode(cave: boolean): void {
+  private setMode(cave: boolean, minimapUnlockAt?: number): void {
     if (!cave && this.caveMinimap.isExpanded) {
       this.setMapExpanded(false);
     }
     this.isCave = cave;
+    this.minimapUnlockAt = cave && minimapUnlockAt ? minimapUnlockAt : null;
+    this.minimapUnlocked = this.minimapUnlockAt === null;
 
     this.hudBg.setVisible(cave);
     this.fuelBarBg.setVisible(cave);
@@ -89,7 +95,10 @@ export class UIScene extends Phaser.Scene {
     this.fuelLabel.setVisible(cave);
     this.fuelValueText.setVisible(cave);
     this.lampWarning.setVisible(false);
+    this.cableEfficiencyText.setVisible(false);
+    if (!cave) this.questText.setVisible(false);
     this.caveMinimap.setActive(cave);
+    this.caveMinimap.setUnlocked(this.minimapUnlocked);
 
     this.homeTitle.setVisible(!cave);
   }
@@ -111,6 +120,17 @@ export class UIScene extends Phaser.Scene {
       })
       .setScrollFactor(0)
       .setDepth(101);
+
+    this.cableEfficiencyText = this.add
+      .text(HUD_PADDING + 92, HUD_PADDING + 7, '', {
+        fontFamily: '"Courier New", monospace',
+        fontSize: '15px',
+        color: '#ffd36a',
+        fontStyle: 'bold',
+      })
+      .setScrollFactor(0)
+      .setDepth(102)
+      .setVisible(false);
 
     this.fuelBarBg = this.add.graphics();
     this.fuelBarBg.setScrollFactor(0).setDepth(101);
@@ -173,6 +193,22 @@ export class UIScene extends Phaser.Scene {
       .setOrigin(0.5, 0.5)
       .setScrollFactor(0)
       .setDepth(103)
+      .setVisible(false);
+
+    this.questText = this.add
+      .text(HUD_PADDING, HUD_PADDING + 150, '', {
+        fontFamily: '"Courier New", monospace',
+        fontSize: '20px',
+        color: '#f4e8c1',
+        backgroundColor: '#080a0ed9',
+        padding: { x: 12, y: 10 },
+        stroke: '#000000',
+        strokeThickness: 3,
+        lineSpacing: 4,
+      })
+      .setScrollFactor(0)
+      .setDepth(103)
+      .setAlpha(0)
       .setVisible(false);
 
     this.homeTitle = this.add
@@ -239,6 +275,10 @@ export class UIScene extends Phaser.Scene {
   private handleMapToggle(event: KeyboardEvent): void {
     event.preventDefault();
     if (!this.isCave) return;
+    if (!this.minimapUnlocked) {
+      this.showStatus('CAVE SCANNER OFFLINE\nRestore more transformers', '#d6b96b', 1800);
+      return;
+    }
     this.setMapExpanded(!this.caveMinimap.isExpanded);
   }
 
@@ -280,10 +320,43 @@ export class UIScene extends Phaser.Scene {
       this.showStatus('Inventory full!', '#ff6644');
     });
 
+    this.eventGroup.on('quest:updated', ({ title, current, total, complete }) => {
+      const heading = complete ? 'OBJECTIVE COMPLETE' : 'OBJECTIVE';
+      this.questText.setText(`${heading}\n${title}\nTransformers activated: ${current} / ${total}`);
+      this.questText.setVisible(true);
+      this.tweens.killTweensOf(this.questText);
+      this.tweens.add({ targets: this.questText, alpha: 1, duration: 250 });
+    });
+
+    this.eventGroup.on('quest:cleared', () => {
+      this.questText.setVisible(false);
+    });
+
+    this.eventGroup.on('transformer:activated', ({ activated }) => {
+      if (
+        this.minimapUnlockAt !== null &&
+        !this.minimapUnlocked &&
+        activated >= this.minimapUnlockAt
+      ) {
+        this.minimapUnlocked = true;
+        this.caveMinimap.setUnlocked(true);
+        this.showStatus('CAVE SCANNER ONLINE\nMINIMAP UNLOCKED', '#8fe8ff', 2600);
+        eventBus.emit('minimap:unlocked', {});
+      }
+    });
+
+    this.eventGroup.on('cable:proximity_changed', ({ powered, fuelMultiplier }) => {
+      this.cableEfficiencyText.setText(
+        powered ? `POWER CABLE  -${Math.round((1 - fuelMultiplier) * 100)}% FUEL` : '',
+      );
+      this.cableEfficiencyText.setVisible(this.isCave && powered);
+      if (powered) this.showStatus('POWER CABLE LINKED\nFuel drain reduced', '#ffd36a', 1500);
+    });
+
     this.eventGroup.on('scene:enter', ({ sceneId }) => {
       const sceneDef = registry.get('scene', sceneId);
       const cave = sceneDef?.kind === 'cave';
-      this.setMode(cave);
+      this.setMode(cave, sceneDef?.quest?.minimapUnlockAt);
 
       if (cave) {
         this.currentFuelRatio = 1;

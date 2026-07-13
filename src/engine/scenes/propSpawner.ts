@@ -50,6 +50,8 @@ export interface SpawnPropsOptions {
       action?: string;
       actionTarget?: string;
       actionLabel?: string;
+      interactionRadius?: number;
+      interactionHighlight?: 'glow' | 'tint' | 'none';
     },
     visual?: Phaser.GameObjects.Image,
   ) => void;
@@ -71,6 +73,8 @@ export function spawnSceneProps(
       action?: string;
       actionTarget?: string;
       actionLabel?: string;
+      interactionRadius?: number;
+      interactionHighlight?: 'glow' | 'tint' | 'none';
     },
     visual?: Phaser.GameObjects.Image,
   ) => void,
@@ -112,7 +116,7 @@ export function spawnSceneProps(
         sprite.setDepth(prop.depth);
         sprite.refreshBody();
         const body = sprite.body as Phaser.Physics.Arcade.StaticBody;
-        const shrink = 0.6;
+        const shrink = prop.collisionScale ?? 0.6;
         body.setSize(body.width * shrink, body.height * shrink);
         body.setOffset(
           (sprite.displayWidth - body.width) / 2,
@@ -163,7 +167,7 @@ export function spawnSceneProps(
       sprite.setDepth(prop.depth);
       sprite.refreshBody();
       const body = sprite.body as Phaser.Physics.Arcade.StaticBody;
-      const shrink = 0.7;
+      const shrink = prop.collisionScale ?? 0.7;
       body.setSize(body.width * shrink, body.height * shrink);
       body.setOffset(
         (sprite.displayWidth - body.width) / 2,
@@ -190,7 +194,7 @@ export function spawnSceneProps(
     }
 
     // Generate normal map and enable Light2D so props react to the lamp
-    if (visual) {
+    if (visual && !prop.unlit) {
       addNormalMapToTexture(scene, prop.image);
       try {
         visual.setPipeline('Light2D');
@@ -209,7 +213,7 @@ export function spawnSceneProps(
     if (visual && depthSort) {
       depthSort.register(visual);
     }
-    if (visual) {
+    if (visual && !prop.unlit) {
       dof?.register(visual);
     }
 

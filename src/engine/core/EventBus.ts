@@ -28,7 +28,18 @@ export interface GameEvents {
   'wire:spark': { x: number; y: number };
   'relay:nearby': { relayId: string; distance: number };
   'relay:reset': { relayId: string };
-  'transformer:activated': Record<string, never>;
+  'transformer:activated': {
+    id: string;
+    x: number;
+    y: number;
+    activated: number;
+    total: number;
+    complete: boolean;
+  };
+  'cable:proximity_changed': { powered: boolean; fuelMultiplier: number };
+  'minimap:unlocked': Record<string, never>;
+  'quest:updated': { title: string; current: number; total: number; complete: boolean };
+  'quest:cleared': Record<string, never>;
   'item:interact': { itemId: string };
 }
 

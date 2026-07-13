@@ -36,6 +36,7 @@ import { WorldReactivitySystem } from '../systems/WorldReactivitySystem';
 import type { CaveMinimapMap, CaveMinimapSnapshot } from '../systems/CaveExploration';
 import { CharacterController3D } from '../rendering/CharacterController3D';
 import { ShopOverlay } from '../ui/ShopOverlay';
+import { PowerCableSystem } from '../systems/PowerCableSystem';
 
 /**
  * ONE generic GameScene configured by a SceneDef.
@@ -60,6 +61,7 @@ export class GameScene extends Phaser.Scene {
   private worldReactivity!: WorldReactivitySystem;
   private char3d: CharacterController3D | null = null;
   private shopOverlay: ShopOverlay | null = null;
+  private powerCable: PowerCableSystem | null = null;
 
   private sceneDefId = 'core:home';
   private sceneDef: SceneDef | undefined;
@@ -88,6 +90,13 @@ export class GameScene extends Phaser.Scene {
   }
 
   create() {
+    // Phaser emits SHUTDOWN on stop/restart but does not call a scene's custom
+    // shutdown method automatically. Clean up any pre-existing run (including
+    // one created before this lifecycle hook existed), then bind this run.
+    this.powerCable?.destroy();
+    this.powerCable = null;
+    this.events.once(Phaser.Scenes.Events.SHUTDOWN, this.shutdown, this);
+
     this.movementSystem = new MovementSystem();
     this.animationSystem = new AnimationSystem(configManager);
     this.proceduralAnimSystem = new ProceduralAnimSystem(configManager, eventBus);
@@ -130,6 +139,12 @@ export class GameScene extends Phaser.Scene {
     this.spawnPlayer(this.sceneDef);
     this.zoneManager.setPlayer(this.player);
     if (this.isCave) this.dof.enable();
+
+    const cableConfig = this.sceneDef?.quest?.powerCable;
+    this.powerCable =
+      this.isCave && cableConfig
+        ? new PowerCableSystem(this, this.player.sprite, cableConfig)
+        : null;
 
     this.tryLoad3DCharacter();
 
@@ -270,7 +285,8 @@ export class GameScene extends Phaser.Scene {
     const dt = delta / 1000;
 
     if (this.isCave) {
-      this.lampSystem.update(dt);
+      this.powerCable?.update();
+      this.lampSystem.update(dt, this.powerCable?.fuelBurnMultiplier ?? 1);
       this.proceduralAnimSystem.setFuelRatio(this.lampSystem.ratio);
     }
 
@@ -338,16 +354,23 @@ export class GameScene extends Phaser.Scene {
       playerX: this.player.sprite.x,
       playerY: this.player.sprite.y,
       visibilityRadius: this.lampRenderer.displayedRadius,
+      poweredCableSegments: this.powerCable?.poweredSegments,
+      cableRevision: this.powerCable?.revision,
     };
   }
 
   shutdown() {
     this.unsubConfig?.();
+    this.unsubConfig = null;
     this.unsubFuel?.();
+    this.unsubFuel = null;
     this.unsubInventory?.();
+    this.unsubInventory = null;
     this.soundSystem?.destroy();
     this.ambientAudio?.destroy();
     this.char3d?.destroy();
+    this.powerCable?.destroy();
+    this.powerCable = null;
     this.dof?.destroy();
     this.worldReactivity?.destroy();
     for (const unsub of this.unsubOverlay) unsub();

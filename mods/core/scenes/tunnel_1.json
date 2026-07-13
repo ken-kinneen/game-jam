@@ -114,6 +114,19 @@
     "tileImage": "tilesets/tunnelfloor",
     "wallImage": "tilesets/wall"
   },
+  "quest": {
+    "type": "activate_all_transformers",
+    "title": "Restore the power grid",
+    "completionText": "POWER GRID RESTORED",
+    "exitTitle": "Return to the cave entrance",
+    "completionScene": "core:home",
+    "minimapUnlockAt": 2,
+    "powerCable": {
+      "sampleDistance": 18,
+      "poweredRadius": 30,
+      "fuelBurnMultiplier": 0.5
+    }
+  },
   "props": [
     {
       "image": "furniture/cable_bundle",
@@ -125,6 +138,23 @@
       "depth": 1,
       "collides": false,
       "angle": 0
+    },
+    {
+      "image": "furniture/transformer_box",
+      "position": {
+        "x": 400,
+        "y": 736
+      },
+      "height": 72,
+      "depth": 2,
+      "collides": true,
+      "collisionScale": 0.4,
+      "angle": 0,
+      "action": "transformer",
+      "actionLabel": "Restore Power",
+      "interactionRadius": 28,
+      "interactionHighlight": "tint",
+      "unlit": true
     },
     {
       "image": "furniture/junction_box",
@@ -232,12 +262,16 @@
         "x": 895,
         "y": 832
       },
-      "scale": 0.3,
+      "height": 72,
       "depth": 2,
       "collides": true,
+      "collisionScale": 0.4,
       "angle": 0,
       "action": "transformer",
-      "actionLabel": "Activate Relay A"
+      "actionLabel": "Activate Relay A",
+      "interactionRadius": 28,
+      "interactionHighlight": "tint",
+      "unlit": true
     },
     {
       "image": "furniture/cable_bundle",
@@ -322,12 +356,16 @@
         "x": 752,
         "y": 1776
       },
-      "scale": 0.35,
+      "height": 72,
       "depth": 2,
       "collides": true,
+      "collisionScale": 0.4,
       "angle": 0,
       "action": "transformer",
-      "actionLabel": "Restore Grid Section"
+      "actionLabel": "Restore Grid Section",
+      "interactionRadius": 28,
+      "interactionHighlight": "tint",
+      "unlit": true
     }
   ],
   "exits": [

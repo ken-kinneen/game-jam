@@ -4,7 +4,10 @@ import type { SceneDef } from '../schemas/scene.schema';
 import type { SceneDirector } from './SceneDirector';
 import type { DepthSortSystem } from '../systems/DepthSortSystem';
 import type { DepthOfFieldSystem } from '../systems/DepthOfFieldSystem';
+import { TransformerQuestSystem } from '../systems/TransformerQuestSystem';
 import { spawnSceneProps, type PropShadow, type Prop3DInstance } from './propSpawner';
+
+type InteractionHighlight = 'glow' | 'tint' | 'none';
 
 export interface ExitZone {
   sprite: Phaser.Physics.Arcade.Sprite;
@@ -12,6 +15,7 @@ export interface ExitZone {
   tooltip: Phaser.GameObjects.Text;
   to: string;
   displayLabel: string;
+  interactionHighlight: InteractionHighlight;
   propVisual?: Phaser.GameObjects.Image;
 }
 
@@ -21,6 +25,9 @@ export interface InteractZone {
   tooltip: Phaser.GameObjects.Text;
   displayLabel: string;
   action: string;
+  interactionRadius?: number;
+  interactionHighlight: InteractionHighlight;
+  objectiveId?: string;
   propVisual?: Phaser.GameObjects.Image;
 }
 
@@ -35,6 +42,7 @@ export class ZoneManager {
   private activeExit: ExitZone | null = null;
   private activeInteract: InteractZone | null = null;
   private promptText!: Phaser.GameObjects.Text;
+  private transformerQuest?: TransformerQuestSystem;
 
   constructor(
     private readonly scene: Phaser.Scene,
@@ -48,10 +56,12 @@ export class ZoneManager {
 
   /** Resets zone state for a fresh scene load. */
   reset(): void {
+    this.transformerQuest?.destroy();
     this.exitZones = [];
     this.interactZones = [];
     this.activeExit = null;
     this.activeInteract = null;
+    this.transformerQuest = undefined;
     this.propShadows.length = 0;
     this.props3d.length = 0;
   }
@@ -76,6 +86,7 @@ export class ZoneManager {
     this.propShadows.push(...result.propShadows);
     this.props3d.push(...result.props3d);
     this.createPromptText();
+    this.createTransformerQuest();
   }
 
   /** Register a ground-item sprite as an interact zone with glow + tooltip. */
@@ -99,6 +110,7 @@ export class ZoneManager {
       tooltip,
       displayLabel: label,
       action,
+      interactionHighlight: 'glow',
       propVisual: sprite as unknown as Phaser.GameObjects.Image,
     });
   }
@@ -116,7 +128,8 @@ export class ZoneManager {
 
     for (const zone of this.interactZones) {
       const dist = this.distToZoneEdge(px, py, zone.propVisual, zone.sprite);
-      if (dist < threshold && dist < nearestDist) {
+      const interactionThreshold = zone.interactionRadius ?? threshold;
+      if (dist < interactionThreshold && dist < nearestDist) {
         nearest = zone;
         nearestDist = dist;
       }
@@ -125,16 +138,24 @@ export class ZoneManager {
     if (nearest && nearest !== this.activeInteract && !this.activeExit) {
       if (this.activeInteract) {
         this.hideTooltip(this.activeInteract.tooltip);
-        this.setPropGlow(this.activeInteract.propVisual, false);
+        this.setPropHighlight(
+          this.activeInteract.propVisual,
+          false,
+          this.activeInteract.interactionHighlight,
+        );
       }
       this.activeInteract = nearest;
       this.showTooltip(nearest.tooltip);
-      this.setPropGlow(nearest.propVisual, true);
+      this.setPropHighlight(nearest.propVisual, true, nearest.interactionHighlight);
       this.promptText.setText(`E ${nearest.displayLabel}`);
       this.promptText.setVisible(true);
     } else if (!nearest && this.activeInteract) {
       this.hideTooltip(this.activeInteract.tooltip);
-      this.setPropGlow(this.activeInteract.propVisual, false);
+      this.setPropHighlight(
+        this.activeInteract.propVisual,
+        false,
+        this.activeInteract.interactionHighlight,
+      );
       this.activeInteract = null;
       if (!this.activeExit) {
         this.promptText.setVisible(false);
@@ -164,17 +185,25 @@ export class ZoneManager {
     if (nearest && nearest !== this.activeExit) {
       if (this.activeExit) {
         this.hideTooltip(this.activeExit.tooltip);
-        this.setPropGlow(this.activeExit.propVisual, false);
+        this.setPropHighlight(
+          this.activeExit.propVisual,
+          false,
+          this.activeExit.interactionHighlight,
+        );
       }
       this.activeExit = nearest;
       this.showTooltip(nearest.tooltip);
-      this.setPropGlow(nearest.propVisual, true);
+      this.setPropHighlight(nearest.propVisual, true, nearest.interactionHighlight);
       this.promptText.setText(`E ${nearest.displayLabel}`);
       this.promptText.setVisible(true);
       eventBus.emit('exit:nearby', { exitTo: nearest.to, label: nearest.displayLabel });
     } else if (!nearest && this.activeExit) {
       this.hideTooltip(this.activeExit.tooltip);
-      this.setPropGlow(this.activeExit.propVisual, false);
+      this.setPropHighlight(
+        this.activeExit.propVisual,
+        false,
+        this.activeExit.interactionHighlight,
+      );
       this.activeExit = null;
       this.promptText.setVisible(false);
       eventBus.emit('exit:left', {});
@@ -229,7 +258,14 @@ export class ZoneManager {
 
       const tooltip = this.createZoneTooltip(pos.x, pos.y + 34);
 
-      this.exitZones.push({ sprite: zoneSprite, label, tooltip, to: exit.to, displayLabel });
+      this.exitZones.push({
+        sprite: zoneSprite,
+        label,
+        tooltip,
+        to: exit.to,
+        displayLabel,
+        interactionHighlight: 'glow',
+      });
     }
   }
 
@@ -261,7 +297,14 @@ export class ZoneManager {
 
       const tooltip = this.createZoneTooltip(pos.x, pos.y + 34);
 
-      this.interactZones.push({ sprite: zoneSprite, label, tooltip, displayLabel, action: 'shop' });
+      this.interactZones.push({
+        sprite: zoneSprite,
+        label,
+        tooltip,
+        displayLabel,
+        action: 'shop',
+        interactionHighlight: 'glow',
+      });
     }
   }
 
@@ -272,79 +315,66 @@ export class ZoneManager {
       action?: string;
       actionTarget?: string;
       actionLabel?: string;
+      interactionRadius?: number;
+      interactionHighlight?: InteractionHighlight;
     },
     visual?: Phaser.GameObjects.Image,
   ): void {
     const pos = prop.position;
     const displayLabel = prop.actionLabel ?? prop.action ?? '';
     const tooltip = this.createZoneTooltip(pos.x, pos.y + 40, displayLabel);
+    const interactionHighlight = prop.interactionHighlight ?? 'glow';
 
-    if (visual?.preFX) {
+    if (visual?.preFX && interactionHighlight === 'glow') {
       visual.preFX.setPadding(6);
       visual.preFX.addGlow(0xffdd66, 0, 0, false);
     }
 
+    const { sprite, label } = this.createHiddenZone(pos.x, pos.y);
     if (prop.action === 'exit' && prop.actionTarget) {
-      const zoneSprite = this.scene.physics.add.sprite(pos.x, pos.y, '__placeholder');
-      zoneSprite.setDisplaySize(48, 48);
-      zoneSprite.setAlpha(0);
-      zoneSprite.setDepth(5);
-      const body = zoneSprite.body as Phaser.Physics.Arcade.Body;
-      body.setImmovable(true);
-      body.setAllowGravity(false);
-
-      const label = this.scene.add.text(pos.x, pos.y - 36, '', { fontSize: '1px' });
-      label.setVisible(false);
-
       this.exitZones.push({
-        sprite: zoneSprite,
+        sprite,
         label,
         tooltip,
         to: prop.actionTarget,
         displayLabel,
+        interactionHighlight,
         propVisual: visual,
       });
-    } else if (prop.action === 'transformer') {
-      const zoneSprite = this.scene.physics.add.sprite(pos.x, pos.y, '__placeholder');
-      zoneSprite.setDisplaySize(48, 48);
-      zoneSprite.setAlpha(0);
-      zoneSprite.setDepth(5);
-      const body = zoneSprite.body as Phaser.Physics.Arcade.Body;
-      body.setImmovable(true);
-      body.setAllowGravity(false);
-
-      const label = this.scene.add.text(pos.x, pos.y - 36, '', { fontSize: '1px' });
-      label.setVisible(false);
-
+    } else if (
+      prop.action === 'transformer' ||
+      prop.action === 'shop' ||
+      prop.action === 'upgrade'
+    ) {
       this.interactZones.push({
-        sprite: zoneSprite,
-        label,
-        tooltip,
-        displayLabel,
-        action: 'transformer',
-        propVisual: visual,
-      });
-    } else if (prop.action === 'shop' || prop.action === 'upgrade') {
-      const zoneSprite = this.scene.physics.add.sprite(pos.x, pos.y, '__placeholder');
-      zoneSprite.setDisplaySize(48, 48);
-      zoneSprite.setAlpha(0);
-      zoneSprite.setDepth(5);
-      const body = zoneSprite.body as Phaser.Physics.Arcade.Body;
-      body.setImmovable(true);
-      body.setAllowGravity(false);
-
-      const label = this.scene.add.text(pos.x, pos.y - 36, '', { fontSize: '1px' });
-      label.setVisible(false);
-
-      this.interactZones.push({
-        sprite: zoneSprite,
+        sprite,
         label,
         tooltip,
         displayLabel,
         action: prop.action,
+        interactionRadius: prop.interactionRadius,
+        interactionHighlight,
+        objectiveId: prop.action === 'transformer' ? `transformer:${pos.x}:${pos.y}` : undefined,
         propVisual: visual,
       });
     }
+  }
+
+  private createHiddenZone(
+    x: number,
+    y: number,
+  ): { sprite: Phaser.Physics.Arcade.Sprite; label: Phaser.GameObjects.Text } {
+    const sprite = this.scene.physics.add.sprite(x, y, '__placeholder');
+    sprite.setDisplaySize(48, 48);
+    sprite.setAlpha(0);
+    sprite.setDepth(5);
+    const body = sprite.body as Phaser.Physics.Arcade.Body;
+    body.setImmovable(true);
+    body.setAllowGravity(false);
+
+    const label = this.scene.add.text(x, y - 36, '', { fontSize: '1px' });
+    label.setVisible(false);
+    return { sprite, label };
   }
 
   private createZoneTooltip(x: number, y: number, label?: string): Phaser.GameObjects.Text {
@@ -388,12 +418,12 @@ export class ZoneManager {
     propVisual: Phaser.GameObjects.Image | undefined,
     fallbackSprite: Phaser.Physics.Arcade.Sprite,
   ): number {
-    if (propVisual && 'body' in propVisual && propVisual.body) {
-      const body = propVisual.body as Phaser.Physics.Arcade.StaticBody;
-      const bx = body.x;
-      const by = body.y;
-      const bw = body.width;
-      const bh = body.height;
+    if (propVisual) {
+      const bounds = propVisual.getBounds();
+      const bx = bounds.x;
+      const by = bounds.y;
+      const bw = bounds.width;
+      const bh = bounds.height;
 
       const cx = Math.max(bx, Math.min(px, bx + bw));
       const cy = Math.max(by, Math.min(py, by + bh));
@@ -406,9 +436,19 @@ export class ZoneManager {
     return Math.sqrt(dx * dx + dy * dy);
   }
 
-  /** Activates or deactivates the glow effect on an interactive prop. */
-  private setPropGlow(visual: Phaser.GameObjects.Image | undefined, active: boolean): void {
-    if (!visual?.preFX) return;
+  /** Activates or deactivates the configured proximity highlight. */
+  private setPropHighlight(
+    visual: Phaser.GameObjects.Image | undefined,
+    active: boolean,
+    mode: InteractionHighlight,
+  ): void {
+    if (mode === 'none' || !visual) return;
+    if (mode === 'tint') {
+      if (active) visual.setTint(0xffdd88);
+      else visual.clearTint();
+      return;
+    }
+    if (!visual.preFX) return;
     const fx = visual.preFX.list;
     const glow = fx.find((f) => (f as { type?: number }).type === 4) as Phaser.FX.Glow | undefined;
     if (!glow) return;
@@ -445,51 +485,49 @@ export class ZoneManager {
     } else if (zone.action === 'upgrade') {
       this.openShop?.();
     } else if (zone.action === 'transformer') {
-      this.handleTransformerActivation();
+      this.handleTransformerActivation(zone);
     } else if (zone.action === 'banana') {
       eventBus.emit('item:interact', { itemId: 'banana_peel' });
     }
   }
 
-  private handleTransformerActivation(): void {
-    eventBus.emit('transformer:activated', {});
+  private handleTransformerActivation(zone: InteractZone): void {
+    if (!this.transformerQuest || !zone.objectiveId) return;
 
-    this.scene.cameras.main.flash(600, 255, 220, 120);
+    const progress = this.transformerQuest.activate(zone.objectiveId, {
+      x: zone.sprite.x,
+      y: zone.sprite.y,
+    });
+    if (!progress.activated) return;
 
-    const statusText = this.scene.add.text(
-      this.scene.cameras.main.width / 2,
-      this.scene.cameras.main.height / 2,
-      'GRID SECTION RESTORED',
+    this.hideTooltip(zone.tooltip);
+    this.setPropHighlight(zone.propVisual, false, zone.interactionHighlight);
+    zone.propVisual?.setTint(0x88ff99);
+    zone.sprite.disableBody(true, true);
+    this.interactZones = this.interactZones.filter((candidate) => candidate !== zone);
+    this.activeInteract = null;
+    this.promptText.setVisible(false);
+  }
+
+  private createTransformerQuest(): void {
+    const quest = this.sceneDef?.quest;
+    if (quest?.type !== 'activate_all_transformers') return;
+
+    const transformerCount = this.interactZones.filter(
+      (zone) => zone.action === 'transformer',
+    ).length;
+    if (transformerCount === 0) return;
+
+    this.transformerQuest = new TransformerQuestSystem(
+      this.scene,
+      transformerCount,
       {
-        fontFamily: '"Courier New", monospace',
-        fontSize: '28px',
-        color: '#ffdd44',
-        stroke: '#000000',
-        strokeThickness: 5,
-        align: 'center',
+        title: quest.title,
+        completionText: quest.completionText,
+        exitTitle: quest.exitTitle,
       },
+      () => this.director.transitionTo(quest.completionScene, this.scene),
     );
-    statusText.setOrigin(0.5, 0.5);
-    statusText.setScrollFactor(0);
-    statusText.setDepth(1000);
-    statusText.setAlpha(0);
-
-    this.scene.tweens.add({
-      targets: statusText,
-      alpha: 1,
-      duration: 400,
-      yoyo: true,
-      hold: 1500,
-      onComplete: () => statusText.destroy(),
-    });
-
-    this.scene.time.delayedCall(2500, () => {
-      this.scene.cameras.main.fade(1000, 0, 0, 0, false, (_cam: unknown, progress: number) => {
-        if (progress >= 1) {
-          this.director.transitionTo('core:home', this.scene);
-        }
-      });
-    });
   }
 
   private createPromptText(): void {
@@ -509,6 +547,15 @@ export class ZoneManager {
   }
 
   private enterExit(exit: ExitZone): void {
+    if (this.transformerQuest) {
+      if (!this.transformerQuest.canExitSuccessfully) {
+        this.transformerQuest.showExitBlockedFeedback();
+        return;
+      }
+      this.transformerQuest.completeAtExit();
+      return;
+    }
+
     this.scene.cameras.main.fade(500, 0, 0, 0, false, (_cam: unknown, progress: number) => {
       if (progress >= 1) {
         this.director.transitionTo(exit.to, this.scene);
