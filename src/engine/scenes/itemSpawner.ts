@@ -12,6 +12,7 @@ const GLOW_INTENSITY_HI = 1.5;
 const SPARKLE_COUNT = 12;
 const SPARKLE_SIZE = 4;
 const RAINBOW = [0xff0000, 0xff8800, 0xffff00, 0x00ff44, 0x00ccff, 0x8844ff, 0xff44ff];
+const GOLD_GLOW = 0xffd700;
 
 /** Spawns trash items randomly within world bounds. */
 export function spawnGroundItems(
@@ -31,7 +32,7 @@ export function spawnGroundItems(
     const x = Phaser.Math.Between(bounds.x + margin, bounds.right - margin);
     const y = Phaser.Math.Between(bounds.y + margin, bounds.bottom - margin);
 
-    const sprite = createItemSprite(scene, x, y, itemDef);
+    const sprite = createItemSprite(scene, x, y, itemDef, undefined, itemDef.id);
     pickupSystem.addGroundItem(sprite, itemDef.id, 1);
   }
 }
@@ -54,7 +55,7 @@ export function spawnFuelItems(
     const x = Phaser.Math.Between(bounds.x + margin, bounds.right - margin);
     const y = Phaser.Math.Between(bounds.y + margin, bounds.bottom - margin);
 
-    const sprite = createItemSprite(scene, x, y, itemDef);
+    const sprite = createItemSprite(scene, x, y, itemDef, undefined, itemDef.id);
     pickupSystem.addGroundItem(sprite, itemDef.id, 1);
   }
 }
@@ -81,7 +82,7 @@ export function spawnProceduralItems(
 
     const x = item.x * CAVE_TILE_PX + CAVE_TILE_PX / 2;
     const y = item.y * CAVE_TILE_PX + CAVE_TILE_PX / 2;
-    const sprite = createItemSprite(scene, x, y, itemDef);
+    const sprite = createItemSprite(scene, x, y, itemDef, undefined, itemDef.id);
     pickupSystem.addGroundItem(sprite, itemDef.id, 1);
   }
 }
@@ -115,6 +116,7 @@ export function spawnPlacedItems(
       item.position.y,
       { ...itemDef, ...overrides },
       item.angle,
+      item.itemId,
     );
     pickupSystem.addGroundItem(sprite, item.itemId, item.qty ?? 1);
   }
@@ -126,6 +128,7 @@ function createItemSprite(
   y: number,
   itemDef: { sprite: string; displayScale?: number },
   angle?: number,
+  itemId?: string,
 ): Phaser.Physics.Arcade.Sprite {
   const textureKey =
     itemDef.sprite !== 'placeholder' && scene.textures.exists(itemDef.sprite)
@@ -157,7 +160,12 @@ function createItemSprite(
   const bodySize = Math.min(targetSize, 24);
   body.setSize(bodySize / scale, bodySize / scale);
 
-  addItemEffects(scene, sprite);
+  const isGolden = itemId?.includes('banana');
+  if (isGolden) {
+    addGoldenEffect(scene, sprite);
+  } else {
+    addItemEffects(scene, sprite);
+  }
   return sprite;
 }
 
@@ -165,7 +173,6 @@ function addItemEffects(scene: Phaser.Scene, sprite: Phaser.Physics.Arcade.Sprit
   const phase = Math.random() * Math.PI * 2;
   const baseY = sprite.y;
 
-  // Big floaty bob
   scene.tweens.add({
     targets: sprite,
     y: baseY - BOB_AMPLITUDE,
@@ -176,7 +183,6 @@ function addItemEffects(scene: Phaser.Scene, sprite: Phaser.Physics.Arcade.Sprit
     delay: (phase * BOB_DURATION) / (Math.PI * 2),
   });
 
-  // Slow spin
   scene.tweens.add({
     targets: sprite,
     angle: 360,
@@ -185,7 +191,6 @@ function addItemEffects(scene: Phaser.Scene, sprite: Phaser.Physics.Arcade.Sprit
     repeat: -1,
   });
 
-  // Scale pulse
   const baseScale = sprite.scaleX;
   scene.tweens.add({
     targets: sprite,
@@ -197,7 +202,6 @@ function addItemEffects(scene: Phaser.Scene, sprite: Phaser.Physics.Arcade.Sprit
     repeat: -1,
   });
 
-  // Rainbow tint cycle
   let colorIdx = Math.floor(Math.random() * RAINBOW.length);
   scene.time.addEvent({
     delay: 200,
@@ -209,7 +213,6 @@ function addItemEffects(scene: Phaser.Scene, sprite: Phaser.Physics.Arcade.Sprit
     },
   });
 
-  // Sparkle particle ring
   createSparkleTexture(scene);
   const particles = scene.add.particles(sprite.x, sprite.y, '__sparkle', {
     speed: { min: 20, max: 60 },
@@ -233,7 +236,6 @@ function addItemEffects(scene: Phaser.Scene, sprite: Phaser.Physics.Arcade.Sprit
     particles.destroy();
   });
 
-  // Big rainbow glow light
   try {
     const glow = scene.lights.addLight(
       sprite.x,
@@ -262,6 +264,87 @@ function addItemEffects(scene: Phaser.Scene, sprite: Phaser.Physics.Arcade.Sprit
     scene.events.on('update', () => {
       glow.x = sprite.x;
       glow.y = sprite.y;
+    });
+    sprite.on('destroy', () => {
+      scene.lights.removeLight(glow);
+    });
+  } catch {
+    /* lights not available */
+  }
+}
+
+function addGoldenEffect(scene: Phaser.Scene, sprite: Phaser.Physics.Arcade.Sprite): void {
+  // Permanent gold tint
+  sprite.setTint(0xffd700);
+
+  // Slow sheen: briefly flash bright white-gold, then ease back
+  scene.time.addEvent({
+    delay: 3000,
+    loop: true,
+    callback: () => {
+      if (!sprite.active) return;
+      scene.tweens.addCounter({
+        from: 0,
+        to: 100,
+        duration: 300,
+        ease: 'Sine.easeIn',
+        onUpdate: (t) => {
+          const v = t.getValue() ?? 0;
+          const r = Math.round(0xff + ((0xff - 0xff) * v) / 100);
+          const g = Math.round(0xd7 + ((0xfe - 0xd7) * v) / 100);
+          const b = Math.round(0x00 + ((0xf0 - 0x00) * v) / 100);
+          sprite.setTint(Phaser.Display.Color.GetColor(r, g, b));
+        },
+        onComplete: () => {
+          scene.tweens.addCounter({
+            from: 100,
+            to: 0,
+            duration: 600,
+            ease: 'Sine.easeOut',
+            onUpdate: (t) => {
+              const v = t.getValue() ?? 0;
+              const r = Math.round(0xff + ((0xff - 0xff) * v) / 100);
+              const g = Math.round(0xd7 + ((0xfe - 0xd7) * v) / 100);
+              const b = Math.round(0x00 + ((0xf0 - 0x00) * v) / 100);
+              sprite.setTint(Phaser.Display.Color.GetColor(r, g, b));
+            },
+          });
+        },
+      });
+    },
+  });
+
+  // A few slow-drifting gold sparkles, not a ring — just occasional glints
+  createSparkleTexture(scene);
+  const particles = scene.add.particles(sprite.x, sprite.y, '__sparkle', {
+    speed: { min: 5, max: 15 },
+    scale: { start: 0.8, end: 0 },
+    alpha: { start: 0.9, end: 0 },
+    lifespan: 1200,
+    frequency: 500,
+    quantity: 1,
+    tint: [0xffd700, 0xffec80, 0xfffacd],
+    emitZone: {
+      type: 'edge' as const,
+      source: new Phaser.Geom.Circle(0, 0, 12),
+      quantity: 6,
+    },
+  });
+  particles.setDepth(10);
+  sprite.on('destroy', () => {
+    particles.destroy();
+  });
+
+  // Warm gold glow light
+  try {
+    const glow = scene.lights.addLight(sprite.x, sprite.y, 50, GOLD_GLOW, 0.5);
+    scene.tweens.add({
+      targets: glow,
+      intensity: 0.9,
+      duration: 2000,
+      ease: 'Sine.easeInOut',
+      yoyo: true,
+      repeat: -1,
     });
     sprite.on('destroy', () => {
       scene.lights.removeLight(glow);
