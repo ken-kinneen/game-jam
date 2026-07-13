@@ -27,6 +27,7 @@ export interface GameEvents {
   'relay:nearby': { relayId: string; distance: number };
   'relay:reset': { relayId: string };
   'transformer:activated': Record<string, never>;
+  'item:interact': { itemId: string };
 }
 
 type EventCallback<T> = (data: T) => void;

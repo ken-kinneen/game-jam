@@ -1,6 +1,7 @@
 import type { ContentRegistry } from '../core/ContentRegistry';
 import type { CaveMap } from '../generation/caveGenerator';
 import type { PickupSystem } from '../systems/PickupSystem';
+import type { ZoneManager } from './zoneManager';
 
 const ITEM_TARGET_SIZE = 28;
 const CAVE_TILE_PX = 16;
@@ -19,6 +20,7 @@ export function spawnGroundItems(
   scene: Phaser.Scene,
   registry: ContentRegistry,
   pickupSystem: PickupSystem,
+  zoneManager?: ZoneManager,
 ): void {
   const trashItems = registry.getByTag('item', 'trash');
   if (trashItems.length === 0) return;
@@ -34,6 +36,9 @@ export function spawnGroundItems(
 
     const sprite = createItemSprite(scene, x, y, itemDef, undefined, itemDef.id);
     pickupSystem.addGroundItem(sprite, itemDef.id, 1);
+    if (itemDef.id.includes('banana') && zoneManager) {
+      zoneManager.registerItemInteraction(sprite, 'Banana Peel', 'banana');
+    }
   }
 }
 
@@ -42,6 +47,7 @@ export function spawnFuelItems(
   scene: Phaser.Scene,
   registry: ContentRegistry,
   pickupSystem: PickupSystem,
+  zoneManager?: ZoneManager,
 ): void {
   const fuelItems = registry.getByTag('item', 'fuel');
   if (fuelItems.length === 0) return;
@@ -57,6 +63,9 @@ export function spawnFuelItems(
 
     const sprite = createItemSprite(scene, x, y, itemDef, undefined, itemDef.id);
     pickupSystem.addGroundItem(sprite, itemDef.id, 1);
+    if (itemDef.id.includes('banana') && zoneManager) {
+      zoneManager.registerItemInteraction(sprite, 'Banana Peel', 'banana');
+    }
   }
 }
 
@@ -66,6 +75,7 @@ export function spawnProceduralItems(
   registry: ContentRegistry,
   pickupSystem: PickupSystem,
   caveMap: CaveMap,
+  zoneManager?: ZoneManager,
 ): void {
   const trashItems = registry.getByTag('item', 'trash');
   const fuelItems = registry.getByTag('item', 'fuel');
@@ -84,6 +94,9 @@ export function spawnProceduralItems(
     const y = item.y * CAVE_TILE_PX + CAVE_TILE_PX / 2;
     const sprite = createItemSprite(scene, x, y, itemDef, undefined, itemDef.id);
     pickupSystem.addGroundItem(sprite, itemDef.id, 1);
+    if (itemDef.id.includes('banana') && zoneManager) {
+      zoneManager.registerItemInteraction(sprite, 'Banana Peel', 'banana');
+    }
   }
 }
 
@@ -100,6 +113,7 @@ export function spawnPlacedItems(
     scale?: number;
     angle?: number;
   }[],
+  zoneManager?: ZoneManager,
 ): void {
   for (const item of items) {
     const itemDef = registry.get('item', item.itemId);
@@ -119,6 +133,10 @@ export function spawnPlacedItems(
       item.itemId,
     );
     pickupSystem.addGroundItem(sprite, item.itemId, item.qty ?? 1);
+
+    if (item.itemId.includes('banana') && zoneManager) {
+      zoneManager.registerItemInteraction(sprite, 'Banana Peel', 'banana');
+    }
   }
 }
 

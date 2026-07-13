@@ -130,12 +130,24 @@ export class GameScene extends Phaser.Scene {
 
     if (this.isCave) {
       if (this.sceneDef?.groundItems?.length) {
-        spawnPlacedItems(this, registry, this.pickupSystem, this.sceneDef.groundItems);
+        spawnPlacedItems(
+          this,
+          registry,
+          this.pickupSystem,
+          this.sceneDef.groundItems,
+          this.zoneManager,
+        );
       } else if (this.proceduralCaveMap) {
-        spawnProceduralItems(this, registry, this.pickupSystem, this.proceduralCaveMap);
+        spawnProceduralItems(
+          this,
+          registry,
+          this.pickupSystem,
+          this.proceduralCaveMap,
+          this.zoneManager,
+        );
       } else {
-        spawnGroundItems(this, registry, this.pickupSystem);
-        spawnFuelItems(this, registry, this.pickupSystem);
+        spawnGroundItems(this, registry, this.pickupSystem, this.zoneManager);
+        spawnFuelItems(this, registry, this.pickupSystem, this.zoneManager);
       }
     }
 
@@ -198,6 +210,12 @@ export class GameScene extends Phaser.Scene {
         this.lampRenderer.setLampColor(color);
       }),
     ];
+
+    eventBus.on('item:interact', ({ itemId }) => {
+      if (itemId === 'banana_peel') {
+        this.playCutsceneVideo('mods/core/assets/video/banana.mp4');
+      }
+    });
 
     this.applyCameraConfig();
     this.applyPlayerConfig();
@@ -504,5 +522,51 @@ export class GameScene extends Phaser.Scene {
     if (this.wallGroup && this.player) {
       this.physics.add.collider(this.player.sprite, this.wallGroup);
     }
+  }
+
+  private playCutsceneVideo(src: string): void {
+    if (this.shopOpen) return;
+    this.shopOpen = true;
+
+    const canvas = this.game.canvas;
+    const rect = canvas.getBoundingClientRect();
+
+    const video = document.createElement('video');
+    video.src = src;
+    video.playsInline = true;
+    video.muted = false;
+    video.setAttribute('playsinline', '');
+    video.style.cssText = `
+      position: fixed;
+      top: ${rect.top}px; left: ${rect.left}px;
+      width: ${rect.width}px; height: ${rect.height}px;
+      object-fit: contain; z-index: 9999;
+      background: #000;
+      pointer-events: auto;
+      cursor: pointer;
+    `;
+    document.body.appendChild(video);
+
+    const finish = () => {
+      if (!video.parentNode) return;
+      video.pause();
+      video.remove();
+      document.removeEventListener('keydown', onKey);
+      this.shopOpen = false;
+    };
+
+    video.addEventListener('ended', finish);
+    video.addEventListener('error', () => finish());
+    video.addEventListener('click', finish);
+
+    const onKey = (e: KeyboardEvent) => {
+      if (e.code === 'Space' || e.code === 'Escape' || e.code === 'KeyE') {
+        e.preventDefault();
+        finish();
+      }
+    };
+    document.addEventListener('keydown', onKey);
+
+    video.play().catch(() => finish());
   }
 }

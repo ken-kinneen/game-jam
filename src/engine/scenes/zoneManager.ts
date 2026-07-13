@@ -78,6 +78,31 @@ export class ZoneManager {
     this.createPromptText();
   }
 
+  /** Register a ground-item sprite as an interact zone with glow + tooltip. */
+  registerItemInteraction(
+    sprite: Phaser.Physics.Arcade.Sprite,
+    label: string,
+    action: string,
+  ): void {
+    const tooltip = this.createZoneTooltip(sprite.x, sprite.y + 20, label);
+
+    if (sprite.preFX) {
+      sprite.preFX.setPadding(6);
+      sprite.preFX.addGlow(0xffdd66, 0, 0, false);
+    }
+
+    this.interactZones.push({
+      sprite,
+      label: this.scene.add
+        .text(sprite.x, sprite.y - 36, '', { fontSize: '1px' })
+        .setVisible(false),
+      tooltip,
+      displayLabel: label,
+      action,
+      propVisual: sprite as unknown as Phaser.GameObjects.Image,
+    });
+  }
+
   /** Checks proximity to interact zones and updates prompts. */
   checkInteractOverlap(): void {
     if (!this.player) return;
@@ -421,6 +446,8 @@ export class ZoneManager {
       this.openShop?.();
     } else if (zone.action === 'transformer') {
       this.handleTransformerActivation();
+    } else if (zone.action === 'banana') {
+      eventBus.emit('item:interact', { itemId: 'banana_peel' });
     }
   }
 
