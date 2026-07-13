@@ -14,8 +14,8 @@
     {
       "image": "furniture/bed_3",
       "position": {
-        "x": 104,
-        "y": 155
+        "x": 133,
+        "y": 165
       },
       "scale": 0.3,
       "depth": 2,
@@ -25,16 +25,13 @@
     {
       "image": "furniture/bed_8",
       "position": {
-        "x": 412,
-        "y": 244
+        "x": 400,
+        "y": 257
       },
-      "height": 135,
+      "scale": 0.3,
       "depth": 2,
       "collides": true,
-      "angle": 90,
-      "render3d": {
-        "modelUrl": "mods/core/assets/models/bench.glb"
-      }
+      "angle": 90
     },
     {
       "image": "furniture/bed_11",
@@ -230,8 +227,8 @@
       "condition": "always",
       "label": "Exit",
       "position": {
-        "x": 117,
-        "y": 357
+        "x": 217,
+        "y": 389
       }
     }
   ],

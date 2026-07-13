@@ -2,9 +2,41 @@ import type { Entity } from '../entities/Entity';
 import type { SceneDef } from '../schemas/scene.schema';
 import type { DepthSortSystem } from '../systems/DepthSortSystem';
 import { PropRenderer3D } from '../rendering/PropRenderer3D';
+import { generateNormalMap } from '../rendering/normalMapGenerator';
 
 export type PropShadow = { shadow: Phaser.GameObjects.Image; source: Phaser.GameObjects.Image };
 export type Prop3DInstance = { renderer: PropRenderer3D; x: number; y: number };
+
+interface PropModelEntry {
+  modelUrl: string;
+  height?: number;
+  shape?: 'table' | 'box' | 'cylinder';
+  color?: number;
+}
+
+let propModelMap: Record<string, PropModelEntry> | null = null;
+let propModelMapLoaded = false;
+
+async function loadPropModelMap(): Promise<Record<string, PropModelEntry>> {
+  if (propModelMap) return propModelMap;
+  if (propModelMapLoaded) return {};
+  propModelMapLoaded = true;
+  try {
+    const resp = await fetch('mods/core/assets/models/prop-models.json');
+    if (!resp.ok) return {};
+    const data = await resp.json();
+    propModelMap = data.models ?? {};
+    console.log('[PropModels] Loaded 3D model map:', Object.keys(propModelMap!));
+    return propModelMap!;
+  } catch {
+    return {};
+  }
+}
+
+/** Pre-load the model map. Call once during scene create. */
+export function preloadPropModels(): Promise<Record<string, PropModelEntry>> {
+  return loadPropModelMap();
+}
 
 export interface SpawnPropsOptions {
   scene: Phaser.Scene;
@@ -50,25 +82,31 @@ export function spawnSceneProps(
   for (const prop of props) {
     const pos = prop.position;
 
+    // Check for 3D model override from prop-models.json
+    const modelEntry = propModelMap?.[prop.image];
+    const render3d = prop.render3d || (modelEntry ? true : false);
+
     // 3D rendered prop
-    if (prop.render3d) {
-      const config = typeof prop.render3d === 'object' ? prop.render3d : {};
-      const displaySize = prop.height ?? 96;
+    if (render3d) {
+      const config = typeof prop.render3d === 'object' ? prop.render3d : (modelEntry ?? {});
+      const displaySize = prop.height ?? modelEntry?.height ?? 96;
       const renderer = new PropRenderer3D(scene, `${prop.image}_${pos.x}_${pos.y}`, {
         shape: (config as { shape?: 'table' | 'box' | 'cylinder' }).shape ?? 'table',
         color: (config as { color?: number }).color,
         modelUrl: (config as { modelUrl?: string }).modelUrl,
-        size: Math.min(Math.max(displaySize, 96), 256),
+        size: Math.max(displaySize, 96),
       });
 
       const texKey = renderer.getTextureKey();
       const img = scene.add.image(pos.x, pos.y, texKey);
       img.setDisplaySize(displaySize, displaySize);
+      if (prop.angle) img.setAngle(prop.angle);
       img.setDepth(prop.depth);
 
       if (prop.collides && player) {
         const sprite = scene.physics.add.staticImage(pos.x, pos.y, texKey);
         sprite.setDisplaySize(displaySize, displaySize);
+        if (prop.angle) sprite.setAngle(prop.angle);
         sprite.setDepth(prop.depth);
         sprite.refreshBody();
         const body = sprite.body as Phaser.Physics.Arcade.StaticBody;
@@ -147,12 +185,12 @@ export function spawnSceneProps(
       addContactShadow(scene, visual, scale);
     }
 
-    // Enable Light2D pipeline so props react to the lamp point light
+    // Generate normal map and enable Light2D so props react to the lamp
     if (visual) {
+      addNormalMapToTexture(scene, prop.image);
       try {
         visual.setPipeline('Light2D');
       } catch {
-        // Fallback: add rim-like shadow if Light2D not available
         if (visual.preFX) {
           visual.preFX.setPadding(4);
           visual.preFX.addShadow(0, 1, 0.06, 0.6, 0x000000, 4, 0.8);
@@ -205,6 +243,16 @@ function addContactShadow(
   contactShadow.setDisplaySize(shadowW, shadowH);
   contactShadow.setDepth(visual.depth - 0.2);
   contactShadow.setAlpha(0.6);
+}
+
+/** Generates a normal map and attaches it to the texture's dataSource for Light2D. */
+function addNormalMapToTexture(scene: Phaser.Scene, textureKey: string): void {
+  const tex = scene.textures.get(textureKey);
+  if (!tex || tex.dataSource.length > 0) return;
+
+  const source = tex.getSourceImage() as CanvasImageSource;
+  const normalCanvas = generateNormalMap(source, 2.5);
+  tex.setDataSource([normalCanvas]);
 }
 
 /** Applies data-driven preFX effects from the prop's fx array. */

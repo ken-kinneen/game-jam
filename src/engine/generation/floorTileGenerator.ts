@@ -4,6 +4,8 @@
  * The result is a continuous organic surface with no visible seams or patterns.
  */
 
+import { generateNormalMap } from '../rendering/normalMapGenerator';
+
 /** Definition for a single tile type in the palette. */
 export type FloorTileDef = {
   texture: 'wood' | 'stone' | 'metal' | 'marble';
@@ -376,6 +378,10 @@ export function buildTileFloorGraphics(
     const scale = tileSize / srcWidth;
     tileSprite.setTileScale(scale, scale);
     tileSprite.setDepth(-1);
+
+    // Generate and attach a normal map for Light2D per-pixel lighting
+    addNormalMapToTexture(scene, tileImage);
+
     try {
       tileSprite.setPipeline('Light2D');
     } catch {
@@ -414,6 +420,8 @@ function renderSingleTile(
     const canvas = generateSeamlessTileCanvas(potSize, tileDef);
     scene.textures.addCanvas(texKey, canvas);
   }
+
+  addNormalMapToTexture(scene, texKey);
 
   const tileSprite = scene.add.tileSprite(width / 2, height / 2, width, height, texKey);
   tileSprite.setDepth(-1);
@@ -497,6 +505,20 @@ function nearestPOT(n: number): number {
   return v;
 }
 
+/**
+ * Generates a normal map from a texture's source image and attaches it
+ * as a dataSource so Phaser's Light2D pipeline uses it automatically.
+ */
+function addNormalMapToTexture(scene: Phaser.Scene, textureKey: string): void {
+  const tex = scene.textures.get(textureKey);
+  if (!tex || tex.dataSource.length > 0) return;
+
+  const source = tex.getSourceImage() as CanvasImageSource;
+  const normalCanvas = generateNormalMap(source, 2.5);
+
+  tex.setDataSource([normalCanvas]);
+}
+
 /** Generates a seamless wall tile canvas with a darker, rougher surface. */
 function generateSeamlessWallCanvas(size: number): HTMLCanvasElement {
   const canvas = document.createElement('canvas');
@@ -558,6 +580,8 @@ function drawWalls(
     scene.textures.addCanvas(texKey, wallCanvas);
   }
 
+  addNormalMapToTexture(scene, texKey);
+
   // The "ledge" — how many pixels of visible inner face each wall shows.
   // This is the strip between the wall top and the floor that sells the height.
   const ledge = Math.max(3, Math.round(wallThickness * 0.22));
@@ -568,8 +592,10 @@ function drawWalls(
   const ih = height - wallThickness * 2;
 
   // ── 1. Wall top faces (the flat surface you look down on) ──
+  const wallSprites: Phaser.GameObjects.TileSprite[] = [];
   const topW = scene.add.tileSprite(width / 2, wallThickness / 2, width, wallThickness, texKey);
   topW.setDepth(0);
+  wallSprites.push(topW);
   const botW = scene.add.tileSprite(
     width / 2,
     height - wallThickness / 2,
@@ -578,8 +604,10 @@ function drawWalls(
     texKey,
   );
   botW.setDepth(0);
+  wallSprites.push(botW);
   const lefW = scene.add.tileSprite(wallThickness / 2, height / 2, wallThickness, height, texKey);
   lefW.setDepth(0);
+  wallSprites.push(lefW);
   const rigW = scene.add.tileSprite(
     width - wallThickness / 2,
     height / 2,
@@ -588,6 +616,15 @@ function drawWalls(
     texKey,
   );
   rigW.setDepth(0);
+  wallSprites.push(rigW);
+
+  for (const ws of wallSprites) {
+    try {
+      ws.setPipeline('Light2D');
+    } catch {
+      /* no-op */
+    }
+  }
 
   // Darken the wall tops slightly — they're the "top" of a thick slab
   const topDarken = scene.add.graphics();

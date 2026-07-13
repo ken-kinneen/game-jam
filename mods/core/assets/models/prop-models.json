@@ -1,0 +1,13 @@
+{
+  "description": "Maps 2D prop image keys to 3D model overrides. The prop spawner checks this automatically — any prop whose image matches an entry here gets rendered as 3D with dynamic lamp shadows.",
+  "models": {
+    "furniture/bed_3": {
+      "modelUrl": "mods/core/assets/models/bed.glb",
+      "height": 218
+    },
+    "furniture/bed_8": {
+      "modelUrl": "mods/core/assets/models/bench.glb",
+      "height": 186
+    }
+  }
+}
