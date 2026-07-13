@@ -6,27 +6,18 @@
     "method": "tileFloor",
     "width": 512,
     "height": 512,
-    "wallThickness": 25,
+    "wallThickness": 20,
     "tileSize": 220,
-    "tileImage": "tilesets/home_floor_18"
+    "tileImage": "tilesets/home_floor_26",
+    "wallImage": "tilesets/wall_3",
+    "wallTileSize": 100
   },
   "props": [
     {
-      "image": "furniture/bed_3",
+      "image": "furniture/desk_5",
       "position": {
-        "x": 133,
-        "y": 165
-      },
-      "scale": 0.3,
-      "depth": 2,
-      "collides": true,
-      "angle": 0
-    },
-    {
-      "image": "furniture/bed_8",
-      "position": {
-        "x": 400,
-        "y": 257
+        "x": 413,
+        "y": 281
       },
       "scale": 0.3,
       "depth": 2,
@@ -34,191 +25,92 @@
       "angle": 90
     },
     {
-      "image": "furniture/bed_11",
+      "image": "furniture/bed_7",
       "position": {
-        "x": 119,
-        "y": 396
+        "x": 101,
+        "y": 142
       },
-      "scale": 0.28,
+      "scale": 0.37,
       "depth": 2,
       "collides": true,
       "angle": 0
     },
     {
-      "image": "furniture/bed_4",
-      "position": {
-        "x": 2,
-        "y": 455
-      },
-      "scale": 0.2,
-      "depth": 2,
-      "collides": true,
-      "angle": 90
-    },
-    {
-      "image": "furniture/bed_5",
-      "position": {
-        "x": 0,
-        "y": 324
-      },
-      "scale": 0.22,
-      "depth": 2,
-      "collides": true,
-      "angle": 90
-    },
-    {
-      "image": "furniture/bed_4",
-      "position": {
-        "x": 117,
-        "y": 0
-      },
-      "scale": 0.22,
-      "depth": 2,
-      "collides": true,
-      "angle": 0
-    },
-    {
-      "image": "furniture/bed_5",
-      "position": {
-        "x": 0,
-        "y": 184
-      },
-      "scale": 0.22,
-      "depth": 2,
-      "collides": true,
-      "angle": 90
-    },
-    {
-      "image": "furniture/bed_2",
-      "position": {
-        "x": 0,
-        "y": 65
-      },
-      "scale": 0.22,
-      "depth": 2,
-      "collides": true,
-      "angle": 90
-    },
-    {
-      "image": "furniture/bed_5",
-      "position": {
-        "x": 253,
-        "y": 0
-      },
-      "scale": 0.22,
-      "depth": 2,
-      "collides": true,
-      "angle": 0
-    },
-    {
-      "image": "furniture/bed_4",
+      "image": "furniture/chargingrig",
       "position": {
         "x": 390,
-        "y": 0
-      },
-      "scale": 0.21,
-      "depth": 2,
-      "collides": true,
-      "angle": 0
-    },
-    {
-      "image": "furniture/bed_2",
-      "position": {
-        "x": 512,
-        "y": 0
+        "y": 438
       },
       "scale": 0.2,
       "depth": 2,
       "collides": true,
-      "angle": 0
+      "angle": 90
     },
     {
-      "image": "furniture/bed_4",
+      "image": "furniture/toolbox_2",
       "position": {
-        "x": 512,
-        "y": 114
+        "x": 427,
+        "y": 156
       },
-      "scale": 0.24,
-      "depth": 2,
-      "collides": true,
-      "angle": 270
-    },
-    {
-      "image": "furniture/bed_5",
-      "position": {
-        "x": 512,
-        "y": 269
-      },
-      "scale": 0.26,
-      "depth": 2,
-      "collides": true,
-      "angle": 270
-    },
-    {
-      "image": "furniture/bed_5",
-      "position": {
-        "x": 512,
-        "y": 438
-      },
-      "scale": 0.26,
-      "depth": 2,
-      "collides": true,
-      "angle": 270
-    },
-    {
-      "image": "furniture/bed_4",
-      "position": {
-        "x": 405,
-        "y": 512
-      },
-      "scale": 0.22,
-      "depth": 2,
-      "collides": true,
-      "angle": 0
-    },
-    {
-      "image": "furniture/bed_5",
-      "position": {
-        "x": 118,
-        "y": 512
-      },
-      "scale": 0.25,
-      "depth": 2,
-      "collides": true,
-      "angle": 0
-    },
-    {
-      "image": "furniture/bed_4",
-      "position": {
-        "x": 268,
-        "y": 512
-      },
-      "scale": 0.23,
-      "depth": 2,
-      "collides": true,
-      "angle": 0
-    },
-    {
-      "image": "furniture/bed_6",
-      "position": {
-        "x": 421,
-        "y": 417
-      },
-      "scale": 0.25,
-      "depth": 2,
-      "collides": true,
-      "angle": 0
-    },
-    {
-      "image": "furniture/toolbox",
-      "position": {
-        "x": 405,
-        "y": 92
-      },
-      "scale": 0.22,
-      "depth": 2,
+      "scale": 0.16,
+      "depth": 0,
       "collides": true,
       "angle": 90
+    },
+    {
+      "image": "furniture/toolbox_4",
+      "position": {
+        "x": 249,
+        "y": 454
+      },
+      "scale": 0.11,
+      "depth": 2,
+      "collides": true,
+      "angle": 0
+    },
+    {
+      "image": "furniture/duffelbag_2",
+      "position": {
+        "x": 433,
+        "y": 71
+      },
+      "scale": 0.13,
+      "depth": 2,
+      "collides": true,
+      "angle": 61
+    },
+    {
+      "image": "furniture/bucket",
+      "position": {
+        "x": 276,
+        "y": 59
+      },
+      "scale": 0.11,
+      "depth": 2,
+      "collides": true,
+      "angle": 0
+    },
+    {
+      "image": "furniture/foldingtable_3",
+      "position": {
+        "x": 210,
+        "y": 56
+      },
+      "scale": 0.14,
+      "depth": 2,
+      "collides": true,
+      "angle": 0
+    },
+    {
+      "image": "furniture/hatch",
+      "position": {
+        "x": 104,
+        "y": 405
+      },
+      "scale": 0.25,
+      "depth": 2,
+      "collides": true,
+      "angle": 180
     }
   ],
   "exits": [
@@ -227,17 +119,17 @@
       "condition": "always",
       "label": "Exit",
       "position": {
-        "x": 217,
-        "y": 389
+        "x": 201,
+        "y": 413
       }
     }
   ],
   "shops": [
     {
-      "label": "Shop",
+      "label": "Craft ",
       "position": {
-        "x": 370,
-        "y": 237
+        "x": 365,
+        "y": 263
       }
     }
   ],

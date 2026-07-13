@@ -309,17 +309,20 @@ function buildCorridorRoom(
   const voidBg = scene.add.rectangle(canvasW / 2, canvasH / 2, canvasW, canvasH, 0x050608);
   voidBg.setDepth(-3);
 
-  // Floor tiles only under walkable segments
-  const tileKey = gen.tileImage && scene.textures.exists(gen.tileImage) ? gen.tileImage : null;
-  if (tileKey) {
-    const srcW = scene.textures.get(tileKey).getSourceImage().width;
-    const tileScale = (CELL * 3) / srcW;
-    for (const seg of gen.segments) {
-      const sx = seg.x * CELL;
-      const sy = seg.y * CELL;
-      const sw = seg.w * CELL;
-      const sh = seg.h * CELL;
-      const floorTile = scene.add.tileSprite(sx + sw / 2, sy + sh / 2, sw, sh, tileKey);
+  // Floor tiles — per-segment override, falling back to global tileImage
+  const globalTileKey =
+    gen.tileImage && scene.textures.exists(gen.tileImage) ? gen.tileImage : null;
+  for (const seg of gen.segments) {
+    const sx = seg.x * CELL;
+    const sy = seg.y * CELL;
+    const sw = seg.w * CELL;
+    const sh = seg.h * CELL;
+    const segTileKey =
+      seg.tileImage && scene.textures.exists(seg.tileImage) ? seg.tileImage : globalTileKey;
+    if (segTileKey) {
+      const srcW = scene.textures.get(segTileKey).getSourceImage().width;
+      const tileScale = (CELL * 3) / srcW;
+      const floorTile = scene.add.tileSprite(sx + sw / 2, sy + sh / 2, sw, sh, segTileKey);
       floorTile.setTileScale(tileScale, tileScale);
       floorTile.setTilePosition(sx, sy);
       floorTile.setDepth(-2);
@@ -328,13 +331,7 @@ function buildCorridorRoom(
       } catch {
         /* no-op */
       }
-    }
-  } else {
-    for (const seg of gen.segments) {
-      const sx = seg.x * CELL;
-      const sy = seg.y * CELL;
-      const sw = seg.w * CELL;
-      const sh = seg.h * CELL;
+    } else {
       const fallback = scene.add.rectangle(sx + sw / 2, sy + sh / 2, sw, sh, 0x2a2a2a);
       fallback.setDepth(-2);
     }
@@ -348,12 +345,35 @@ function buildCorridorRoom(
     return rngState / 0x7fffffff;
   };
 
-  const wallKey = gen.wallImage && scene.textures.exists(gen.wallImage) ? gen.wallImage : null;
-  let wallTileScale = 1;
-  if (wallKey) {
-    const wallSrcW = scene.textures.get(wallKey).getSourceImage().width;
-    wallTileScale = (CELL * 3) / wallSrcW;
-  }
+  const globalWallKey =
+    gen.wallImage && scene.textures.exists(gen.wallImage) ? gen.wallImage : null;
+  const wallScaleCache: Record<string, number> = {};
+  const getWallScale = (key: string) => {
+    if (!(key in wallScaleCache)) {
+      const srcW = scene.textures.get(key).getSourceImage().width;
+      wallScaleCache[key] = (CELL * 3) / srcW;
+    }
+    return wallScaleCache[key];
+  };
+
+  const findAdjacentSegWall = (gx: number, gy: number): string | null => {
+    for (const [dx, dy] of [
+      [1, 0],
+      [-1, 0],
+      [0, 1],
+      [0, -1],
+    ]) {
+      const nx = gx + dx,
+        ny = gy + dy;
+      if (nx < 0 || ny < 0 || nx >= gen.gridWidth || ny >= gen.gridHeight) continue;
+      if (grid[ny][nx] !== 1) continue;
+      const seg = gen.segments.find(
+        (s) => nx >= s.x && nx < s.x + s.w && ny >= s.y && ny < s.y + s.h,
+      );
+      if (seg?.wallImage && scene.textures.exists(seg.wallImage)) return seg.wallImage;
+    }
+    return null;
+  };
 
   const ROTATIONS = [0, 90, 180, 270];
   const TINT_LO = 0.7;
@@ -371,15 +391,16 @@ function buildCorridorRoom(
       ].some(([dx, dy]) => grid[gy + dy]?.[gx + dx] === 1);
       if (!bordersFloor) continue;
 
-      if (wallKey) {
+      const cellWallKey = findAdjacentSegWall(gx, gy) || globalWallKey;
+      if (cellWallKey) {
         const wallTile = scene.add.tileSprite(
           gx * CELL + CELL / 2,
           gy * CELL + CELL / 2,
           CELL,
           CELL,
-          wallKey,
+          cellWallKey,
         );
-        wallTile.setTileScale(wallTileScale, wallTileScale);
+        wallTile.setTileScale(getWallScale(cellWallKey), getWallScale(cellWallKey));
         wallTile.setTilePosition(gx * CELL, gy * CELL);
         wallTile.setAngle(ROTATIONS[Math.floor(rng() * 4)]);
         const bright = TINT_LO + rng() * (TINT_HI - TINT_LO);

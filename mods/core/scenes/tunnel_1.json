@@ -6,101 +6,131 @@
     "method": "corridor",
     "cellSize": 32,
     "gridWidth": 35,
-    "gridHeight": 50,
+    "gridHeight": 59,
     "segments": [
       {
-        "x": 15,
+        "x": 17,
         "y": 0,
         "w": 5,
         "h": 11,
         "label": "entry_corridor"
       },
       {
-        "x": 10,
+        "x": 8,
         "y": 9,
-        "w": 15,
-        "h": 6,
-        "label": "junction_1"
+        "w": 22,
+        "h": 7,
+        "label": "junction_a"
       },
       {
-        "x": 10,
+        "x": 8,
         "y": 14,
-        "w": 4,
+        "w": 5,
         "h": 9,
-        "label": "west_fork"
+        "label": "west_corridor"
       },
       {
-        "x": 4,
-        "y": 19,
-        "w": 10,
-        "h": 6,
-        "label": "dead_end_room"
+        "x": 2,
+        "y": 20,
+        "w": 11,
+        "h": 7,
+        "label": "scrap_room",
+        "tileImage": "tilesets/scrapfloor_2",
+        "wallImage": "tilesets/corridorwall_2"
+      },
+      {
+        "x": 2,
+        "y": 26,
+        "w": 5,
+        "h": 4,
+        "label": "collapsed_nook"
+      },
+      {
+        "x": 25,
+        "y": 14,
+        "w": 5,
+        "h": 11,
+        "label": "east_cable_corridor",
+        "tileImage": "tilesets/cablefloor_2",
+        "wallImage": "tilesets/transitionwall_2"
       },
       {
         "x": 21,
-        "y": 14,
-        "w": 4,
-        "h": 12,
-        "label": "east_fork"
+        "y": 23,
+        "w": 12,
+        "h": 7,
+        "label": "relay_room_a",
+        "tileImage": "tilesets/relayroom",
+        "wallImage": "tilesets/electricwall"
       },
       {
         "x": 24,
-        "y": 20,
-        "w": 6,
-        "h": 4,
-        "label": "east_alcove"
-      },
-      {
-        "x": 17,
-        "y": 24,
-        "w": 8,
-        "h": 6,
-        "label": "junction_2"
-      },
-      {
-        "x": 11,
-        "y": 26,
-        "w": 8,
-        "h": 4,
-        "label": "west_alcove"
-      },
-      {
-        "x": 19,
         "y": 29,
+        "w": 5,
+        "h": 7,
+        "label": "mid_corridor"
+      },
+      {
+        "x": 22,
+        "y": 34,
+        "w": 9,
+        "h": 8,
+        "label": "dark_zone"
+      },
+      {
+        "x": 14,
+        "y": 40,
+        "w": 18,
+        "h": 6,
+        "label": "junction_b"
+      },
+      {
+        "x": 14,
+        "y": 45,
         "w": 4,
         "h": 9,
-        "label": "south_corridor"
+        "label": "flooded_detour",
+        "tileImage": "tilesets/floodedfloor",
+        "wallImage": "tilesets/transitionwall"
       },
       {
-        "x": 13,
-        "y": 36,
-        "w": 14,
+        "x": 28,
+        "y": 45,
+        "w": 4,
         "h": 8,
-        "label": "transformer_room"
+        "label": "cable_path",
+        "tileImage": "tilesets/cablefloor_2",
+        "wallImage": "tilesets/electricwall"
+      },
+      {
+        "x": 14,
+        "y": 52,
+        "w": 20,
+        "h": 7,
+        "label": "transformer_room",
+        "tileImage": "tilesets/relayroom"
       }
     ],
-    "tileImage": "tilesets/home_floor",
-    "wallImage": "tilesets/wall_2"
+    "tileImage": "tilesets/tunnelfloor",
+    "wallImage": "tilesets/wall"
   },
   "props": [
     {
-      "image": "furniture/transformer_box",
+      "image": "furniture/cable_bundle",
       "position": {
-        "x": 640,
-        "y": 1248
+        "x": 800,
+        "y": 352
       },
-      "scale": 0.35,
-      "depth": 2,
-      "collides": true,
-      "angle": 0,
-      "action": "transformer",
-      "actionLabel": "Restore Power"
+      "scale": 0.2,
+      "depth": 1,
+      "collides": false,
+      "angle": 0
     },
     {
       "image": "furniture/junction_box",
       "position": {
-        "x": 384,
-        "y": 320
+        "x": 320,
+        "y": 352
       },
       "scale": 0.2,
       "depth": 2,
@@ -108,43 +138,10 @@
       "angle": 0
     },
     {
-      "image": "furniture/pipe_horizontal",
-      "position": {
-        "x": 560,
-        "y": 288
-      },
-      "scale": 0.25,
-      "depth": 1,
-      "collides": false,
-      "angle": 0
-    },
-    {
-      "image": "furniture/warning_sign",
-      "position": {
-        "x": 352,
-        "y": 640
-      },
-      "scale": 0.18,
-      "depth": 2,
-      "collides": false,
-      "angle": 0
-    },
-    {
-      "image": "furniture/pipe_vertical",
-      "position": {
-        "x": 752,
-        "y": 576
-      },
-      "scale": 0.25,
-      "depth": 1,
-      "collides": false,
-      "angle": 0
-    },
-    {
       "image": "furniture/barrel",
       "position": {
-        "x": 224,
-        "y": 688
+        "x": 128,
+        "y": 704
       },
       "scale": 0.22,
       "depth": 2,
@@ -154,8 +151,132 @@
     {
       "image": "furniture/crate",
       "position": {
-        "x": 176,
+        "x": 320,
         "y": 736
+      },
+      "scale": 0.2,
+      "depth": 2,
+      "collides": true,
+      "angle": 0
+    },
+    {
+      "image": "furniture/barrel",
+      "position": {
+        "x": 224,
+        "y": 768
+      },
+      "scale": 0.2,
+      "depth": 2,
+      "collides": true,
+      "angle": 15
+    },
+    {
+      "image": "furniture/crate",
+      "position": {
+        "x": 96,
+        "y": 880
+      },
+      "scale": 0.25,
+      "depth": 2,
+      "collides": true,
+      "angle": 0,
+      "actionLabel": "Collapsed — can't get through"
+    },
+    {
+      "image": "furniture/cable_bundle",
+      "position": {
+        "x": 864,
+        "y": 520
+      },
+      "scale": 0.18,
+      "depth": 1,
+      "collides": false,
+      "angle": 90
+    },
+    {
+      "image": "furniture/cable_bundle",
+      "position": {
+        "x": 864,
+        "y": 656
+      },
+      "scale": 0.18,
+      "depth": 1,
+      "collides": false,
+      "angle": 90
+    },
+    {
+      "image": "furniture/warning_sign",
+      "position": {
+        "x": 736,
+        "y": 784
+      },
+      "scale": 0.18,
+      "depth": 2,
+      "collides": false,
+      "angle": 0
+    },
+    {
+      "image": "furniture/cable_bundle",
+      "position": {
+        "x": 816,
+        "y": 752
+      },
+      "scale": 0.2,
+      "depth": 1,
+      "collides": false,
+      "angle": 0
+    },
+    {
+      "image": "furniture/transformer_box",
+      "position": {
+        "x": 896,
+        "y": 832
+      },
+      "scale": 0.3,
+      "depth": 2,
+      "collides": true,
+      "angle": 0,
+      "action": "transformer",
+      "actionLabel": "Activate Relay A"
+    },
+    {
+      "image": "furniture/cable_bundle",
+      "position": {
+        "x": 832,
+        "y": 960
+      },
+      "scale": 0.18,
+      "depth": 1,
+      "collides": false,
+      "angle": 90
+    },
+    {
+      "image": "furniture/junction_box",
+      "position": {
+        "x": 544,
+        "y": 1328
+      },
+      "scale": 0.18,
+      "depth": 2,
+      "collides": false,
+      "angle": 0
+    },
+    {
+      "image": "furniture/cable_bundle",
+      "position": {
+        "x": 928,
+        "y": 1360
+      },
+      "scale": 0.2,
+      "depth": 1,
+      "collides": false,
+      "angle": 0
+    },
+    {
+      "image": "furniture/barrel",
+      "position": {
+        "x": 496,
+        "y": 1520
       },
       "scale": 0.2,
       "depth": 2,
@@ -165,35 +286,48 @@
     {
       "image": "furniture/cable_bundle",
       "position": {
-        "x": 640,
-        "y": 1120
-      },
-      "scale": 0.2,
-      "depth": 1,
-      "collides": false,
-      "angle": 0
-    },
-    {
-      "image": "furniture/light_fixture",
-      "position": {
-        "x": 560,
-        "y": 160
-      },
-      "scale": 0.15,
-      "depth": 3,
-      "collides": false,
-      "angle": 0
-    },
-    {
-      "image": "furniture/vent_grate",
-      "position": {
-        "x": 896,
-        "y": 672
+        "x": 960,
+        "y": 1536
       },
       "scale": 0.18,
       "depth": 1,
       "collides": false,
+      "angle": 90
+    },
+    {
+      "image": "furniture/warning_sign",
+      "position": {
+        "x": 608,
+        "y": 1728
+      },
+      "scale": 0.18,
+      "depth": 2,
+      "collides": false,
       "angle": 0
+    },
+    {
+      "image": "furniture/cable_bundle",
+      "position": {
+        "x": 752,
+        "y": 1712
+      },
+      "scale": 0.22,
+      "depth": 1,
+      "collides": false,
+      "angle": 0
+    },
+    {
+      "image": "furniture/transformer_box",
+      "position": {
+        "x": 752,
+        "y": 1776
+      },
+      "scale": 0.35,
+      "depth": 2,
+      "collides": true,
+      "angle": 0,
+      "action": "transformer",
+      "actionLabel": "Restore Grid Section"
     }
   ],
   "exits": [
@@ -202,7 +336,7 @@
       "condition": "always",
       "label": "Return Home",
       "position": {
-        "x": 560,
+        "x": 624,
         "y": 16
       }
     }
@@ -210,99 +344,99 @@
   "shops": [],
   "groundItems": [
     {
-      "itemId": "core:rusty_can",
+      "itemId": "core:battery",
       "position": {
-        "x": 544,
-        "y": 224
+        "x": 352,
+        "y": 416
       }
     },
     {
       "itemId": "core:rusty_can",
       "position": {
-        "x": 192,
-        "y": 672
-      }
-    },
-    {
-      "itemId": "core:plastic_bag",
-      "position": {
-        "x": 256,
-        "y": 720
-      }
-    },
-    {
-      "itemId": "core:banana_peel",
-      "position": {
-        "x": 320,
-        "y": 688
+        "x": 288,
+        "y": 448
       }
     },
     {
       "itemId": "core:battery",
       "position": {
-        "x": 160,
-        "y": 752
+        "x": 192,
+        "y": 688
       }
     },
     {
       "itemId": "core:oil_can",
       "position": {
-        "x": 832,
-        "y": 672
+        "x": 288,
+        "y": 752
       }
     },
     {
       "itemId": "core:fuel_bottle",
       "position": {
-        "x": 880,
+        "x": 128,
+        "y": 768
+      }
+    },
+    {
+      "itemId": "core:battery",
+      "position": {
+        "x": 352,
         "y": 704
       }
     },
     {
       "itemId": "core:rusty_can",
       "position": {
-        "x": 736,
-        "y": 544
+        "x": 256,
+        "y": 720
       }
     },
     {
       "itemId": "core:oil_can",
       "position": {
-        "x": 416,
-        "y": 880
+        "x": 160,
+        "y": 736
+      }
+    },
+    {
+      "itemId": "core:battery",
+      "position": {
+        "x": 880,
+        "y": 576
+      }
+    },
+    {
+      "itemId": "core:fuel_bottle",
+      "position": {
+        "x": 824,
+        "y": 1088
       }
     },
     {
       "itemId": "core:fuel_bottle",
       "position": {
         "x": 480,
-        "y": 912
+        "y": 1584
+      }
+    },
+    {
+      "itemId": "core:battery",
+      "position": {
+        "x": 496,
+        "y": 1632
       }
     },
     {
       "itemId": "core:oil_can",
       "position": {
-        "x": 672,
-        "y": 1024
-      }
-    },
-    {
-      "itemId": "core:rusty_can",
-      "position": {
-        "x": 512,
-        "y": 1280
-      }
-    },
-    {
-      "itemId": "core:plastic_bag",
-      "position": {
-        "x": 768,
-        "y": 1248
+        "x": 945,
+        "y": 1594
       }
     }
   ],
   "playerSpawn": {
-    "x": 560,
-    "y": 64
+    "x": 624,
+    "y": 96
   }
 }

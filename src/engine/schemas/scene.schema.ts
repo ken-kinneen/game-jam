@@ -62,6 +62,8 @@ const CorridorSegmentSchema = z.object({
   w: z.number().int().positive(),
   h: z.number().int().positive(),
   label: z.string().optional(),
+  tileImage: z.string().optional(),
+  wallImage: z.string().optional(),
 });
 
 const CorridorGenerationSchema = z.object({
