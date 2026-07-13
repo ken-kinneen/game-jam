@@ -48,6 +48,7 @@ export class UIScene extends Phaser.Scene {
     this.buildHUD();
     this.caveMinimap = new CaveMinimap(this);
     this.bindEvents();
+    this.bindMapKeys();
     this.refreshTrashDisplay();
 
     const activeSceneId = this.initialSceneId ?? 'core:home';
@@ -77,6 +78,9 @@ export class UIScene extends Phaser.Scene {
   }
 
   private setMode(cave: boolean): void {
+    if (!cave && this.caveMinimap.isExpanded) {
+      this.setMapExpanded(false);
+    }
     this.isCave = cave;
 
     this.hudBg.setVisible(cave);
@@ -227,6 +231,29 @@ export class UIScene extends Phaser.Scene {
     this.caveMinimap.sync(gameScene.getCaveMinimapSnapshot?.() ?? null);
   }
 
+  private bindMapKeys(): void {
+    this.input.keyboard?.on('keydown-TAB', this.handleMapToggle, this);
+    this.input.keyboard?.on('keydown-ESC', this.handleMapClose, this);
+  }
+
+  private handleMapToggle(event: KeyboardEvent): void {
+    event.preventDefault();
+    if (!this.isCave) return;
+    this.setMapExpanded(!this.caveMinimap.isExpanded);
+  }
+
+  private handleMapClose(event: KeyboardEvent): void {
+    if (!this.caveMinimap.isExpanded) return;
+    event.preventDefault();
+    this.setMapExpanded(false);
+  }
+
+  private setMapExpanded(expanded: boolean): void {
+    if (this.caveMinimap.isExpanded === expanded) return;
+    this.caveMinimap.setExpanded(expanded);
+    eventBus.emit(expanded ? 'map:opened' : 'map:closed', {});
+  }
+
   private bindEvents(): void {
     this.eventGroup.on('item:picked_up', ({ qty }) => {
       this.showStatus(`+${qty} picked up`);
@@ -282,6 +309,9 @@ export class UIScene extends Phaser.Scene {
   }
 
   shutdown() {
+    if (this.caveMinimap?.isExpanded) this.setMapExpanded(false);
+    this.input.keyboard?.off('keydown-TAB', this.handleMapToggle, this);
+    this.input.keyboard?.off('keydown-ESC', this.handleMapClose, this);
     this.eventGroup?.clear();
   }
 }

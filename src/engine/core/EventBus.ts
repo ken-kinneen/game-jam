@@ -20,6 +20,8 @@ export interface GameEvents {
   'upgrade:available': { upgradeIds: string[] };
   'shop:opened': Record<string, never>;
   'shop:closed': Record<string, never>;
+  'map:opened': Record<string, never>;
+  'map:closed': Record<string, never>;
   'lamp:color_changed': { color: string };
   'lamp:fuel_critical': { ratio: number };
   'player:footstep': Record<string, never>;

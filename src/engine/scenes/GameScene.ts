@@ -72,8 +72,9 @@ export class GameScene extends Phaser.Scene {
   private unsubConfig: (() => void) | null = null;
   private unsubFuel: (() => void) | null = null;
   private unsubInventory: (() => void) | null = null;
-  private unsubShop: (() => void)[] = [];
+  private unsubOverlay: (() => void)[] = [];
   private shopOpen = false;
+  private mapOpen = false;
   private isCave = false;
 
   declare raycasterPlugin: PhaserRaycaster;
@@ -102,6 +103,7 @@ export class GameScene extends Phaser.Scene {
     this.isCave = this.sceneDef?.kind === 'cave';
     this.director.syncState(this.sceneDefId, this.isCave);
     this.shopOpen = false;
+    this.mapOpen = false;
 
     const room = buildSceneRoom(this, this.sceneDef, this.isCave);
     this.wallLayer = room.wallLayer;
@@ -202,12 +204,19 @@ export class GameScene extends Phaser.Scene {
       inventoryManager.add(itemId, qty);
     });
 
-    this.unsubShop = [
+    this.unsubOverlay = [
       eventBus.on('shop:opened', () => {
         this.shopOpen = true;
       }),
       eventBus.on('shop:closed', () => {
         this.shopOpen = false;
+      }),
+      eventBus.on('map:opened', () => {
+        this.mapOpen = true;
+        this.stopPlayerMovement();
+      }),
+      eventBus.on('map:closed', () => {
+        this.mapOpen = false;
       }),
       eventBus.on('lamp:color_changed', ({ color }) => {
         this.lampRenderer.setLampColor(color);
@@ -265,7 +274,7 @@ export class GameScene extends Phaser.Scene {
       this.proceduralAnimSystem.setFuelRatio(this.lampSystem.ratio);
     }
 
-    if (!this.shopOpen) {
+    if (!this.shopOpen && !this.mapOpen) {
       const move = this.inputMap.getMoveVector();
       this.movementSystem.update(this.player, move.x, move.y, dt);
 
@@ -341,8 +350,18 @@ export class GameScene extends Phaser.Scene {
     this.char3d?.destroy();
     this.dof?.destroy();
     this.worldReactivity?.destroy();
-    for (const unsub of this.unsubShop) unsub();
-    this.unsubShop = [];
+    for (const unsub of this.unsubOverlay) unsub();
+    this.unsubOverlay = [];
+  }
+
+  private stopPlayerMovement(): void {
+    const movement = this.player.getComponent<Movement>('movement');
+    if (movement) {
+      movement.velocityX = 0;
+      movement.velocityY = 0;
+    }
+    const body = this.player.sprite.body as Phaser.Physics.Arcade.Body | null;
+    body?.setVelocity(0, 0);
   }
 
   private spawnPlayer(sceneDef: SceneDef | undefined): void {

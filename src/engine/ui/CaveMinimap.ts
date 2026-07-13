@@ -5,54 +5,77 @@ import {
   type CaveMinimapSnapshot,
 } from '../systems/CaveExploration';
 
-const PANEL_WIDTH = 240;
-const PANEL_HEIGHT = 170;
+const MINIMAP_WIDTH = 240;
+const MINIMAP_HEIGHT = 150;
 const PANEL_PADDING = 10;
-const LABEL_HEIGHT = 30;
+const FOLLOW_CELL_SIZE = 5;
+const EXPANDED_MARGIN = 96;
+const EXPANDED_MAX_WIDTH = 1100;
+const EXPANDED_MAX_HEIGHT = 800;
 
-/** Screen-space cave map with exploration-based fog of war. */
+/** Screen-space cave map with a following minimap and a full explored-map overlay. */
 export class CaveMinimap {
+  private readonly backdrop: Phaser.GameObjects.Graphics;
   private readonly background: Phaser.GameObjects.Graphics;
   private readonly mapGraphics: Phaser.GameObjects.Graphics;
   private readonly markerGraphics: Phaser.GameObjects.Graphics;
-  private readonly label: Phaser.GameObjects.Text;
+  private readonly clipShape: Phaser.GameObjects.Graphics;
 
   private map: CaveMinimapMap | null = null;
   private exploration: CaveExploration | null = null;
   private active = false;
+  private expanded = false;
   private mapX = 0;
   private mapY = 0;
-  private cellScale = 1;
+  private viewportX = 0;
+  private viewportY = 0;
+  private viewportWidth = 0;
+  private viewportHeight = 0;
+  private cellScale = FOLLOW_CELL_SIZE;
+  private lastPlayerX = 0;
+  private lastPlayerY = 0;
 
   constructor(private readonly scene: Phaser.Scene) {
-    const panelX = scene.cameras.main.width - PANEL_WIDTH - 32;
-    const panelY = 32;
-
+    this.backdrop = scene.add.graphics().setScrollFactor(0).setDepth(109);
     this.background = scene.add.graphics().setScrollFactor(0).setDepth(110);
-    this.background.fillStyle(0x050708, 0.84);
-    this.background.fillRoundedRect(panelX, panelY, PANEL_WIDTH, PANEL_HEIGHT, 10);
-    this.background.lineStyle(2, 0x8f7a4b, 0.9);
-    this.background.strokeRoundedRect(panelX, panelY, PANEL_WIDTH, PANEL_HEIGHT, 10);
-
-    this.label = scene.add
-      .text(panelX + PANEL_PADDING, panelY + 8, 'CAVE MAP', {
-        fontFamily: '"Courier New", monospace',
-        fontSize: '18px',
-        color: '#d9bd78',
-        fontStyle: 'bold',
-      })
-      .setScrollFactor(0)
-      .setDepth(112);
-
     this.mapGraphics = scene.add.graphics().setScrollFactor(0).setDepth(111);
     this.markerGraphics = scene.add.graphics().setScrollFactor(0).setDepth(113);
+
+    this.clipShape = scene.make.graphics();
+    const clipMask = this.clipShape.createGeometryMask();
+    this.mapGraphics.setMask(clipMask);
+    this.markerGraphics.setMask(clipMask);
+
+    this.applyLayout();
     this.setVisible(false);
+  }
+
+  get isExpanded(): boolean {
+    return this.expanded;
   }
 
   setActive(active: boolean): void {
     this.active = active;
-    if (!active) this.setMap(null);
+    if (!active) {
+      this.expanded = false;
+      this.setMap(null);
+    }
+    this.applyLayout();
     this.applyVisibility();
+  }
+
+  setExpanded(expanded: boolean): void {
+    const next = this.active && expanded;
+    if (this.expanded === next) return;
+
+    this.expanded = next;
+    this.applyLayout();
+    this.applyVisibility();
+  }
+
+  toggleExpanded(): boolean {
+    this.setExpanded(!this.expanded);
+    return this.expanded;
   }
 
   sync(snapshot: CaveMinimapSnapshot | null): void {
@@ -61,9 +84,12 @@ export class CaveMinimap {
       return;
     }
 
+    this.lastPlayerX = snapshot.playerX;
+    this.lastPlayerY = snapshot.playerY;
     if (snapshot.map !== this.map) this.setMap(snapshot.map);
     if (!this.exploration) return;
 
+    this.positionMap(snapshot.playerX, snapshot.playerY);
     const revealRadius = lightRadiusToRevealRadius(
       snapshot.visibilityRadius,
       snapshot.map.tileSize,
@@ -81,20 +107,86 @@ export class CaveMinimap {
     this.exploration = map ? new CaveExploration(map) : null;
     this.mapGraphics.clear();
     this.markerGraphics.clear();
+    this.applyLayout();
+    this.applyVisibility();
+  }
 
-    if (map) {
-      const panelX = this.scene.cameras.main.width - PANEL_WIDTH - 32;
-      const panelY = 32;
-      const availableWidth = PANEL_WIDTH - PANEL_PADDING * 2;
-      const availableHeight = PANEL_HEIGHT - LABEL_HEIGHT - PANEL_PADDING;
-      this.cellScale = Math.min(availableWidth / map.width, availableHeight / map.height);
-      const renderedWidth = map.width * this.cellScale;
-      const renderedHeight = map.height * this.cellScale;
-      this.mapX = panelX + (PANEL_WIDTH - renderedWidth) / 2;
-      this.mapY = panelY + LABEL_HEIGHT + (availableHeight - renderedHeight) / 2;
+  private applyLayout(): void {
+    const camera = this.scene.cameras.main;
+    const panelWidth = this.expanded
+      ? Math.min(camera.width - EXPANDED_MARGIN * 2, EXPANDED_MAX_WIDTH)
+      : MINIMAP_WIDTH;
+    const panelHeight = this.expanded
+      ? Math.min(camera.height - EXPANDED_MARGIN * 2, EXPANDED_MAX_HEIGHT)
+      : MINIMAP_HEIGHT;
+    const panelX = this.expanded ? (camera.width - panelWidth) / 2 : camera.width - panelWidth - 32;
+    const panelY = this.expanded ? (camera.height - panelHeight) / 2 : 32;
+
+    this.viewportX = panelX + PANEL_PADDING;
+    this.viewportY = panelY + PANEL_PADDING;
+    this.viewportWidth = panelWidth - PANEL_PADDING * 2;
+    this.viewportHeight = panelHeight - PANEL_PADDING * 2;
+    this.cellScale =
+      this.expanded && this.map
+        ? Math.min(this.viewportWidth / this.map.width, this.viewportHeight / this.map.height)
+        : FOLLOW_CELL_SIZE;
+
+    this.backdrop.clear();
+    if (this.expanded) {
+      this.backdrop.fillStyle(0x000000, 0.68);
+      this.backdrop.fillRect(0, 0, camera.width, camera.height);
     }
 
-    this.applyVisibility();
+    this.background.clear();
+    this.background.fillStyle(0x050708, this.expanded ? 0.96 : 0.84);
+    this.background.fillRoundedRect(panelX, panelY, panelWidth, panelHeight, 10);
+    this.background.lineStyle(2, 0x8f7a4b, 0.9);
+    this.background.strokeRoundedRect(panelX, panelY, panelWidth, panelHeight, 10);
+
+    this.clipShape.clear();
+    this.clipShape.fillStyle(0xffffff, 1);
+    this.clipShape.fillRect(
+      this.viewportX,
+      this.viewportY,
+      this.viewportWidth,
+      this.viewportHeight,
+    );
+
+    if (this.map) {
+      this.positionMap(this.lastPlayerX, this.lastPlayerY);
+      this.drawExploredMap();
+      this.drawPlayer(this.lastPlayerX, this.lastPlayerY);
+    }
+  }
+
+  private positionMap(worldX: number, worldY: number): void {
+    if (!this.map) return;
+
+    const contentWidth = this.map.width * this.cellScale;
+    const contentHeight = this.map.height * this.cellScale;
+    const playerCellX = worldX / this.map.tileSize;
+    const playerCellY = worldY / this.map.tileSize;
+    const desiredX = this.viewportX + this.viewportWidth / 2 - playerCellX * this.cellScale;
+    const desiredY = this.viewportY + this.viewportHeight / 2 - playerCellY * this.cellScale;
+
+    this.mapX =
+      contentWidth <= this.viewportWidth
+        ? this.viewportX + (this.viewportWidth - contentWidth) / 2
+        : Phaser.Math.Clamp(
+            desiredX,
+            this.viewportX + this.viewportWidth - contentWidth,
+            this.viewportX,
+          );
+    this.mapY =
+      contentHeight <= this.viewportHeight
+        ? this.viewportY + (this.viewportHeight - contentHeight) / 2
+        : Phaser.Math.Clamp(
+            desiredY,
+            this.viewportY + this.viewportHeight - contentHeight,
+            this.viewportY,
+          );
+
+    this.mapGraphics.setPosition(this.mapX, this.mapY);
   }
 
   private drawExploredMap(): void {
@@ -110,8 +202,8 @@ export class CaveMinimap {
         const color = isFloor ? (isVisible ? 0xa99c7b : 0x5c574a) : isVisible ? 0x454a4b : 0x25292a;
         this.mapGraphics.fillStyle(color, isVisible ? 1 : 0.82);
         this.mapGraphics.fillRect(
-          this.mapX + x * this.cellScale,
-          this.mapY + y * this.cellScale,
+          x * this.cellScale,
+          y * this.cellScale,
           this.cellScale + 0.25,
           this.cellScale + 0.25,
         );
@@ -132,8 +224,8 @@ export class CaveMinimap {
     const size = Math.max(2, this.cellScale * 1.6);
     this.mapGraphics.fillStyle(color, 1);
     this.mapGraphics.fillRect(
-      this.mapX + (x + 0.5) * this.cellScale - size / 2,
-      this.mapY + (y + 0.5) * this.cellScale - size / 2,
+      (x + 0.5) * this.cellScale - size / 2,
+      (y + 0.5) * this.cellScale - size / 2,
       size,
       size,
     );
@@ -144,7 +236,7 @@ export class CaveMinimap {
 
     const x = Phaser.Math.Clamp(worldX / this.map.tileSize, 0, this.map.width);
     const y = Phaser.Math.Clamp(worldY / this.map.tileSize, 0, this.map.height);
-    const radius = Math.max(3, this.cellScale * 1.4);
+    const radius = Math.max(3, this.cellScale * 0.7);
 
     this.markerGraphics.clear();
     this.markerGraphics.fillStyle(0xfff0a8, 1);
@@ -166,9 +258,9 @@ export class CaveMinimap {
   }
 
   private setVisible(visible: boolean): void {
+    this.backdrop.setVisible(visible && this.expanded);
     this.background.setVisible(visible);
     this.mapGraphics.setVisible(visible);
     this.markerGraphics.setVisible(visible);
-    this.label.setVisible(visible);
   }
 }
