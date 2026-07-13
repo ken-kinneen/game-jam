@@ -33,6 +33,7 @@ import { AmbientAudioSystem } from '../systems/AmbientAudioSystem';
 import { DepthSortSystem } from '../systems/DepthSortSystem';
 import { DepthOfFieldSystem } from '../systems/DepthOfFieldSystem';
 import { WorldReactivitySystem } from '../systems/WorldReactivitySystem';
+import type { CaveMinimapMap, CaveMinimapSnapshot } from '../systems/CaveExploration';
 import { CharacterController3D } from '../rendering/CharacterController3D';
 import { ShopOverlay } from '../ui/ShopOverlay';
 
@@ -66,6 +67,7 @@ export class GameScene extends Phaser.Scene {
   private wallGroup: Phaser.Physics.Arcade.StaticGroup | null = null;
   private proceduralCaveMap: CaveMap | null = null;
   private proceduralEntry: { x: number; y: number } | null = null;
+  private caveMinimapMap: CaveMinimapMap | null = null;
 
   private unsubConfig: (() => void) | null = null;
   private unsubFuel: (() => void) | null = null;
@@ -106,6 +108,7 @@ export class GameScene extends Phaser.Scene {
     this.wallGroup = room.wallGroup;
     this.proceduralCaveMap = room.caveMap;
     this.proceduralEntry = room.caveEntry;
+    this.caveMinimapMap = room.minimapMap;
 
     if (!this.shopOverlay) {
       this.shopOverlay = new ShopOverlay(() => this.getPlayerStats());
@@ -316,6 +319,17 @@ export class GameScene extends Phaser.Scene {
     const stats = this.player.getComponent<StatSheet>('stats');
     if (!stats) throw new Error('Player has no stats component');
     return stats;
+  }
+
+  /** Current cave grid and player position for the exploration minimap HUD. */
+  getCaveMinimapSnapshot(): CaveMinimapSnapshot | null {
+    if (!this.isCave || !this.caveMinimapMap || !this.player?.sprite) return null;
+    return {
+      map: this.caveMinimapMap,
+      playerX: this.player.sprite.x,
+      playerY: this.player.sprite.y,
+      visibilityRadius: this.lampRenderer.displayedRadius,
+    };
   }
 
   shutdown() {

@@ -2,6 +2,8 @@ import { eventBus, type EventGroup } from '../core/EventBus';
 import { registry } from '../core/ContentRegistry';
 import { configManager } from '../core/ConfigManager';
 import { inventoryManager } from '../core/InventoryManager';
+import { CaveMinimap } from '../ui/CaveMinimap';
+import type { CaveMinimapSnapshot } from '../systems/CaveExploration';
 
 const BAR_WIDTH = 360;
 const BAR_HEIGHT = 28;
@@ -21,6 +23,7 @@ export class UIScene extends Phaser.Scene {
   private statusText!: Phaser.GameObjects.Text;
   private lampWarning!: Phaser.GameObjects.Text;
   private homeTitle!: Phaser.GameObjects.Text;
+  private caveMinimap!: CaveMinimap;
 
   private currentFuelRatio = 1;
   private displayedFuelRatio = 1;
@@ -43,6 +46,7 @@ export class UIScene extends Phaser.Scene {
     this.displayedFuelRatio = 1;
 
     this.buildHUD();
+    this.caveMinimap = new CaveMinimap(this);
     this.bindEvents();
     this.refreshTrashDisplay();
 
@@ -67,6 +71,8 @@ export class UIScene extends Phaser.Scene {
       } else {
         this.lampWarning.setVisible(false);
       }
+
+      this.syncMinimap();
     }
   }
 
@@ -79,6 +85,7 @@ export class UIScene extends Phaser.Scene {
     this.fuelLabel.setVisible(cave);
     this.fuelValueText.setVisible(cave);
     this.lampWarning.setVisible(false);
+    this.caveMinimap.setActive(cave);
 
     this.homeTitle.setVisible(!cave);
   }
@@ -211,6 +218,13 @@ export class UIScene extends Phaser.Scene {
 
   private refreshTrashDisplay(): void {
     this.trashText.setText(String(inventoryManager.totalCount()));
+  }
+
+  private syncMinimap(): void {
+    const gameScene = this.scene.get('GameScene') as Phaser.Scene & {
+      getCaveMinimapSnapshot?: () => CaveMinimapSnapshot | null;
+    };
+    this.caveMinimap.sync(gameScene.getCaveMinimapSnapshot?.() ?? null);
   }
 
   private bindEvents(): void {

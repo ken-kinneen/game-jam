@@ -1,5 +1,6 @@
 import { generateCave, type CaveMap } from '../generation/caveGenerator';
 import { buildTileFloorGraphics } from '../generation/floorTileGenerator';
+import type { CaveMinimapMap } from '../systems/CaveExploration';
 import type { SceneDef } from '../schemas/scene.schema';
 
 export interface RoomBuildResult {
@@ -7,6 +8,7 @@ export interface RoomBuildResult {
   wallGroup: Phaser.Physics.Arcade.StaticGroup | null;
   caveMap: CaveMap | null;
   caveEntry: { x: number; y: number } | null;
+  minimapMap: CaveMinimapMap | null;
 }
 
 const CAVE_TILE_PX = 16;
@@ -22,6 +24,7 @@ export function buildSceneRoom(
     wallGroup: null,
     caveMap: null,
     caveEntry: null,
+    minimapMap: null,
   };
 
   if (!sceneDef) {
@@ -39,11 +42,22 @@ export function buildSceneRoom(
     result.wallGroup = cave.wallGroup;
     result.caveMap = cave.caveMap;
     result.caveEntry = cave.caveEntry;
+    if (cave.caveMap) {
+      result.minimapMap = {
+        width: cave.caveMap.width,
+        height: cave.caveMap.height,
+        grid: cave.caveMap.grid,
+        tileSize: CAVE_TILE_PX,
+        entry: cave.caveMap.entry,
+        exits: cave.caveMap.exits,
+      };
+    }
   } else if (gen.method === 'tileFloor') {
     buildTileFloor(scene, sceneDef);
   } else if (gen.method === 'corridor') {
     const corridor = buildCorridorRoom(scene, sceneDef);
     result.wallGroup = corridor.wallGroup;
+    result.minimapMap = corridor.minimapMap;
   } else if (gen.method === 'tiled') {
     buildFallbackRoom(scene, isCave, gen.width, gen.height, gen.wallThickness);
   } else {
@@ -296,9 +310,9 @@ function compileCorridorGrid(
 function buildCorridorRoom(
   scene: Phaser.Scene,
   sceneDef: SceneDef,
-): Pick<RoomBuildResult, 'wallGroup'> {
+): Pick<RoomBuildResult, 'wallGroup' | 'minimapMap'> {
   const gen = sceneDef.generation;
-  if (gen.method !== 'corridor') return { wallGroup: null };
+  if (gen.method !== 'corridor') return { wallGroup: null, minimapMap: null };
 
   const CELL = gen.cellSize;
   const grid = compileCorridorGrid(gen.gridWidth, gen.gridHeight, gen.segments);
@@ -430,5 +444,27 @@ function buildCorridorRoom(
 
   scene.physics.world.setBounds(0, 0, canvasW, canvasH);
 
-  return { wallGroup };
+  const positionedExits = sceneDef.exits.flatMap((exit) =>
+    exit.position
+      ? [{ x: Math.floor(exit.position.x / CELL), y: Math.floor(exit.position.y / CELL) }]
+      : [],
+  );
+  const entry = sceneDef.playerSpawn
+    ? {
+        x: Math.floor(sceneDef.playerSpawn.x / CELL),
+        y: Math.floor(sceneDef.playerSpawn.y / CELL),
+      }
+    : undefined;
+
+  return {
+    wallGroup,
+    minimapMap: {
+      width: gen.gridWidth,
+      height: gen.gridHeight,
+      grid,
+      tileSize: CELL,
+      entry,
+      exits: positionedExits,
+    },
+  };
 }

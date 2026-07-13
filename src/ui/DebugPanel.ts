@@ -19,7 +19,7 @@ const TOGGLE_KEY = 'Backquote';
 export class DebugPanel {
   private root: HTMLDivElement | null = null;
   private toggleBtn: HTMLButtonElement | null = null;
-  private visible = true;
+  private visible = false;
   private fieldElements = new Map<string, HTMLElement>();
   private sectionBodies = new Map<string, HTMLElement>();
   private sectionCollapsed = new Map<string, boolean>();
@@ -65,7 +65,7 @@ export class DebugPanel {
     this.toggleBtn.innerHTML = '\u2699';
     Object.assign(this.toggleBtn.style, {
       position: 'fixed',
-      top: '10px',
+      bottom: '10px',
       right: '10px',
       width: '36px',
       height: '36px',
