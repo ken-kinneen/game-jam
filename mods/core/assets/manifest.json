@@ -139,5 +139,14 @@
   "tilesets/electricwall": { "file": "sprites/tilesets/electricwall.png", "type": "image" },
   "tilesets/electricwall_2": { "file": "sprites/tilesets/electricwall_2.png", "type": "image" },
   "tilesets/transitionwall": { "file": "sprites/tilesets/transitionwall.png", "type": "image" },
-  "tilesets/transitionwall_2": { "file": "sprites/tilesets/transitionwall_2.png", "type": "image" }
+  "tilesets/transitionwall_2": { "file": "sprites/tilesets/transitionwall_2.png", "type": "image" },
+  "furniture/battery": { "file": "sprites/furniture/battery.png", "type": "image" },
+  "furniture/bottle": { "file": "sprites/furniture/bottle.png", "type": "image" },
+  "furniture/bottle_2": { "file": "sprites/furniture/bottle_2.png", "type": "image" },
+  "furniture/oilcan": { "file": "sprites/furniture/oilcan.png", "type": "image" },
+  "furniture/oilcan_2": { "file": "sprites/furniture/oilcan_2.png", "type": "image" },
+  "furniture/can": { "file": "sprites/furniture/can.png", "type": "image" },
+  "furniture/can_2": { "file": "sprites/furniture/can_2.png", "type": "image" },
+  "furniture/banana": { "file": "sprites/furniture/banana.png", "type": "image" },
+  "furniture/banana_2": { "file": "sprites/furniture/banana_2.png", "type": "image" }
 }

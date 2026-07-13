@@ -5,6 +5,5 @@
   "sprite": "items/battery",
   "stackSize": 10,
   "tags": ["fuel"],
-  "value": 10,
-  "displayScale": 3
+  "value": 10
 }

@@ -155,6 +155,9 @@ const GroundItemSchema = z.object({
   itemId: z.string(),
   position: z.object({ x: z.number(), y: z.number() }),
   qty: z.number().int().positive().default(1),
+  image: z.string().optional(),
+  scale: z.number().positive().optional(),
+  angle: z.number().optional(),
 });
 
 /** Schema for scene content definitions. */

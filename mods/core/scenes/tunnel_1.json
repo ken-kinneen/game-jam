@@ -35,7 +35,6 @@
         "w": 11,
         "h": 7,
         "label": "scrap_room",
-        "tileImage": "tilesets/scrapfloor_2",
         "wallImage": "tilesets/corridorwall_2"
       },
       {
@@ -60,7 +59,7 @@
         "w": 12,
         "h": 7,
         "label": "relay_room_a",
-        "tileImage": "tilesets/relayroom",
+        "tileImage": "tilesets/tunnelfloor_2",
         "wallImage": "tilesets/electricwall"
       },
       {
@@ -68,7 +67,8 @@
         "y": 29,
         "w": 5,
         "h": 7,
-        "label": "mid_corridor"
+        "label": "mid_corridor",
+        "tileImage": "tilesets/cablefloor_2"
       },
       {
         "x": 22,
@@ -90,7 +90,7 @@
         "w": 4,
         "h": 9,
         "label": "flooded_detour",
-        "tileImage": "tilesets/floodedfloor",
+        "tileImage": "tilesets/cablefloor",
         "wallImage": "tilesets/transitionwall"
       },
       {
@@ -108,7 +108,7 @@
         "w": 20,
         "h": 7,
         "label": "transformer_room",
-        "tileImage": "tilesets/relayroom"
+        "tileImage": "tilesets/tunnelfloor_2"
       }
     ],
     "tileImage": "tilesets/tunnelfloor",
@@ -229,7 +229,7 @@
     {
       "image": "furniture/transformer_box",
       "position": {
-        "x": 896,
+        "x": 895,
         "y": 832
       },
       "scale": 0.3,
@@ -348,91 +348,104 @@
       "position": {
         "x": 352,
         "y": 416
-      }
+      },
+      "image": "furniture/battery"
     },
     {
       "itemId": "core:rusty_can",
       "position": {
         "x": 288,
         "y": 448
-      }
+      },
+      "image": "furniture/oilcan"
     },
     {
       "itemId": "core:battery",
       "position": {
         "x": 192,
         "y": 688
-      }
+      },
+      "image": "furniture/battery"
     },
     {
       "itemId": "core:oil_can",
       "position": {
         "x": 288,
         "y": 752
-      }
+      },
+      "image": "furniture/oilcan"
     },
     {
       "itemId": "core:fuel_bottle",
       "position": {
         "x": 128,
-        "y": 768
-      }
+        "y": 764
+      },
+      "image": "furniture/bottle"
     },
     {
       "itemId": "core:battery",
       "position": {
         "x": 352,
         "y": 704
-      }
+      },
+      "image": "furniture/battery"
     },
     {
       "itemId": "core:rusty_can",
       "position": {
-        "x": 256,
-        "y": 720
-      }
+        "x": 250,
+        "y": 700
+      },
+      "image": "furniture/can_2"
     },
     {
       "itemId": "core:oil_can",
       "position": {
         "x": 160,
         "y": 736
-      }
+      },
+      "image": "furniture/oilcan_2"
     },
     {
       "itemId": "core:battery",
       "position": {
         "x": 880,
-        "y": 576
-      }
+        "y": 582
+      },
+      "image": "furniture/battery"
     },
     {
       "itemId": "core:fuel_bottle",
       "position": {
         "x": 824,
         "y": 1088
-      }
+      },
+      "image": "furniture/bottle_2"
     },
     {
       "itemId": "core:fuel_bottle",
       "position": {
         "x": 480,
         "y": 1584
-      }
+      },
+      "image": "furniture/bottle"
     },
     {
       "itemId": "core:battery",
       "position": {
-        "x": 496,
-        "y": 1632
-      }
+        "x": 499,
+        "y": 1620
+      },
+      "image": "furniture/battery"
     },
     {
       "itemId": "core:oil_can",
       "position": {
-        "x": 945,
-        "y": 1594
-      }
+        "x": 950,
+        "y": 1584
+      },
+      "image": "furniture/oilcan"
     }
   ],
   "playerSpawn": {
