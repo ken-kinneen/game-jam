@@ -3,6 +3,7 @@ import type { Entity } from '../entities/Entity';
 import type { SceneDef } from '../schemas/scene.schema';
 import type { SceneDirector } from './SceneDirector';
 import type { DepthSortSystem } from '../systems/DepthSortSystem';
+import type { DepthOfFieldSystem } from '../systems/DepthOfFieldSystem';
 import { spawnSceneProps, type PropShadow, type Prop3DInstance } from './propSpawner';
 
 export interface ExitZone {
@@ -41,6 +42,7 @@ export class ZoneManager {
     private readonly director: SceneDirector,
     private player: Entity | undefined,
     private readonly depthSort?: DepthSortSystem,
+    private readonly dof?: DepthOfFieldSystem,
     private readonly openShop?: () => void,
   ) {}
 
@@ -69,6 +71,7 @@ export class ZoneManager {
       this.player,
       (prop, visual) => this.registerPropInteraction(prop, visual),
       this.depthSort,
+      this.dof,
     );
     this.propShadows.push(...result.propShadows);
     this.props3d.push(...result.props3d);
@@ -276,6 +279,26 @@ export class ZoneManager {
         displayLabel,
         propVisual: visual,
       });
+    } else if (prop.action === 'transformer') {
+      const zoneSprite = this.scene.physics.add.sprite(pos.x, pos.y, '__placeholder');
+      zoneSprite.setDisplaySize(48, 48);
+      zoneSprite.setAlpha(0);
+      zoneSprite.setDepth(5);
+      const body = zoneSprite.body as Phaser.Physics.Arcade.Body;
+      body.setImmovable(true);
+      body.setAllowGravity(false);
+
+      const label = this.scene.add.text(pos.x, pos.y - 36, '', { fontSize: '1px' });
+      label.setVisible(false);
+
+      this.interactZones.push({
+        sprite: zoneSprite,
+        label,
+        tooltip,
+        displayLabel,
+        action: 'transformer',
+        propVisual: visual,
+      });
     } else if (prop.action === 'shop' || prop.action === 'upgrade') {
       const zoneSprite = this.scene.physics.add.sprite(pos.x, pos.y, '__placeholder');
       zoneSprite.setDisplaySize(48, 48);
@@ -396,7 +419,50 @@ export class ZoneManager {
       }
     } else if (zone.action === 'upgrade') {
       this.openShop?.();
+    } else if (zone.action === 'transformer') {
+      this.handleTransformerActivation();
     }
+  }
+
+  private handleTransformerActivation(): void {
+    eventBus.emit('transformer:activated', {});
+
+    this.scene.cameras.main.flash(600, 255, 220, 120);
+
+    const statusText = this.scene.add.text(
+      this.scene.cameras.main.width / 2,
+      this.scene.cameras.main.height / 2,
+      'GRID SECTION RESTORED',
+      {
+        fontFamily: '"Courier New", monospace',
+        fontSize: '28px',
+        color: '#ffdd44',
+        stroke: '#000000',
+        strokeThickness: 5,
+        align: 'center',
+      },
+    );
+    statusText.setOrigin(0.5, 0.5);
+    statusText.setScrollFactor(0);
+    statusText.setDepth(1000);
+    statusText.setAlpha(0);
+
+    this.scene.tweens.add({
+      targets: statusText,
+      alpha: 1,
+      duration: 400,
+      yoyo: true,
+      hold: 1500,
+      onComplete: () => statusText.destroy(),
+    });
+
+    this.scene.time.delayedCall(2500, () => {
+      this.scene.cameras.main.fade(1000, 0, 0, 0, false, (_cam: unknown, progress: number) => {
+        if (progress >= 1) {
+          this.director.transitionTo('core:home', this.scene);
+        }
+      });
+    });
   }
 
   private createPromptText(): void {

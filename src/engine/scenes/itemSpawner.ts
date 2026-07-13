@@ -78,6 +78,24 @@ export function spawnProceduralItems(
   }
 }
 
+/** Spawns pickups at explicit positions defined in scene JSON. */
+export function spawnPlacedItems(
+  scene: Phaser.Scene,
+  registry: ContentRegistry,
+  pickupSystem: PickupSystem,
+  items: { itemId: string; position: { x: number; y: number }; qty?: number }[],
+): void {
+  for (const item of items) {
+    const itemDef = registry.get('item', item.itemId);
+    if (!itemDef) {
+      console.warn(`Ground item "${item.itemId}" not found in registry, skipping`);
+      continue;
+    }
+    const sprite = createItemSprite(scene, item.position.x, item.position.y, itemDef);
+    pickupSystem.addGroundItem(sprite, item.itemId, item.qty ?? 1);
+  }
+}
+
 /** Creates a ground-item sprite scaled by the def's displayScale. */
 function createItemSprite(
   scene: Phaser.Scene,

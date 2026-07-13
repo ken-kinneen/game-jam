@@ -223,7 +223,7 @@
   ],
   "exits": [
     {
-      "to": "core:cave",
+      "to": "core:tunnel_1",
       "condition": "always",
       "label": "Exit",
       "position": {

@@ -1,6 +1,7 @@
 import type { Entity } from '../entities/Entity';
 import type { SceneDef } from '../schemas/scene.schema';
 import type { DepthSortSystem } from '../systems/DepthSortSystem';
+import type { DepthOfFieldSystem } from '../systems/DepthOfFieldSystem';
 import { PropRenderer3D } from '../rendering/PropRenderer3D';
 import { generateNormalMap } from '../rendering/normalMapGenerator';
 
@@ -74,6 +75,7 @@ export function spawnSceneProps(
     visual?: Phaser.GameObjects.Image,
   ) => void,
   depthSort?: DepthSortSystem,
+  dof?: DepthOfFieldSystem,
 ): SpawnPropsResult {
   const propShadows: PropShadow[] = [];
   const props3d: Prop3DInstance[] = [];
@@ -120,9 +122,11 @@ export function spawnSceneProps(
         img.destroy();
         renderer.linkSprite(sprite);
         if (depthSort) depthSort.register(sprite);
+        dof?.register(sprite);
       } else {
         renderer.linkSprite(img);
         if (depthSort) depthSort.register(img);
+        dof?.register(img);
       }
 
       props3d.push({ renderer, x: pos.x, y: pos.y });
@@ -202,9 +206,11 @@ export function spawnSceneProps(
       applyPropFx(visual, prop.fx);
     }
 
-    // Register for y-sort depth ordering
     if (visual && depthSort) {
       depthSort.register(visual);
+    }
+    if (visual) {
+      dof?.register(visual);
     }
 
     if (prop.action) {

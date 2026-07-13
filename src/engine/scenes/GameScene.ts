@@ -22,10 +22,16 @@ import { spawnFxStatues } from './spawnFxStatues';
 import { ZoneManager } from './zoneManager';
 import { buildSceneRoom } from './roomBuilder';
 import { LampRenderer } from './lampRenderer';
-import { spawnGroundItems, spawnFuelItems, spawnProceduralItems } from './itemSpawner';
+import {
+  spawnGroundItems,
+  spawnFuelItems,
+  spawnProceduralItems,
+  spawnPlacedItems,
+} from './itemSpawner';
 import { AmbienceSystem } from '../systems/AmbienceSystem';
 import { AmbientAudioSystem } from '../systems/AmbientAudioSystem';
 import { DepthSortSystem } from '../systems/DepthSortSystem';
+import { DepthOfFieldSystem } from '../systems/DepthOfFieldSystem';
 import { CharacterController3D } from '../rendering/CharacterController3D';
 import { ShopOverlay } from '../ui/ShopOverlay';
 
@@ -48,6 +54,7 @@ export class GameScene extends Phaser.Scene {
   private ambienceSystem!: AmbienceSystem;
   private ambientAudio!: AmbientAudioSystem;
   private depthSort!: DepthSortSystem;
+  private dof!: DepthOfFieldSystem;
   private char3d: CharacterController3D | null = null;
   private shopOverlay: ShopOverlay | null = null;
 
@@ -83,6 +90,7 @@ export class GameScene extends Phaser.Scene {
     this.lampSystem = new LampSystem(eventBus, configManager);
     this.soundSystem = new SoundSystem(this, eventBus, configManager, registry);
     this.depthSort = new DepthSortSystem();
+    this.dof = new DepthOfFieldSystem();
     this.inputMap = new InputMap(this);
     this.director = new SceneDirector(registry, eventBus);
 
@@ -107,17 +115,21 @@ export class GameScene extends Phaser.Scene {
       this.director,
       undefined,
       this.depthSort,
+      this.dof,
       () => this.shopOverlay!.open(),
     );
     this.zoneManager.reset();
 
     this.spawnPlayer(this.sceneDef);
     this.zoneManager.setPlayer(this.player);
+    this.dof.setFocusTarget(this.player.sprite);
 
     this.tryLoad3DCharacter();
 
     if (this.isCave) {
-      if (this.proceduralCaveMap) {
+      if (this.sceneDef?.groundItems?.length) {
+        spawnPlacedItems(this, registry, this.pickupSystem, this.sceneDef.groundItems);
+      } else if (this.proceduralCaveMap) {
         spawnProceduralItems(this, registry, this.pickupSystem, this.proceduralCaveMap);
       } else {
         spawnGroundItems(this, registry, this.pickupSystem);
@@ -244,6 +256,7 @@ export class GameScene extends Phaser.Scene {
     }
 
     this.depthSort.update();
+    this.dof.update();
     this.lampRenderer.update(this.zoneManager.propShadows);
 
     // Update 3D props with lamp position for dynamic shadows
@@ -273,6 +286,7 @@ export class GameScene extends Phaser.Scene {
     this.soundSystem?.destroy();
     this.ambientAudio?.destroy();
     this.char3d?.destroy();
+    this.dof?.destroy();
     for (const unsub of this.unsubShop) unsub();
     this.unsubShop = [];
   }

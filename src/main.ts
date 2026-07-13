@@ -27,6 +27,7 @@ import homeScene from '../mods/core/scenes/home.json';
 import caveScene from '../mods/core/scenes/cave.json';
 import shopScene from '../mods/core/scenes/shop.json';
 import demoScene from '../mods/core/scenes/demo.json';
+import tunnel1Scene from '../mods/core/scenes/tunnel_1.json';
 import homeTrash from '../mods/core/loot-tables/home-trash.json';
 import caveTrash from '../mods/core/loot-tables/cave-trash.json';
 import oilCan from '../mods/core/items/oil-can.json';
@@ -66,6 +67,7 @@ async function boot() {
     { filename: 'scenes/cave.json', data: caveScene },
     { filename: 'scenes/shop.json', data: shopScene },
     { filename: 'scenes/demo.json', data: demoScene },
+    { filename: 'scenes/tunnel_1.json', data: tunnel1Scene },
     { filename: 'loot-tables/home-trash.json', data: homeTrash },
     { filename: 'loot-tables/cave-trash.json', data: caveTrash },
     { filename: 'upgrades/quick-feet.json', data: quickFeet },

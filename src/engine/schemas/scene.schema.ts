@@ -56,6 +56,23 @@ const FloorTileDefSchema = z.object({
   variant: z.number().int().nonnegative().default(0),
 });
 
+const CorridorSegmentSchema = z.object({
+  x: z.number().int().nonnegative(),
+  y: z.number().int().nonnegative(),
+  w: z.number().int().positive(),
+  h: z.number().int().positive(),
+  label: z.string().optional(),
+});
+
+const CorridorGenerationSchema = z.object({
+  method: z.literal('corridor'),
+  cellSize: z.number().int().positive().default(32),
+  gridWidth: z.number().int().positive(),
+  gridHeight: z.number().int().positive(),
+  tileImage: z.string().optional(),
+  segments: z.array(CorridorSegmentSchema).min(1),
+});
+
 const TileFloorGenerationSchema = z.object({
   method: z.literal('tileFloor'),
   width: z.number().int().positive().default(640),
@@ -81,6 +98,7 @@ const GenerationSchema = z.discriminatedUnion('method', [
   BackgroundGenerationSchema,
   TiledGenerationSchema,
   TileFloorGenerationSchema,
+  CorridorGenerationSchema,
 ]);
 
 const ExitSchema = z.object({
@@ -110,7 +128,7 @@ const PropSchema = z.object({
   /** Visual rotation in degrees. Arcade physics bodies stay axis-aligned. */
   angle: z.number().default(0),
   /** If set, this prop acts as an interaction point when the player presses E nearby. */
-  action: z.enum(['shop', 'exit', 'upgrade']).optional(),
+  action: z.enum(['shop', 'exit', 'upgrade', 'transformer']).optional(),
   /** For exit actions: the scene to transition to. */
   actionTarget: z.string().optional(),
   /** Label shown in the [E] prompt when near this prop. */
@@ -130,6 +148,12 @@ const PropSchema = z.object({
     .optional(),
 });
 
+const GroundItemSchema = z.object({
+  itemId: z.string(),
+  position: z.object({ x: z.number(), y: z.number() }),
+  qty: z.number().int().positive().default(1),
+});
+
 /** Schema for scene content definitions. */
 export const SceneDefSchema = z.object({
   id: z.string().regex(/^[a-z0-9_]+:[a-z0-9_]+$/),
@@ -141,6 +165,7 @@ export const SceneDefSchema = z.object({
   exits: z.array(ExitSchema).default([]),
   shops: z.array(ShopSchema).default([]),
   props: z.array(PropSchema).default([]),
+  groundItems: z.array(GroundItemSchema).default([]),
   playerSpawn: z.object({ x: z.number(), y: z.number() }).optional(),
   /** Per-scene override for player max speed. Falls back to playerConfig default. */
   playerMaxSpeed: z.number().positive().optional(),

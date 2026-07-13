@@ -41,6 +41,9 @@ export function buildSceneRoom(
     result.caveEntry = cave.caveEntry;
   } else if (gen.method === 'tileFloor') {
     buildTileFloor(scene, sceneDef);
+  } else if (gen.method === 'corridor') {
+    const corridor = buildCorridorRoom(scene, sceneDef);
+    result.wallGroup = corridor.wallGroup;
   } else if (gen.method === 'tiled') {
     buildFallbackRoom(scene, isCave, gen.width, gen.height, gen.wallThickness);
   } else {
@@ -270,4 +273,75 @@ function buildProceduralCave(
   scene.physics.world.setBounds(0, 0, canvasW, canvasH);
 
   return { wallGroup, caveMap: map, caveEntry };
+}
+
+/** Compiles corridor segments into a walkable floor grid. */
+function compileCorridorGrid(
+  width: number,
+  height: number,
+  segments: { x: number; y: number; w: number; h: number }[],
+): number[][] {
+  const grid: number[][] = Array.from({ length: height }, () => Array(width).fill(0));
+  for (const seg of segments) {
+    for (let gy = seg.y; gy < seg.y + seg.h && gy < height; gy++) {
+      for (let gx = seg.x; gx < seg.x + seg.w && gx < width; gx++) {
+        grid[gy][gx] = 1;
+      }
+    }
+  }
+  return grid;
+}
+
+/** Builds a hand-designed corridor layout from rectangular segments. */
+function buildCorridorRoom(
+  scene: Phaser.Scene,
+  sceneDef: SceneDef,
+): Pick<RoomBuildResult, 'wallGroup'> {
+  const gen = sceneDef.generation;
+  if (gen.method !== 'corridor') return { wallGroup: null };
+
+  const CELL = gen.cellSize;
+  const grid = compileCorridorGrid(gen.gridWidth, gen.gridHeight, gen.segments);
+  const canvasW = gen.gridWidth * CELL;
+  const canvasH = gen.gridHeight * CELL;
+
+  const tileKey = gen.tileImage && scene.textures.exists(gen.tileImage) ? gen.tileImage : null;
+
+  if (tileKey) {
+    const floorTile = scene.add.tileSprite(canvasW / 2, canvasH / 2, canvasW, canvasH, tileKey);
+    const srcW = scene.textures.get(tileKey).getSourceImage().width;
+    const tileScale = (CELL * 3) / srcW;
+    floorTile.setTileScale(tileScale, tileScale);
+    floorTile.setDepth(-2);
+    try {
+      floorTile.setPipeline('Light2D');
+    } catch {
+      /* no-op */
+    }
+  } else {
+    const fallback = scene.add.rectangle(canvasW / 2, canvasH / 2, canvasW, canvasH, 0x2a2a2a);
+    fallback.setDepth(-2);
+  }
+
+  const wallGroup = scene.physics.add.staticGroup();
+  for (let gy = 0; gy < gen.gridHeight; gy++) {
+    for (let gx = 0; gx < gen.gridWidth; gx++) {
+      if (grid[gy][gx] !== 0) continue;
+      const bordersFloor = [
+        [1, 0],
+        [-1, 0],
+        [0, 1],
+        [0, -1],
+      ].some(([dx, dy]) => grid[gy + dy]?.[gx + dx] === 1);
+      if (!bordersFloor) continue;
+
+      const rect = scene.add.rectangle(gx * CELL + CELL / 2, gy * CELL + CELL / 2, CELL, CELL);
+      rect.setVisible(false);
+      wallGroup.add(rect);
+    }
+  }
+
+  scene.physics.world.setBounds(0, 0, canvasW, canvasH);
+
+  return { wallGroup };
 }
