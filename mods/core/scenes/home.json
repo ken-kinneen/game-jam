@@ -7,7 +7,7 @@
     "width": 512,
     "height": 512,
     "wallThickness": 25,
-    "tileSize": 80,
+    "tileSize": 220,
     "tileImage": "tilesets/home_floor_18"
   },
   "props": [

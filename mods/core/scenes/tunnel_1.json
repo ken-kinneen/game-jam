@@ -2,129 +2,307 @@
   "id": "core:tunnel_1",
   "type": "scene",
   "kind": "cave",
-  "playerMaxSpeed": 100,
   "generation": {
     "method": "corridor",
     "cellSize": 32,
     "gridWidth": 35,
     "gridHeight": 50,
-    "tileImage": "tilesets/cave_floor",
     "segments": [
-      { "x": 15, "y": 0, "w": 5, "h": 11, "label": "entry_corridor" },
-      { "x": 10, "y": 9, "w": 15, "h": 6, "label": "junction_1" },
-      { "x": 10, "y": 14, "w": 4, "h": 9, "label": "west_fork" },
-      { "x": 4, "y": 19, "w": 10, "h": 6, "label": "dead_end_room" },
-      { "x": 21, "y": 14, "w": 4, "h": 12, "label": "east_fork" },
-      { "x": 24, "y": 20, "w": 6, "h": 4, "label": "east_alcove" },
-      { "x": 17, "y": 24, "w": 8, "h": 6, "label": "junction_2" },
-      { "x": 11, "y": 26, "w": 8, "h": 4, "label": "west_alcove" },
-      { "x": 19, "y": 29, "w": 4, "h": 9, "label": "south_corridor" },
-      { "x": 13, "y": 36, "w": 14, "h": 8, "label": "transformer_room" }
-    ]
+      {
+        "x": 15,
+        "y": 0,
+        "w": 5,
+        "h": 11,
+        "label": "entry_corridor"
+      },
+      {
+        "x": 10,
+        "y": 9,
+        "w": 15,
+        "h": 6,
+        "label": "junction_1"
+      },
+      {
+        "x": 10,
+        "y": 14,
+        "w": 4,
+        "h": 9,
+        "label": "west_fork"
+      },
+      {
+        "x": 4,
+        "y": 19,
+        "w": 10,
+        "h": 6,
+        "label": "dead_end_room"
+      },
+      {
+        "x": 21,
+        "y": 14,
+        "w": 4,
+        "h": 12,
+        "label": "east_fork"
+      },
+      {
+        "x": 24,
+        "y": 20,
+        "w": 6,
+        "h": 4,
+        "label": "east_alcove"
+      },
+      {
+        "x": 17,
+        "y": 24,
+        "w": 8,
+        "h": 6,
+        "label": "junction_2"
+      },
+      {
+        "x": 11,
+        "y": 26,
+        "w": 8,
+        "h": 4,
+        "label": "west_alcove"
+      },
+      {
+        "x": 19,
+        "y": 29,
+        "w": 4,
+        "h": 9,
+        "label": "south_corridor"
+      },
+      {
+        "x": 13,
+        "y": 36,
+        "w": 14,
+        "h": 8,
+        "label": "transformer_room"
+      }
+    ],
+    "tileImage": "tilesets/home_floor",
+    "wallImage": "tilesets/wall_2"
   },
-  "playerSpawn": { "x": 560, "y": 64 },
+  "props": [
+    {
+      "image": "furniture/transformer_box",
+      "position": {
+        "x": 640,
+        "y": 1248
+      },
+      "scale": 0.35,
+      "depth": 2,
+      "collides": true,
+      "angle": 0,
+      "action": "transformer",
+      "actionLabel": "Restore Power"
+    },
+    {
+      "image": "furniture/junction_box",
+      "position": {
+        "x": 384,
+        "y": 320
+      },
+      "scale": 0.2,
+      "depth": 2,
+      "collides": false,
+      "angle": 0
+    },
+    {
+      "image": "furniture/pipe_horizontal",
+      "position": {
+        "x": 560,
+        "y": 288
+      },
+      "scale": 0.25,
+      "depth": 1,
+      "collides": false,
+      "angle": 0
+    },
+    {
+      "image": "furniture/warning_sign",
+      "position": {
+        "x": 352,
+        "y": 640
+      },
+      "scale": 0.18,
+      "depth": 2,
+      "collides": false,
+      "angle": 0
+    },
+    {
+      "image": "furniture/pipe_vertical",
+      "position": {
+        "x": 752,
+        "y": 576
+      },
+      "scale": 0.25,
+      "depth": 1,
+      "collides": false,
+      "angle": 0
+    },
+    {
+      "image": "furniture/barrel",
+      "position": {
+        "x": 224,
+        "y": 688
+      },
+      "scale": 0.22,
+      "depth": 2,
+      "collides": true,
+      "angle": 0
+    },
+    {
+      "image": "furniture/crate",
+      "position": {
+        "x": 176,
+        "y": 736
+      },
+      "scale": 0.2,
+      "depth": 2,
+      "collides": true,
+      "angle": 0
+    },
+    {
+      "image": "furniture/cable_bundle",
+      "position": {
+        "x": 640,
+        "y": 1120
+      },
+      "scale": 0.2,
+      "depth": 1,
+      "collides": false,
+      "angle": 0
+    },
+    {
+      "image": "furniture/light_fixture",
+      "position": {
+        "x": 560,
+        "y": 160
+      },
+      "scale": 0.15,
+      "depth": 3,
+      "collides": false,
+      "angle": 0
+    },
+    {
+      "image": "furniture/vent_grate",
+      "position": {
+        "x": 896,
+        "y": 672
+      },
+      "scale": 0.18,
+      "depth": 1,
+      "collides": false,
+      "angle": 0
+    }
+  ],
   "exits": [
     {
       "to": "core:home",
       "condition": "always",
       "label": "Return Home",
-      "position": { "x": 560, "y": 16 }
+      "position": {
+        "x": 560,
+        "y": 16
+      }
     }
   ],
-  "props": [
-    {
-      "image": "furniture/transformer_box",
-      "position": { "x": 640, "y": 1248 },
-      "scale": 0.35,
-      "depth": 2,
-      "collides": true,
-      "action": "transformer",
-      "actionLabel": "Restore Power",
-      "fx": ["glow"]
-    },
-    {
-      "image": "furniture/junction_box",
-      "position": { "x": 384, "y": 320 },
-      "scale": 0.2,
-      "depth": 2,
-      "collides": false
-    },
-    {
-      "image": "furniture/pipe_horizontal",
-      "position": { "x": 560, "y": 288 },
-      "scale": 0.25,
-      "depth": 1,
-      "collides": false
-    },
-    {
-      "image": "furniture/warning_sign",
-      "position": { "x": 352, "y": 640 },
-      "scale": 0.18,
-      "depth": 2,
-      "collides": false
-    },
-    {
-      "image": "furniture/pipe_vertical",
-      "position": { "x": 752, "y": 576 },
-      "scale": 0.25,
-      "depth": 1,
-      "collides": false
-    },
-    {
-      "image": "furniture/barrel",
-      "position": { "x": 224, "y": 688 },
-      "scale": 0.22,
-      "depth": 2,
-      "collides": true
-    },
-    {
-      "image": "furniture/crate",
-      "position": { "x": 176, "y": 736 },
-      "scale": 0.2,
-      "depth": 2,
-      "collides": true
-    },
-    {
-      "image": "furniture/cable_bundle",
-      "position": { "x": 640, "y": 1120 },
-      "scale": 0.2,
-      "depth": 1,
-      "collides": false
-    },
-    {
-      "image": "furniture/light_fixture",
-      "position": { "x": 560, "y": 160 },
-      "scale": 0.15,
-      "depth": 3,
-      "collides": false
-    },
-    {
-      "image": "furniture/vent_grate",
-      "position": { "x": 896, "y": 672 },
-      "scale": 0.18,
-      "depth": 1,
-      "collides": false
-    }
-  ],
+  "shops": [],
   "groundItems": [
-    { "itemId": "core:rusty_can", "position": { "x": 544, "y": 224 } },
-
-    { "itemId": "core:rusty_can", "position": { "x": 192, "y": 672 } },
-    { "itemId": "core:plastic_bag", "position": { "x": 256, "y": 720 } },
-    { "itemId": "core:banana_peel", "position": { "x": 320, "y": 688 } },
-    { "itemId": "core:battery", "position": { "x": 160, "y": 752 } },
-
-    { "itemId": "core:oil_can", "position": { "x": 832, "y": 672 } },
-    { "itemId": "core:fuel_bottle", "position": { "x": 880, "y": 704 } },
-
-    { "itemId": "core:rusty_can", "position": { "x": 736, "y": 544 } },
-
-    { "itemId": "core:oil_can", "position": { "x": 416, "y": 880 } },
-    { "itemId": "core:fuel_bottle", "position": { "x": 480, "y": 912 } },
-
-    { "itemId": "core:oil_can", "position": { "x": 672, "y": 1024 } },
-
-    { "itemId": "core:rusty_can", "position": { "x": 512, "y": 1280 } },
-    { "itemId": "core:plastic_bag", "position": { "x": 768, "y": 1248 } }
-  ]
+    {
+      "itemId": "core:rusty_can",
+      "position": {
+        "x": 544,
+        "y": 224
+      }
+    },
+    {
+      "itemId": "core:rusty_can",
+      "position": {
+        "x": 192,
+        "y": 672
+      }
+    },
+    {
+      "itemId": "core:plastic_bag",
+      "position": {
+        "x": 256,
+        "y": 720
+      }
+    },
+    {
+      "itemId": "core:banana_peel",
+      "position": {
+        "x": 320,
+        "y": 688
+      }
+    },
+    {
+      "itemId": "core:battery",
+      "position": {
+        "x": 160,
+        "y": 752
+      }
+    },
+    {
+      "itemId": "core:oil_can",
+      "position": {
+        "x": 832,
+        "y": 672
+      }
+    },
+    {
+      "itemId": "core:fuel_bottle",
+      "position": {
+        "x": 880,
+        "y": 704
+      }
+    },
+    {
+      "itemId": "core:rusty_can",
+      "position": {
+        "x": 736,
+        "y": 544
+      }
+    },
+    {
+      "itemId": "core:oil_can",
+      "position": {
+        "x": 416,
+        "y": 880
+      }
+    },
+    {
+      "itemId": "core:fuel_bottle",
+      "position": {
+        "x": 480,
+        "y": 912
+      }
+    },
+    {
+      "itemId": "core:oil_can",
+      "position": {
+        "x": 672,
+        "y": 1024
+      }
+    },
+    {
+      "itemId": "core:rusty_can",
+      "position": {
+        "x": 512,
+        "y": 1280
+      }
+    },
+    {
+      "itemId": "core:plastic_bag",
+      "position": {
+        "x": 768,
+        "y": 1248
+      }
+    }
+  ],
+  "playerSpawn": {
+    "x": 560,
+    "y": 64
+  }
 }

@@ -7,14 +7,16 @@ interface TrackedSprite {
 
 export class DepthOfFieldSystem {
   private tracked: TrackedSprite[] = [];
-  private focusTarget: Phaser.GameObjects.Sprite | null = null;
+  private enabled = false;
 
-  private focusRadius = 60;
-  private maxBlurRadius = 280;
-  private maxStrength = 0.8;
+  private lampX = 0;
+  private lampY = 0;
+  private lampRadius = 0;
 
-  setFocusTarget(sprite: Phaser.GameObjects.Sprite): void {
-    this.focusTarget = sprite;
+  private maxStrength = 1.2;
+
+  enable(): void {
+    this.enabled = true;
   }
 
   register(sprite: Phaser.GameObjects.Image | Phaser.GameObjects.Sprite): void {
@@ -29,32 +31,39 @@ export class DepthOfFieldSystem {
     this.tracked.splice(idx, 1);
   }
 
+  setLamp(x: number, y: number, radius: number): void {
+    this.lampX = x;
+    this.lampY = y;
+    this.lampRadius = radius;
+  }
+
   update(): void {
-    if (!this.focusTarget) return;
-    const fx = this.focusTarget.x;
-    const fy = this.focusTarget.y;
+    if (!this.enabled || this.lampRadius <= 0) return;
+
+    const innerEdge = this.lampRadius * 0.5;
+    const outerEdge = this.lampRadius * 1.1;
 
     for (const entry of this.tracked) {
       const go = entry.go;
       if (!go.active) continue;
 
-      const dx = go.x - fx;
-      const dy = go.y - fy;
+      const dx = go.x - this.lampX;
+      const dy = go.y - this.lampY;
       const dist = Math.sqrt(dx * dx + dy * dy);
 
-      if (dist <= this.focusRadius) {
+      if (dist <= innerEdge) {
         if (entry.blur) {
           entry.blur.strength = 0;
         }
         continue;
       }
 
-      const t = Math.min((dist - this.focusRadius) / (this.maxBlurRadius - this.focusRadius), 1);
+      const t = Math.min((dist - innerEdge) / (outerEdge - innerEdge), 1);
       const strength = t * t * this.maxStrength;
 
       if (!entry.blur && go.preFX) {
         try {
-          entry.blur = go.preFX.addBlur(0, 1, 1, strength, 0xffffff, 6) as unknown as BlurFX;
+          entry.blur = go.preFX.addBlur(0, 1, 1, strength, 0xffffff, 4) as unknown as BlurFX;
         } catch {
           continue;
         }
@@ -71,6 +80,6 @@ export class DepthOfFieldSystem {
       entry.blur?.destroy();
     }
     this.tracked.length = 0;
-    this.focusTarget = null;
+    this.enabled = false;
   }
 }

@@ -70,6 +70,7 @@ const CorridorGenerationSchema = z.object({
   gridWidth: z.number().int().positive(),
   gridHeight: z.number().int().positive(),
   tileImage: z.string().optional(),
+  wallImage: z.string().optional(),
   segments: z.array(CorridorSegmentSchema).min(1),
 });
 

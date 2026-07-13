@@ -50,6 +50,8 @@ const GLOW_COLORS: Record<string, [string, string, string, string]> = {
 /** Renders fog-of-war darkness, warm lamp glow, and prop shadows. */
 export class LampRenderer {
   displayedRadius = 120;
+  lampX = 0;
+  lampY = 0;
   private fow!: Phaser.GameObjects.RenderTexture;
   private fowEraser!: Phaser.GameObjects.Sprite;
   private darknessAlpha = 0.88;
@@ -214,6 +216,8 @@ export class LampRenderer {
 
     const lampX = px + this.sway.offsetX;
     const lampY = py + this.sway.offsetY;
+    this.lampX = lampX;
+    this.lampY = lampY;
 
     const wb = this.scene.physics.world.bounds;
     this.fow.clear();

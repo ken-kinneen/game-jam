@@ -63,5 +63,9 @@
 
   "ambience/hut_room": { "file": "audio/ambience/hut_room.ogg", "type": "audio" },
   "ambience/corridor_hum": { "file": "audio/ambience/corridor_hum.ogg", "type": "audio" },
-  "ambience/electrical_drone": { "file": "audio/ambience/electrical_drone.ogg", "type": "audio" }
+  "ambience/electrical_drone": { "file": "audio/ambience/electrical_drone.ogg", "type": "audio" },
+  "tilesets/home_floor_10": { "file": "sprites/tilesets/home_floor_10.png", "type": "image" },
+  "tilesets/home_floor_11": { "file": "sprites/tilesets/home_floor_11.png", "type": "image" },
+  "tilesets/wall": { "file": "sprites/tilesets/wall.png", "type": "image" },
+  "tilesets/wall_2": { "file": "sprites/tilesets/wall_2.png", "type": "image" }
 }

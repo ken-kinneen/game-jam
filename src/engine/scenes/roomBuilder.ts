@@ -305,23 +305,59 @@ function buildCorridorRoom(
   const canvasW = gen.gridWidth * CELL;
   const canvasH = gen.gridHeight * CELL;
 
-  const tileKey = gen.tileImage && scene.textures.exists(gen.tileImage) ? gen.tileImage : null;
+  // Black void base — everything starts in shadow
+  const voidBg = scene.add.rectangle(canvasW / 2, canvasH / 2, canvasW, canvasH, 0x050608);
+  voidBg.setDepth(-3);
 
+  // Floor tiles only under walkable segments
+  const tileKey = gen.tileImage && scene.textures.exists(gen.tileImage) ? gen.tileImage : null;
   if (tileKey) {
-    const floorTile = scene.add.tileSprite(canvasW / 2, canvasH / 2, canvasW, canvasH, tileKey);
     const srcW = scene.textures.get(tileKey).getSourceImage().width;
     const tileScale = (CELL * 3) / srcW;
-    floorTile.setTileScale(tileScale, tileScale);
-    floorTile.setDepth(-2);
-    try {
-      floorTile.setPipeline('Light2D');
-    } catch {
-      /* no-op */
+    for (const seg of gen.segments) {
+      const sx = seg.x * CELL;
+      const sy = seg.y * CELL;
+      const sw = seg.w * CELL;
+      const sh = seg.h * CELL;
+      const floorTile = scene.add.tileSprite(sx + sw / 2, sy + sh / 2, sw, sh, tileKey);
+      floorTile.setTileScale(tileScale, tileScale);
+      floorTile.setTilePosition(sx, sy);
+      floorTile.setDepth(-2);
+      try {
+        floorTile.setPipeline('Light2D');
+      } catch {
+        /* no-op */
+      }
     }
   } else {
-    const fallback = scene.add.rectangle(canvasW / 2, canvasH / 2, canvasW, canvasH, 0x2a2a2a);
-    fallback.setDepth(-2);
+    for (const seg of gen.segments) {
+      const sx = seg.x * CELL;
+      const sy = seg.y * CELL;
+      const sw = seg.w * CELL;
+      const sh = seg.h * CELL;
+      const fallback = scene.add.rectangle(sx + sw / 2, sy + sh / 2, sw, sh, 0x2a2a2a);
+      fallback.setDepth(-2);
+    }
   }
+
+  // Seeded RNG for deterministic wall variety
+  const seedVal = gen.gridWidth * 1000 + gen.gridHeight;
+  let rngState = seedVal;
+  const rng = () => {
+    rngState = (rngState * 1664525 + 1013904223) & 0x7fffffff;
+    return rngState / 0x7fffffff;
+  };
+
+  const wallKey = gen.wallImage && scene.textures.exists(gen.wallImage) ? gen.wallImage : null;
+  let wallTileScale = 1;
+  if (wallKey) {
+    const wallSrcW = scene.textures.get(wallKey).getSourceImage().width;
+    wallTileScale = (CELL * 3) / wallSrcW;
+  }
+
+  const ROTATIONS = [0, 90, 180, 270];
+  const TINT_LO = 0.7;
+  const TINT_HI = 1.0;
 
   const wallGroup = scene.physics.add.staticGroup();
   for (let gy = 0; gy < gen.gridHeight; gy++) {
@@ -335,9 +371,39 @@ function buildCorridorRoom(
       ].some(([dx, dy]) => grid[gy + dy]?.[gx + dx] === 1);
       if (!bordersFloor) continue;
 
-      const rect = scene.add.rectangle(gx * CELL + CELL / 2, gy * CELL + CELL / 2, CELL, CELL);
-      rect.setVisible(false);
-      wallGroup.add(rect);
+      if (wallKey) {
+        const wallTile = scene.add.tileSprite(
+          gx * CELL + CELL / 2,
+          gy * CELL + CELL / 2,
+          CELL,
+          CELL,
+          wallKey,
+        );
+        wallTile.setTileScale(wallTileScale, wallTileScale);
+        wallTile.setTilePosition(gx * CELL, gy * CELL);
+        wallTile.setAngle(ROTATIONS[Math.floor(rng() * 4)]);
+        const bright = TINT_LO + rng() * (TINT_HI - TINT_LO);
+        const tintVal = Math.round(bright * 255);
+        wallTile.setTint(Phaser.Display.Color.GetColor(tintVal, tintVal, tintVal));
+        wallTile.setDepth(-1);
+        try {
+          wallTile.setPipeline('Light2D');
+        } catch {
+          /* no-op */
+        }
+        wallGroup.add(wallTile);
+      } else {
+        const bright = 0x14 + Math.floor(rng() * 0x0c);
+        const rect = scene.add.rectangle(
+          gx * CELL + CELL / 2,
+          gy * CELL + CELL / 2,
+          CELL,
+          CELL,
+          Phaser.Display.Color.GetColor(bright, bright + 2, bright + 4),
+        );
+        rect.setDepth(-1);
+        wallGroup.add(rect);
+      }
     }
   }
 

@@ -122,7 +122,7 @@ export class GameScene extends Phaser.Scene {
 
     this.spawnPlayer(this.sceneDef);
     this.zoneManager.setPlayer(this.player);
-    this.dof.setFocusTarget(this.player.sprite);
+    if (this.isCave) this.dof.enable();
 
     this.tryLoad3DCharacter();
 
@@ -256,8 +256,13 @@ export class GameScene extends Phaser.Scene {
     }
 
     this.depthSort.update();
-    this.dof.update();
     this.lampRenderer.update(this.zoneManager.propShadows);
+    this.dof.setLamp(
+      this.lampRenderer.lampX,
+      this.lampRenderer.lampY,
+      this.lampRenderer.displayedRadius,
+    );
+    this.dof.update();
 
     // Update 3D props with lamp position for dynamic shadows
     if (this.zoneManager.props3d.length > 0) {
