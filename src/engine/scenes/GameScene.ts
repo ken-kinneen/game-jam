@@ -32,6 +32,7 @@ import { AmbienceSystem } from '../systems/AmbienceSystem';
 import { AmbientAudioSystem } from '../systems/AmbientAudioSystem';
 import { DepthSortSystem } from '../systems/DepthSortSystem';
 import { DepthOfFieldSystem } from '../systems/DepthOfFieldSystem';
+import { WorldReactivitySystem } from '../systems/WorldReactivitySystem';
 import { CharacterController3D } from '../rendering/CharacterController3D';
 import { ShopOverlay } from '../ui/ShopOverlay';
 
@@ -55,6 +56,7 @@ export class GameScene extends Phaser.Scene {
   private ambientAudio!: AmbientAudioSystem;
   private depthSort!: DepthSortSystem;
   private dof!: DepthOfFieldSystem;
+  private worldReactivity!: WorldReactivitySystem;
   private char3d: CharacterController3D | null = null;
   private shopOverlay: ShopOverlay | null = null;
 
@@ -158,6 +160,14 @@ export class GameScene extends Phaser.Scene {
     this.ambienceSystem = new AmbienceSystem(this, this.player, this.isCave);
     this.ambientAudio = new AmbientAudioSystem(this, eventBus, configManager);
     this.ambientAudio.create();
+
+    this.worldReactivity = new WorldReactivitySystem(this, this.player, this.isCave);
+    this.worldReactivity.setWallGroup(this.wallGroup);
+    this.worldReactivity.create();
+
+    for (const { source } of this.zoneManager.propShadows) {
+      this.worldReactivity.registerProp(source);
+    }
 
     if (this.isCave) {
       this.unsubFuel = eventBus.on('item:picked_up', ({ itemId }) => {
@@ -275,6 +285,12 @@ export class GameScene extends Phaser.Scene {
 
     this.ambienceSystem.update();
     this.ambientAudio.update();
+    this.worldReactivity.update(
+      this.lampRenderer.lampX,
+      this.lampRenderer.lampY,
+      this.lampRenderer.lampAngle,
+      this.lampRenderer.displayedRadius,
+    );
   }
 
   /** Expose player stats so ShopScene can apply upgrades. */
@@ -292,6 +308,7 @@ export class GameScene extends Phaser.Scene {
     this.ambientAudio?.destroy();
     this.char3d?.destroy();
     this.dof?.destroy();
+    this.worldReactivity?.destroy();
     for (const unsub of this.unsubShop) unsub();
     this.unsubShop = [];
   }
