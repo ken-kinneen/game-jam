@@ -3,6 +3,7 @@
   "type": "upgrade",
   "name": "Bright Lamp",
   "sprite": "placeholder",
+  "description": "Polished reflector, denser wick. Pushes the dark back another few meters.",
   "rarity": "common",
   "cost": { "core:rusty_can": 8 },
   "effects": [{ "kind": "stat", "stat": "glowRadius", "mod": "increased", "value": 0.25 }],

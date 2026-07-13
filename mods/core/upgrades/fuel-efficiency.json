@@ -3,6 +3,7 @@
   "type": "upgrade",
   "name": "Fuel Efficiency",
   "sprite": "placeholder",
+  "description": "Throttle the burn. Same light, less panic when the gauge dips.",
   "rarity": "uncommon",
   "cost": { "core:rusty_can": 10 },
   "effects": [{ "kind": "stat", "stat": "fuelBurnRate", "mod": "more", "value": -0.2 }],

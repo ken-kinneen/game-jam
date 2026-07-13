@@ -3,6 +3,7 @@
   "type": "upgrade",
   "name": "Deep Pockets",
   "sprite": "placeholder",
+  "description": "Reinforced linings and a suspicious number of zippers. Haul more trash per run.",
   "rarity": "uncommon",
   "cost": { "core:rusty_can": 12, "core:plastic_bag": 3 },
   "effects": [{ "kind": "stat", "stat": "carryCapacity", "mod": "flat", "value": 5 }],

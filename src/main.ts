@@ -6,7 +6,6 @@ import { configManager } from './engine/core/ConfigManager';
 import { BootScene } from './engine/scenes/BootScene';
 import { GameScene } from './engine/scenes/GameScene';
 import { UIScene } from './engine/scenes/UIScene';
-import { ShopScene } from './engine/scenes/ShopScene';
 import { UpgradeScene } from './engine/scenes/UpgradeScene';
 import { CutsceneScene } from './engine/scenes/CutsceneScene';
 import { DebugPanel } from './ui/DebugPanel';
@@ -140,7 +139,7 @@ async function boot() {
         },
       ],
     },
-    scene: [BootScene, GameScene, UIScene, ShopScene, UpgradeScene, CutsceneScene],
+    scene: [BootScene, GameScene, UIScene, UpgradeScene, CutsceneScene],
   });
 
   game.scene.start('BootScene', { manifests });

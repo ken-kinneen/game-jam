@@ -1,0 +1,55 @@
+{
+  "hash": "6312192c",
+  "configHash": "c9156474",
+  "lockfileHash": "fd8cf96e",
+  "browserHash": "c4f80082",
+  "optimized": {
+    "phaser": {
+      "src": "../../node_modules/phaser/dist/phaser.js",
+      "file": "phaser.js",
+      "fileHash": "e7876d9c",
+      "needsInterop": true
+    },
+    "phaser-raycaster": {
+      "src": "../../node_modules/phaser-raycaster/src/main-esm.js",
+      "file": "phaser-raycaster.js",
+      "fileHash": "feadbb98",
+      "needsInterop": false
+    },
+    "zod": {
+      "src": "../../node_modules/zod/index.js",
+      "file": "zod.js",
+      "fileHash": "74226542",
+      "needsInterop": false
+    },
+    "three": {
+      "src": "../../node_modules/three/build/three.module.js",
+      "file": "three.js",
+      "fileHash": "90e43a24",
+      "needsInterop": false
+    },
+    "three/addons/loaders/GLTFLoader.js": {
+      "src": "../../node_modules/three/examples/jsm/loaders/GLTFLoader.js",
+      "file": "three_addons_loaders_GLTFLoader__js.js",
+      "fileHash": "ecc4a966",
+      "needsInterop": false
+    },
+    "three/addons/loaders/FBXLoader.js": {
+      "src": "../../node_modules/three/examples/jsm/loaders/FBXLoader.js",
+      "file": "three_addons_loaders_FBXLoader__js.js",
+      "fileHash": "7783d895",
+      "needsInterop": false
+    }
+  },
+  "chunks": {
+    "chunk-FVQTIQGM": {
+      "file": "chunk-FVQTIQGM.js"
+    },
+    "chunk-TSPYLKCY": {
+      "file": "chunk-TSPYLKCY.js"
+    },
+    "chunk-V4OQ3NZ2": {
+      "file": "chunk-V4OQ3NZ2.js"
+    }
+  }
+}

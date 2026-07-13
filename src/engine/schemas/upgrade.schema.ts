@@ -21,6 +21,7 @@ export const UpgradeDefSchema = z.object({
   type: z.literal('upgrade'),
   name: z.string().min(1),
   sprite: z.string().min(1),
+  description: z.string().min(1).optional(),
   rarity: z.enum(['common', 'uncommon', 'rare', 'legendary']).default('common'),
   cost: z.record(z.string(), z.number().nonnegative()).default({}),
   effects: z.array(EffectSchema).default([]),

@@ -41,6 +41,7 @@ export class ZoneManager {
     private readonly director: SceneDirector,
     private player: Entity | undefined,
     private readonly depthSort?: DepthSortSystem,
+    private readonly openShop?: () => void,
   ) {}
 
   /** Resets zone state for a fresh scene load. */
@@ -385,7 +386,7 @@ export class ZoneManager {
   private handleInteraction(zone: InteractZone): void {
     if (zone.action === 'shop') {
       if (this.sceneDef?.kind === 'shop') {
-        this.scene.scene.launch('ShopScene');
+        this.openShop?.();
       } else {
         this.scene.cameras.main.fade(500, 0, 0, 0, false, (_cam: unknown, progress: number) => {
           if (progress >= 1) {
@@ -394,7 +395,7 @@ export class ZoneManager {
         });
       }
     } else if (zone.action === 'upgrade') {
-      this.scene.scene.launch('UpgradeScene');
+      this.openShop?.();
     }
   }
 

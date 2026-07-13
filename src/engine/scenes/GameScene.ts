@@ -27,6 +27,7 @@ import { AmbienceSystem } from '../systems/AmbienceSystem';
 import { AmbientAudioSystem } from '../systems/AmbientAudioSystem';
 import { DepthSortSystem } from '../systems/DepthSortSystem';
 import { CharacterController3D } from '../rendering/CharacterController3D';
+import { ShopOverlay } from '../ui/ShopOverlay';
 
 /**
  * ONE generic GameScene configured by a SceneDef.
@@ -48,6 +49,7 @@ export class GameScene extends Phaser.Scene {
   private ambientAudio!: AmbientAudioSystem;
   private depthSort!: DepthSortSystem;
   private char3d: CharacterController3D | null = null;
+  private shopOverlay: ShopOverlay | null = null;
 
   private sceneDefId = 'core:home';
   private sceneDef: SceneDef | undefined;
@@ -95,12 +97,17 @@ export class GameScene extends Phaser.Scene {
     this.proceduralCaveMap = room.caveMap;
     this.proceduralEntry = room.caveEntry;
 
+    if (!this.shopOverlay) {
+      this.shopOverlay = new ShopOverlay(() => this.getPlayerStats());
+    }
+
     this.zoneManager = new ZoneManager(
       this,
       this.sceneDef,
       this.director,
       undefined,
       this.depthSort,
+      () => this.shopOverlay!.open(),
     );
     this.zoneManager.reset();
 
