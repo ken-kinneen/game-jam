@@ -11,12 +11,11 @@ const CONE_TEX_SIZE = 512;
 const GLOW_TEX_SIZE = 512;
 const AMBIENT_TEX_SIZE = 128;
 const LAMP_POINT_TEX_SIZE = 64;
-const CONE_HALF_ANGLE = (48 * Math.PI) / 180; // 48° total per shoulder beam
-const BEAM_DIVERGENCE = (10 * Math.PI) / 180;
+const CONE_HALF_ANGLE = (55 * Math.PI) / 180; // 110° total cone
 
 // Backpack lamp geometry — offset from character center
-const LAMP_BEHIND = 4; // px behind the character (opposite of facing)
-const LAMP_SPREAD = 22; // px apart perpendicular to facing (each side)
+const LAMP_BEHIND = 8; // px behind the character (opposite of facing)
+const LAMP_SPREAD = 5; // px apart perpendicular to facing (each side)
 const LAMP_POINT_RADIUS = 18; // visible radius of each backpack lamp circle
 
 /** Damped spring for lamp sway — reacts to player acceleration. */
@@ -104,8 +103,7 @@ export class LampRenderer {
   lampY = 0;
   lampAngle = Math.PI / 2; // facing down initially
   private fow!: Phaser.GameObjects.RenderTexture;
-  private coneEraserL!: Phaser.GameObjects.Sprite;
-  private coneEraserR!: Phaser.GameObjects.Sprite;
+  private coneEraser!: Phaser.GameObjects.Sprite;
   private ambientEraser!: Phaser.GameObjects.Sprite;
   private lampPointEraserL!: Phaser.GameObjects.Sprite;
   private lampPointEraserR!: Phaser.GameObjects.Sprite;
@@ -114,8 +112,7 @@ export class LampRenderer {
   private darknessAlpha = 0.88;
   private raycaster!: PhaserRaycaster.Raycaster;
   private ray!: PhaserRaycaster.Raycaster.Ray;
-  private warmGlowL!: Phaser.GameObjects.Sprite;
-  private warmGlowR!: Phaser.GameObjects.Sprite;
+  private warmGlow!: Phaser.GameObjects.Sprite;
   private lampColor = 'default';
   private sway: LampSway = { offsetX: 0, offsetY: 0, velX: 0, velY: 0 };
   private prevPlayerX = 0;
@@ -171,20 +168,13 @@ export class LampRenderer {
     this.createLampPointTexture();
     this.createConeGlowTexture();
 
-    this.coneEraserL = this.scene.make.sprite({
+    this.coneEraser = this.scene.make.sprite({
       x: 0,
       y: 0,
       key: '__cone_eraser',
       add: false,
     });
-    this.coneEraserL.setOrigin(0.15, 0.5);
-    this.coneEraserR = this.scene.make.sprite({
-      x: 0,
-      y: 0,
-      key: '__cone_eraser',
-      add: false,
-    });
-    this.coneEraserR.setOrigin(0.15, 0.5);
+    this.coneEraser.setOrigin(0.15, 0.5);
 
     this.ambientEraser = this.scene.make.sprite({
       x: 0,
@@ -211,8 +201,10 @@ export class LampRenderer {
     this.lampPointGlowR.setOrigin(0.5, 0.5);
     this.lampPointGlowR.setTint(0xffc864);
 
-    this.warmGlowL = this.createWarmGlow();
-    this.warmGlowR = this.createWarmGlow();
+    this.warmGlow = this.scene.add.sprite(0, 0, '__cone_glow');
+    this.warmGlow.setBlendMode(Phaser.BlendModes.ADD);
+    this.warmGlow.setDepth(799);
+    this.warmGlow.setOrigin(0.15, 0.5);
 
     this.displayedRadius = configManager.get<number>('lamp', 'glowRadiusMax');
 
@@ -228,14 +220,6 @@ export class LampRenderer {
     const ctx = c.getContext('2d')!;
     drawCone(ctx, S, CONE_HALF_ANGLE, null);
     this.scene.textures.addCanvas('__cone_eraser', c);
-  }
-
-  private createWarmGlow(): Phaser.GameObjects.Sprite {
-    const glow = this.scene.add.sprite(0, 0, '__cone_glow');
-    glow.setBlendMode(Phaser.BlendModes.ADD);
-    glow.setDepth(799);
-    glow.setOrigin(0.15, 0.5);
-    return glow;
   }
 
   private createAmbientEraserTexture(): void {
@@ -356,11 +340,9 @@ export class LampRenderer {
 
     const lL = { x: lampX + backDx + perpDx, y: lampY + backDy + perpDy };
     const lR = { x: lampX + backDx - perpDx, y: lampY + backDy - perpDy };
-    // Midpoint remains the logical lamp origin for shared light systems.
+    // Cone origin — midpoint between the two lamps
     const coneOriginX = (lL.x + lR.x) / 2;
     const coneOriginY = (lL.y + lR.y) / 2;
-    const beamAngleL = this.facingAngle + BEAM_DIVERGENCE;
-    const beamAngleR = this.facingAngle - BEAM_DIVERGENCE;
 
     const wb = this.scene.physics.world.bounds;
     this.fow.clear();
@@ -379,23 +361,21 @@ export class LampRenderer {
       this.fow.erase(this.lampPointEraserL, lL.x - wb.x, lL.y - wb.y);
       this.fow.erase(this.lampPointEraserR, lR.x - wb.x, lR.y - wb.y);
 
-      // One directional beam from each shoulder lamp.
+      // Directional cone from between the two lamps
       const coneScale = (this.displayedRadius * 2) / (CONE_TEX_SIZE * 0.85);
-      this.coneEraserL.setScale(coneScale);
-      this.coneEraserL.setRotation(beamAngleL);
-      this.coneEraserR.setScale(coneScale);
-      this.coneEraserR.setRotation(beamAngleR);
-      this.fow.erase(this.coneEraserL, lL.x - wb.x, lL.y - wb.y);
-      this.fow.erase(this.coneEraserR, lR.x - wb.x, lR.y - wb.y);
+      this.coneEraser.setScale(coneScale);
+      this.coneEraser.setRotation(this.facingAngle);
+      this.fow.erase(this.coneEraser, coneOriginX - wb.x, coneOriginY - wb.y);
     }
 
     this.updatePropShadows(propShadows, lampX, lampY, this.displayedRadius);
 
-    // Matching warm glow for each shoulder beam.
+    // Position warm glow cone from between the lamps
+    this.warmGlow.setPosition(coneOriginX, coneOriginY);
     const glowScale = (this.displayedRadius * 2) / (GLOW_TEX_SIZE * 0.85);
-    const glowAlpha = ratio > 0 ? 0.28 : 0;
-    this.positionWarmGlow(this.warmGlowL, lL.x, lL.y, beamAngleL, glowScale, glowAlpha);
-    this.positionWarmGlow(this.warmGlowR, lR.x, lR.y, beamAngleR, glowScale, glowAlpha);
+    this.warmGlow.setScale(Math.max(glowScale, 0.01));
+    this.warmGlow.setRotation(this.facingAngle);
+    this.warmGlow.setAlpha(ratio > 0 ? 0.65 : 0);
 
     // Lamp point glows at backpack positions
     const lpGlowScale = (LAMP_POINT_RADIUS * 3) / LAMP_POINT_TEX_SIZE;
@@ -415,20 +395,6 @@ export class LampRenderer {
       this.pointLight.radius = this.displayedRadius * 0.6;
       this.pointLight.intensity = ratio > 0 ? 1.2 + Math.sin(t * 0.004) * 0.05 : 0;
     }
-  }
-
-  private positionWarmGlow(
-    glow: Phaser.GameObjects.Sprite,
-    x: number,
-    y: number,
-    angle: number,
-    scale: number,
-    alpha: number,
-  ): void {
-    glow.setPosition(x, y);
-    glow.setScale(Math.max(scale, 0.01));
-    glow.setRotation(angle);
-    glow.setAlpha(alpha);
   }
 
   private updateFacingAngle(dt: number): void {
@@ -494,8 +460,9 @@ export class LampRenderer {
     }
 
     this.rebuildGlowTexture();
-    this.warmGlowL?.setTexture('__cone_glow');
-    this.warmGlowR?.setTexture('__cone_glow');
+    if (this.warmGlow) {
+      this.warmGlow.setTexture('__cone_glow');
+    }
   }
 
   applyDarknessAlpha(): void {

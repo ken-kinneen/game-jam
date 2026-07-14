@@ -10,7 +10,6 @@ export interface TransformerQuestConfig {
 /** Owns transformer quest progress, HUD feedback, and map-completion timing. */
 export class TransformerQuestSystem {
   private readonly objective: TransformerObjective;
-  private introTimer: Phaser.Time.TimerEvent | null = null;
   private completionTimer: Phaser.Time.TimerEvent | null = null;
   private readyToExit = false;
   private completionStarted = false;
@@ -22,7 +21,6 @@ export class TransformerQuestSystem {
     private readonly onComplete: () => void,
   ) {
     this.objective = new TransformerObjective(transformerCount);
-    this.publishObjectiveAfterHudStarts();
   }
 
   activate(transformerId: string, position: { x: number; y: number }): TransformerProgress {
@@ -68,15 +66,8 @@ export class TransformerQuestSystem {
   }
 
   destroy(): void {
-    this.introTimer?.remove(false);
     this.completionTimer?.remove(false);
     eventBus.emit('quest:cleared', {});
-  }
-
-  private publishObjectiveAfterHudStarts(): void {
-    this.introTimer = this.scene.time.delayedCall(300, () => {
-      this.publishObjective();
-    });
   }
 
   private publishObjective(): void {

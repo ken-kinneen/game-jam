@@ -120,7 +120,6 @@
     "completionText": "POWER GRID RESTORED",
     "exitTitle": "Return to the cave entrance",
     "completionScene": "core:home",
-    "minimapUnlockAt": 2,
     "powerCable": {
       "sampleDistance": 18,
       "poweredRadius": 30,

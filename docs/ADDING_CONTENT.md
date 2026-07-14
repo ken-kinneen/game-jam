@@ -1,25 +1,7 @@
 # Adding Content to TRASHED
 
 All game content lives in `mods/`. The base game is `mods/core/`.
-You should **never** need to touch `src/engine/` when adding items, enemies, upgrades,
-recipes, or scenes that use mechanics already supported by the content schemas.
-
-## Content vs. New Mechanics
-
-The mods-only rule applies to content that fits the existing JSON schemas and engine behavior.
-Adding a genuinely new mechanic may require an engine change—for example, a new interaction
-action, quest type, AI behavior, or rendering capability.
-
-When a mechanic requires engine work:
-
-1. Keep assets, placements, labels, and tuning values in `mods/`.
-2. Add generic, reusable schema fields instead of hardcoding a particular scene or asset ID.
-3. Put substantial behavior in its own system under `src/engine/systems/`.
-4. Keep scene and zone managers focused on orchestration and delegation.
-5. Add focused tests for stateful behavior.
-6. Include the engine and mod changes together, and explain why a mods-only change was not possible.
-
-If the desired behavior can already be expressed in JSON, a PR should still touch **only** `mods/`.
+You should **never** need to touch `src/engine/` to add items, enemies, upgrades, recipes, or scenes.
 
 ## Quick Start
 
@@ -28,7 +10,7 @@ If the desired behavior can already be expressed in JSON, a PR should still touc
 3. Change the `id` to `core:your_snake_case_name` (the prefix must match the mod)
 4. Add a sprite entry to `mods/core/assets/manifest.json` (or use `"placeholder"`)
 5. Run `npm run validate` — fix any errors
-6. Open a PR touching **only** `mods/` when using existing mechanics
+6. Open a PR touching **only** `mods/`
 
 ---
 
@@ -146,7 +128,9 @@ Location: `mods/core/scenes/`
 }
 ```
 
-Scenes can opt into an engine-supported quest through a typed `quest` block. For example:
+### Transformer Quest
+
+Cave scenes can use the transformer objective through a typed `quest` block:
 
 ```json
 "quest": {
@@ -155,7 +139,6 @@ Scenes can opt into an engine-supported quest through a typed `quest` block. For
   "completionText": "POWER GRID RESTORED",
   "exitTitle": "Return to the cave entrance",
   "completionScene": "core:home",
-  "minimapUnlockAt": 2,
   "powerCable": {
     "sampleDistance": 18,
     "poweredRadius": 30,
@@ -164,12 +147,11 @@ Scenes can opt into an engine-supported quest through a typed `quest` block. For
 }
 ```
 
-The scene keeps its labels and destination in `mods/`; the reusable quest behavior lives in its
-dedicated engine system. `powerCable` adds a loose player trail that locks and becomes energized
-at each transformer. Players within `poweredRadius` consume fuel at the configured multiplier.
-`minimapUnlockAt` keeps both the minimap and Tab map offline until that many transformers are active.
-After the last transformer, the quest changes to `exitTitle`; completion occurs only when the player
-uses the cave exit.
+The objective appears after the player activates the first transformer. Each
+activated transformer powers the cable laid since the previous one. Walking
+near a powered cable reduces fuel consumption by `fuelBurnMultiplier`. After
+all transformers are active, the player must return to the cave entrance to
+complete the objective and transition to `completionScene`.
 
 ---
 

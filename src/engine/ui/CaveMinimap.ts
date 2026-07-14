@@ -13,7 +13,15 @@ const EXPANDED_MARGIN = 96;
 const EXPANDED_MAX_WIDTH = 1100;
 const EXPANDED_MAX_HEIGHT = 800;
 
-/** Screen-space cave map with a following minimap and a full explored-map overlay. */
+/**
+ * Preserved cave-map renderer used by UIScene when its feature flag is enabled.
+ * CaveExploration owns fog-of-war state, so revealed cells remain known while
+ * current visibility continues to shrink and grow with lamp fuel. In compact
+ * mode the map follows the player inside a clipped top-right viewport; expanded
+ * mode fits the explored cave into a centered overlay. Entry, exit, player, and
+ * energized-cable markers are drawn only from snapshot data supplied by
+ * GameScene, keeping this renderer independent from cave gameplay systems.
+ */
 export class CaveMinimap {
   private readonly backdrop: Phaser.GameObjects.Graphics;
   private readonly background: Phaser.GameObjects.Graphics;

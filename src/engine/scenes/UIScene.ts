@@ -9,6 +9,21 @@ const BAR_WIDTH = 360;
 const BAR_HEIGHT = 28;
 const HUD_PADDING = 32;
 
+/**
+ * Future cave-map feature switch. The map is intentionally disabled for the
+ * current game version, but its implementation remains ready for reuse.
+ *
+ * When enabled, UIScene asks GameScene for a CaveMinimapSnapshot each frame.
+ * CaveMinimap then reveals only cells reached by the player's fuel-scaled lamp,
+ * follows the player in the top-right HUD, and opens the explored overview with
+ * Tab. A transformer quest can delay access with `minimapUnlockAt`; powered
+ * cable paths are added to the map after their segments become energized.
+ *
+ * To restore the feature, set this flag to true. Scene-specific unlock timing
+ * can then be configured in the scene JSON through `quest.minimapUnlockAt`.
+ */
+const CAVE_MAP_ENABLED = false;
+
 /** HUD overlay: lamp fuel bar, trash counter, status messages. Driven entirely by events. */
 export class UIScene extends Phaser.Scene {
   private eventGroup!: EventGroup;
@@ -52,7 +67,7 @@ export class UIScene extends Phaser.Scene {
     this.buildHUD();
     this.caveMinimap = new CaveMinimap(this);
     this.bindEvents();
-    this.bindMapKeys();
+    if (CAVE_MAP_ENABLED) this.bindMapKeys();
     this.refreshTrashDisplay();
 
     const activeSceneId = this.initialSceneId ?? 'core:home';
@@ -77,7 +92,7 @@ export class UIScene extends Phaser.Scene {
         this.lampWarning.setVisible(false);
       }
 
-      this.syncMinimap();
+      if (CAVE_MAP_ENABLED) this.syncMinimap();
     }
   }
 
@@ -97,8 +112,8 @@ export class UIScene extends Phaser.Scene {
     this.lampWarning.setVisible(false);
     this.cableEfficiencyText.setVisible(false);
     if (!cave) this.questText.setVisible(false);
-    this.caveMinimap.setActive(cave);
-    this.caveMinimap.setUnlocked(this.minimapUnlocked);
+    this.caveMinimap.setActive(CAVE_MAP_ENABLED && cave);
+    this.caveMinimap.setUnlocked(CAVE_MAP_ENABLED && this.minimapUnlocked);
 
     this.homeTitle.setVisible(!cave);
   }
@@ -196,16 +211,18 @@ export class UIScene extends Phaser.Scene {
       .setVisible(false);
 
     this.questText = this.add
-      .text(HUD_PADDING, HUD_PADDING + 150, '', {
+      .text(w - HUD_PADDING, HUD_PADDING, '', {
         fontFamily: '"Courier New", monospace',
-        fontSize: '20px',
+        fontSize: '15px',
         color: '#f4e8c1',
         backgroundColor: '#080a0ed9',
-        padding: { x: 12, y: 10 },
+        padding: { x: 9, y: 7 },
         stroke: '#000000',
-        strokeThickness: 3,
-        lineSpacing: 4,
+        strokeThickness: 2,
+        lineSpacing: 2,
+        align: 'right',
       })
+      .setOrigin(1, 0)
       .setScrollFactor(0)
       .setDepth(103)
       .setAlpha(0)
@@ -273,6 +290,7 @@ export class UIScene extends Phaser.Scene {
   }
 
   private handleMapToggle(event: KeyboardEvent): void {
+    if (!CAVE_MAP_ENABLED) return;
     event.preventDefault();
     if (!this.isCave) return;
     if (!this.minimapUnlocked) {
@@ -321,8 +339,8 @@ export class UIScene extends Phaser.Scene {
     });
 
     this.eventGroup.on('quest:updated', ({ title, current, total, complete }) => {
-      const heading = complete ? 'OBJECTIVE COMPLETE' : 'OBJECTIVE';
-      this.questText.setText(`${heading}\n${title}\nTransformers activated: ${current} / ${total}`);
+      const heading = complete ? 'OBJECTIVE COMPLETE' : `OBJECTIVE  ${current} / ${total}`;
+      this.questText.setText(`${heading}\n${title}`);
       this.questText.setVisible(true);
       this.tweens.killTweensOf(this.questText);
       this.tweens.add({ targets: this.questText, alpha: 1, duration: 250 });
@@ -334,6 +352,7 @@ export class UIScene extends Phaser.Scene {
 
     this.eventGroup.on('transformer:activated', ({ activated }) => {
       if (
+        CAVE_MAP_ENABLED &&
         this.minimapUnlockAt !== null &&
         !this.minimapUnlocked &&
         activated >= this.minimapUnlockAt
