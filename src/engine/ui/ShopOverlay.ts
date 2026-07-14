@@ -50,10 +50,17 @@ export class ShopOverlay {
     this.root.className = 'shop-root';
     document.body.appendChild(this.root);
 
-    window.addEventListener('keydown', (e) => {
-      if (!this.openFlag) return;
-      if (e.code === 'Escape' || e.code === 'KeyE') this.close();
-    });
+    window.addEventListener(
+      'keydown',
+      (e) => {
+        if (!this.openFlag) return;
+        if (e.code !== 'Escape' && e.code !== 'KeyE' && e.key.toLowerCase() !== 'e') return;
+        e.preventDefault();
+        e.stopImmediatePropagation();
+        this.close();
+      },
+      true,
+    );
   }
 
   open(): void {
@@ -98,7 +105,7 @@ export class ShopOverlay {
         <aside class="shop-side">
           <div>
             <p class="shop-brand">TRASHED</p>
-            <h1 class="shop-title">Scrap Counter</h1>
+            <h1 class="shop-title">Crafting Bench</h1>
           </div>
           <div class="shop-char" id="shop-char">
             <img class="shop-char-fallback" src="/mods/core/assets/sprites/player/walk.png" alt="Player" />
@@ -113,8 +120,8 @@ export class ShopOverlay {
         <section class="shop-main">
           <div class="shop-header">
             <div>
-              <h2>Upgrades</h2>
-              <p>Trade junk for gear. Better lamps, quicker feet, deeper pockets — whatever keeps you alive down there.</p>
+              <h2>Crafting &amp; Upgrades</h2>
+              <p>Turn recovered scrap into gear and tune the lamp for the next expedition.</p>
             </div>
             <button type="button" class="shop-close" id="shop-close">Close · E</button>
           </div>
@@ -233,7 +240,7 @@ export class ShopOverlay {
 }
 
 function formatStat(stat: string, value: number): string {
-  if (stat === 'fuelBurnRate') return `${(value * 100).toFixed(0)}%`;
+  if (stat === 'fuelBurnRate') return `${value.toFixed(1)}/s`;
   if (stat === 'moveSpeed' || stat === 'pickupRadius' || stat === 'glowRadius') {
     return value.toFixed(0);
   }

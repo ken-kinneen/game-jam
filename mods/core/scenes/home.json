@@ -16,13 +16,18 @@
     {
       "image": "furniture/desk_5",
       "position": {
-        "x": 413,
-        "y": 281
+        "x": 420,
+        "y": 420
       },
-      "scale": 0.3,
+      "scale": 0.22,
       "depth": 2,
       "collides": true,
-      "angle": 90
+      "collisionScale": 0.65,
+      "angle": 180,
+      "action": "shop",
+      "actionLabel": "Use Crafting Bench",
+      "interactionRadius": 42,
+      "interactionHighlight": "tint"
     },
     {
       "image": "furniture/bed_7",
@@ -34,17 +39,6 @@
       "depth": 2,
       "collides": true,
       "angle": 0
-    },
-    {
-      "image": "furniture/chargingrig",
-      "position": {
-        "x": 390,
-        "y": 438
-      },
-      "scale": 0.2,
-      "depth": 2,
-      "collides": true,
-      "angle": 90
     },
     {
       "image": "furniture/toolbox_2",
@@ -121,15 +115,6 @@
       "position": {
         "x": 201,
         "y": 413
-      }
-    }
-  ],
-  "shops": [
-    {
-      "label": "Craft ",
-      "position": {
-        "x": 365,
-        "y": 263
       }
     }
   ],

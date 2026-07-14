@@ -36,26 +36,27 @@ export class CharacterController3D {
     }
   }
 
-  /** Attach to an entity. Swaps the sprite texture to the 3D render output. */
-  attach(entity: Entity): void {
+  /** Attach to an entity using the same dimensions as the player config. */
+  attach(entity: Entity, displayHeight = this.renderSize, bodyRadiusPct = 0.35): void {
     if (!this.loaded) return;
     this.entity = entity;
 
     // Swap sprite texture to the 3D rendered canvas
     const key = this.renderer.getTextureKey();
     entity.sprite.setTexture(key);
-    entity.sprite.setDisplaySize(this.renderSize, this.renderSize);
+    const aspect = entity.sprite.width / entity.sprite.height;
+    entity.sprite.setDisplaySize(displayHeight * aspect, displayHeight);
+    entity.sprite.setVisible(true);
 
     // Ensure the physics body is still correct after texture swap
     const body = entity.sprite.body as Phaser.Physics.Arcade.Body;
     if (body) {
-      const radiusPct = 0.35;
-      const w = this.renderSize;
-      const h = this.renderSize;
+      const w = entity.sprite.displayWidth;
+      const h = entity.sprite.displayHeight;
       body.setCircle(
-        Math.min(w, h) * radiusPct,
-        w * ((1 - radiusPct * 2) / 2),
-        h * ((1 - radiusPct * 2) / 2),
+        Math.min(w, h) * bodyRadiusPct,
+        w * ((1 - bodyRadiusPct * 2) / 2),
+        h * ((1 - bodyRadiusPct * 2) / 2),
       );
     }
   }

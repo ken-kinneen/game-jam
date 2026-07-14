@@ -5,6 +5,7 @@ import type { SceneDirector } from './SceneDirector';
 import type { DepthSortSystem } from '../systems/DepthSortSystem';
 import type { DepthOfFieldSystem } from '../systems/DepthOfFieldSystem';
 import { TransformerQuestSystem } from '../systems/TransformerQuestSystem';
+import { progressionManager } from '../core/ProgressionManager';
 import { spawnSceneProps, type PropShadow, type Prop3DInstance } from './propSpawner';
 
 type InteractionHighlight = 'glow' | 'tint' | 'none';
@@ -29,6 +30,7 @@ export interface InteractZone {
   interactionHighlight: InteractionHighlight;
   objectiveId?: string;
   propVisual?: Phaser.GameObjects.Image;
+  showScreenPrompt?: boolean;
 }
 
 export type { PropShadow } from './propSpawner';
@@ -148,7 +150,7 @@ export class ZoneManager {
       this.showTooltip(nearest.tooltip);
       this.setPropHighlight(nearest.propVisual, true, nearest.interactionHighlight);
       this.promptText.setText(`E ${nearest.displayLabel}`);
-      this.promptText.setVisible(true);
+      this.promptText.setVisible(nearest.showScreenPrompt ?? true);
     } else if (!nearest && this.activeInteract) {
       this.hideTooltip(this.activeInteract.tooltip);
       this.setPropHighlight(
@@ -323,6 +325,7 @@ export class ZoneManager {
     const pos = prop.position;
     const displayLabel = prop.actionLabel ?? prop.action ?? '';
     const tooltip = this.createZoneTooltip(pos.x, pos.y + 40, displayLabel);
+    this.positionPropTooltip(tooltip, visual, pos);
     const interactionHighlight = prop.interactionHighlight ?? 'glow';
 
     if (visual?.preFX && interactionHighlight === 'glow') {
@@ -356,6 +359,7 @@ export class ZoneManager {
         interactionHighlight,
         objectiveId: prop.action === 'transformer' ? `transformer:${pos.x}:${pos.y}` : undefined,
         propVisual: visual,
+        showScreenPrompt: false,
       });
     }
   }
@@ -392,6 +396,34 @@ export class ZoneManager {
     tip.setDepth(11);
     tip.setVisible(false);
     return tip;
+  }
+
+  /** Keeps prop tooltips next to their artwork and inside the room bounds. */
+  private positionPropTooltip(
+    tooltip: Phaser.GameObjects.Text,
+    visual: Phaser.GameObjects.Image | undefined,
+    fallback: { x: number; y: number },
+  ): void {
+    const room = this.scene.physics.world.bounds;
+    const bounds = visual?.getBounds();
+    const left = bounds?.left ?? fallback.x;
+    const right = bounds?.right ?? fallback.x;
+    const top = bounds?.top ?? fallback.y;
+    const bottom = bounds?.bottom ?? fallback.y;
+    const margin = 8;
+
+    const x = Phaser.Math.Clamp(
+      (left + right) / 2,
+      room.left + tooltip.width / 2 + margin,
+      room.right - tooltip.width / 2 - margin,
+    );
+    const belowY = bottom + margin;
+    const y =
+      belowY + tooltip.height <= room.bottom - margin
+        ? belowY
+        : Math.max(room.top + margin, top - tooltip.height - margin);
+
+    tooltip.setPosition(x, y);
   }
 
   private showTooltip(tooltip: Phaser.GameObjects.Text): void {
@@ -473,15 +505,7 @@ export class ZoneManager {
 
   private handleInteraction(zone: InteractZone): void {
     if (zone.action === 'shop') {
-      if (this.sceneDef?.kind === 'shop') {
-        this.openShop?.();
-      } else {
-        this.scene.cameras.main.fade(500, 0, 0, 0, false, (_cam: unknown, progress: number) => {
-          if (progress >= 1) {
-            this.director.transitionTo('core:shop', this.scene);
-          }
-        });
-      }
+      this.openShop?.();
     } else if (zone.action === 'upgrade') {
       this.openShop?.();
     } else if (zone.action === 'transformer') {
@@ -526,7 +550,12 @@ export class ZoneManager {
         completionText: quest.completionText,
         exitTitle: quest.exitTitle,
       },
-      () => this.director.transitionTo(quest.completionScene, this.scene),
+      () => {
+        const questId = this.sceneDef!.id;
+        progressionManager.completeQuest(questId);
+        eventBus.emit('quest:completed', { questId });
+        this.director.transitionTo(quest.completionScene, this.scene);
+      },
     );
   }
 

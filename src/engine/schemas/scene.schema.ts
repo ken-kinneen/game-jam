@@ -186,6 +186,15 @@ const TransformerQuestSchema = z.object({
   minimapUnlockAt: z.number().int().positive().optional(),
 });
 
+const PoweredLightSchema = z.object({
+  position: z.object({ x: z.number(), y: z.number() }),
+  /** Quest whose completion supplies power to this fixture. */
+  poweredByQuest: z.string().min(1),
+  radius: z.number().positive().default(120),
+  color: z.number().int().nonnegative().default(0xffc864),
+  intensity: z.number().positive().default(1.2),
+});
+
 /** Schema for scene content definitions. */
 export const SceneDefSchema = z.object({
   id: z.string().regex(/^[a-z0-9_]+:[a-z0-9_]+$/),
@@ -199,6 +208,8 @@ export const SceneDefSchema = z.object({
   props: z.array(PropSchema).default([]),
   /** Optional scene objective backed by a dedicated engine quest system. */
   quest: TransformerQuestSchema.optional(),
+  /** Environmental fixtures that illuminate after persistent quest completion. */
+  poweredLights: z.array(PoweredLightSchema).default([]),
   groundItems: z.array(GroundItemSchema).default([]),
   playerSpawn: z.object({ x: z.number(), y: z.number() }).optional(),
   /** Per-scene override for player max speed. Falls back to playerConfig default. */

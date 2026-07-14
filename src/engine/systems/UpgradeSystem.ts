@@ -1,12 +1,16 @@
 import type { StatSheet } from '../stats/StatSheet';
 import type { UpgradeDef } from '../schemas/upgrade.schema';
 import type { EventBus } from '../core/EventBus';
+import { configManager, type ConfigManager } from '../core/ConfigManager';
 
 /** Applies upgrade effects as StatSheet modifiers, tracks which upgrades are active. */
 export class UpgradeSystem {
   private acquired = new Set<string>();
 
-  constructor(private eventBus: EventBus) {}
+  constructor(
+    private eventBus: EventBus,
+    private config: ConfigManager = configManager,
+  ) {}
 
   /** Check if an upgrade has been acquired. */
   hasUpgrade(upgradeId: string): boolean {
@@ -32,6 +36,7 @@ export class UpgradeSystem {
           value: effect.value,
           source: upgrade.id,
         });
+        this.applyLampStat(effect.stat, stats.get(effect.stat));
       } else if (effect.kind === 'behavior') {
         this.applyBehavior(effect.behavior);
       }
@@ -44,7 +49,16 @@ export class UpgradeSystem {
   private applyBehavior(behavior: string): void {
     if (behavior.startsWith('lamp_color_')) {
       const color = behavior.replace('lamp_color_', '');
+      this.config.set('lamp', 'glowColorName', color);
       this.eventBus.emit('lamp:color_changed', { color });
+    }
+  }
+
+  private applyLampStat(stat: string, value: number): void {
+    if (stat === 'glowRadius') {
+      this.config.set('lamp', 'glowRadiusMax', value);
+    } else if (stat === 'fuelBurnRate') {
+      this.config.set('lamp', 'burnRate', value);
     }
   }
 

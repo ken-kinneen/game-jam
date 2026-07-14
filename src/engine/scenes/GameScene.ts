@@ -37,6 +37,8 @@ import type { CaveMinimapMap, CaveMinimapSnapshot } from '../systems/CaveExplora
 import { CharacterController3D } from '../rendering/CharacterController3D';
 import { ShopOverlay } from '../ui/ShopOverlay';
 import { PowerCableSystem } from '../systems/PowerCableSystem';
+import { QuestLightSystem } from '../systems/QuestLightSystem';
+import { progressionManager } from '../core/ProgressionManager';
 
 /**
  * ONE generic GameScene configured by a SceneDef.
@@ -60,8 +62,10 @@ export class GameScene extends Phaser.Scene {
   private dof!: DepthOfFieldSystem;
   private worldReactivity!: WorldReactivitySystem;
   private char3d: CharacterController3D | null = null;
+  private char3dLoad: Promise<boolean> | null = null;
   private shopOverlay: ShopOverlay | null = null;
   private powerCable: PowerCableSystem | null = null;
+  private questLightSystem: QuestLightSystem | null = null;
 
   private sceneDefId = 'core:home';
   private sceneDef: SceneDef | undefined;
@@ -95,6 +99,8 @@ export class GameScene extends Phaser.Scene {
     // one created before this lifecycle hook existed), then bind this run.
     this.powerCable?.destroy();
     this.powerCable = null;
+    this.questLightSystem?.destroy();
+    this.questLightSystem = null;
     this.events.once(Phaser.Scenes.Events.SHUTDOWN, this.shutdown, this);
 
     this.movementSystem = new MovementSystem();
@@ -188,6 +194,13 @@ export class GameScene extends Phaser.Scene {
       this.player,
     );
     this.lampRenderer.create();
+
+    this.questLightSystem = new QuestLightSystem(
+      this,
+      this.sceneDef?.poweredLights ?? [],
+      (questId) => progressionManager.hasCompletedQuest(questId),
+    );
+    this.questLightSystem.create();
 
     this.ambienceSystem = new AmbienceSystem(this, this.player, this.isCave);
     this.ambientAudio = new AmbientAudioSystem(this, eventBus, configManager);
@@ -368,9 +381,12 @@ export class GameScene extends Phaser.Scene {
     this.unsubInventory = null;
     this.soundSystem?.destroy();
     this.ambientAudio?.destroy();
-    this.char3d?.destroy();
+    // Keep the loaded 3D character renderer and canvas texture alive between scene restarts.
+    // The next scene attaches them to its newly spawned player entity.
     this.powerCable?.destroy();
     this.powerCable = null;
+    this.questLightSystem?.destroy();
+    this.questLightSystem = null;
     this.dof?.destroy();
     this.worldReactivity?.destroy();
     for (const unsub of this.unsubOverlay) unsub();
@@ -491,6 +507,8 @@ export class GameScene extends Phaser.Scene {
     if (stats) {
       stats.setBase('moveSpeed', maxSpeed);
       stats.setBase('pickupRadius', configManager.get<number>('player', 'pickupRadius'));
+      stats.setBase('glowRadius', configManager.get<number>('lamp', 'glowRadiusMax'));
+      stats.setBase('fuelBurnRate', configManager.get<number>('lamp', 'burnRate'));
     }
 
     const body = this.player.sprite.body as Phaser.Physics.Arcade.Body;
@@ -518,57 +536,83 @@ export class GameScene extends Phaser.Scene {
    * Tries multi-file Mixamo FBX first (Walk + Idle), then single-file fallbacks.
    */
   private tryLoad3DCharacter(): void {
-    this.char3d = new CharacterController3D(this, 128);
+    const player = this.player;
 
-    const tryLoad = async (): Promise<void> => {
-      // Try multi-file Mixamo setup (Walk.fbx + Idle.fbx)
-      const multiFiles = [
-        { url: 'mods/core/assets/models/Walk.fbx', name: 'walk' },
-        { url: 'mods/core/assets/models/Idle.fbx', name: 'idle' },
-      ];
+    // The entity's sprite is the 2D fallback. Keep it hidden while the FBX files load so scene
+    // transitions never briefly show the old character art before the 3D texture is attached.
+    player.sprite.setVisible(false);
 
-      const available: { url: string; name: string }[] = [];
-      for (const file of multiFiles) {
-        try {
-          const resp = await fetch(file.url, { method: 'HEAD' });
-          if (resp.ok) available.push(file);
-        } catch {
-          /* skip */
-        }
+    if (this.char3d?.isActive) {
+      this.attach3DCharacter(this.char3d, player);
+      return;
+    }
+
+    if (!this.char3d) {
+      this.char3d = new CharacterController3D(this, 128);
+    }
+    const controller = this.char3d;
+
+    // Only the first scene visit loads and parses the FBX files. Later scene instances either
+    // await this same in-flight promise or reuse the already rendered character immediately.
+    this.char3dLoad ??= this.load3DCharacter(controller);
+    void this.char3dLoad.then((success) => {
+      if (this.player !== player || !this.sys.isActive()) return;
+
+      if (success && this.char3d === controller) {
+        this.attach3DCharacter(controller, player);
+      } else {
+        // No 3D asset was available: reveal the original sprite as the intended fallback.
+        player.sprite.setVisible(true);
+      }
+    });
+  }
+
+  /** Attaches the 3D texture without overriding the configured player dimensions. */
+  private attach3DCharacter(controller: CharacterController3D, player: Entity): void {
+    const height = this.sceneDef?.playerHeight ?? configManager.get<number>('player', 'height');
+    const bodyRadius = configManager.get<number>('player', 'bodyRadiusPercent');
+    controller.attach(player, height, bodyRadius);
+  }
+
+  /** Loads the shared character renderer once, with legacy single-file fallbacks. */
+  private async load3DCharacter(controller: CharacterController3D): Promise<boolean> {
+    const multiFiles = [
+      { url: 'mods/core/assets/models/Walk.fbx', name: 'walk' },
+      { url: 'mods/core/assets/models/Idle.fbx', name: 'idle' },
+    ];
+
+    const available: { url: string; name: string }[] = [];
+    for (const file of multiFiles) {
+      try {
+        const resp = await fetch(file.url, { method: 'HEAD' });
+        if (resp.ok) available.push(file);
+      } catch {
+        /* skip */
+      }
+    }
+
+    if (available.length > 0 && (await controller.load(available))) {
+      return true;
+    }
+
+    const fallbacks = [
+      'mods/core/assets/models/character.fbx',
+      'mods/core/assets/models/character.glb',
+    ];
+    for (const url of fallbacks) {
+      try {
+        const resp = await fetch(url, { method: 'HEAD' });
+        if (!resp.ok) continue;
+      } catch {
+        continue;
       }
 
-      if (available.length > 0) {
-        const success = await this.char3d!.load(available);
-        if (success) {
-          this.char3d!.attach(this.player);
-          return;
-        }
+      if (await controller.load(url)) {
+        return true;
       }
+    }
 
-      // Fallback: single file
-      const fallbacks = [
-        'mods/core/assets/models/character.fbx',
-        'mods/core/assets/models/character.glb',
-      ];
-      for (const url of fallbacks) {
-        try {
-          const resp = await fetch(url, { method: 'HEAD' });
-          if (!resp.ok) continue;
-        } catch {
-          continue;
-        }
-
-        const success = await this.char3d!.load(url);
-        if (success) {
-          this.char3d!.attach(this.player);
-          return;
-        }
-      }
-
-      this.char3d = null;
-    };
-
-    tryLoad();
+    return false;
   }
 
   private setupCollisions(): void {

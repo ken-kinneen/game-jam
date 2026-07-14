@@ -25,7 +25,6 @@ import bananaPeel from '../mods/core/items/banana-peel.json';
 import plasticBag from '../mods/core/items/plastic-bag.json';
 import homeScene from '../mods/core/scenes/home.json';
 import caveScene from '../mods/core/scenes/cave.json';
-import shopScene from '../mods/core/scenes/shop.json';
 import demoScene from '../mods/core/scenes/demo.json';
 import tunnel1Scene from '../mods/core/scenes/tunnel_1.json';
 import homeTrash from '../mods/core/loot-tables/home-trash.json';
@@ -65,7 +64,6 @@ async function boot() {
     { filename: 'items/battery.json', data: battery },
     { filename: 'scenes/home.json', data: homeScene },
     { filename: 'scenes/cave.json', data: caveScene },
-    { filename: 'scenes/shop.json', data: shopScene },
     { filename: 'scenes/demo.json', data: demoScene },
     { filename: 'scenes/tunnel_1.json', data: tunnel1Scene },
     { filename: 'loot-tables/home-trash.json', data: homeTrash },

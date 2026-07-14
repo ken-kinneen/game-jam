@@ -39,6 +39,7 @@ export interface GameEvents {
   'cable:proximity_changed': { powered: boolean; fuelMultiplier: number };
   'minimap:unlocked': Record<string, never>;
   'quest:updated': { title: string; current: number; total: number; complete: boolean };
+  'quest:completed': { questId: string };
   'quest:cleared': Record<string, never>;
   'item:interact': { itemId: string };
 }

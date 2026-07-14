@@ -12,7 +12,6 @@ export const devConfig: ConfigSection = {
       options: [
         { value: 'core:home', label: 'Home' },
         { value: 'core:cave', label: 'Cave' },
-        { value: 'core:shop', label: 'Shop' },
         { value: 'core:demo', label: 'FX Demo' },
       ],
       defaultValue: 'core:home',

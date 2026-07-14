@@ -12,7 +12,7 @@ export const cameraConfig: ConfigSection = {
       min: 1,
       max: 8,
       step: 0.25,
-      defaultValue: 3.5,
+      defaultValue: 2.75,
     },
     {
       key: 'lerpX',

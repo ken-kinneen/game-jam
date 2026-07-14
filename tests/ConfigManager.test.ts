@@ -39,6 +39,13 @@ describe('ConfigManager', () => {
     expect(mgr.get('test', 'speed')).toBe(0);
   });
 
+  it('resets unknown choice values to the field default', () => {
+    const mgr = new ConfigManager();
+    mgr.register(testSection);
+    mgr.set('test', 'mode', 'removed_option');
+    expect(mgr.get('test', 'mode')).toBe('a');
+  });
+
   it('notifies listeners on change', () => {
     const mgr = new ConfigManager();
     mgr.register(testSection);

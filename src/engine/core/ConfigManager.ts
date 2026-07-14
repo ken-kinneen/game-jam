@@ -98,6 +98,8 @@ export class ConfigManager {
 
     if (field.type === 'number') {
       value = Math.min(field.max, Math.max(field.min, value as number));
+    } else if (field.type === 'choice' && !field.options.some((option) => option.value === value)) {
+      value = field.defaultValue;
     }
 
     vals.set(key, value);

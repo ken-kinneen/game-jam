@@ -1,17 +1,20 @@
 const SAVE_KEY = 'trashed_save';
-const CURRENT_VERSION = 1;
+const CURRENT_VERSION = 2;
 
 export interface SaveData {
   version: number;
   unlockedUpgrades: string[];
   homeInventory: { itemId: string; qty: number }[];
   discoveredRecipes: string[];
+  completedQuests: string[];
   settings: Record<string, unknown>;
 }
 
 type Migration = (data: Record<string, unknown>) => Record<string, unknown>;
 
-const MIGRATIONS: Record<number, Migration> = {};
+const MIGRATIONS: Record<number, Migration> = {
+  1: (data) => ({ ...data, version: 2, completedQuests: [] }),
+};
 
 /** Creates a fresh save state. */
 function createDefault(): SaveData {
@@ -20,6 +23,7 @@ function createDefault(): SaveData {
     unlockedUpgrades: [],
     homeInventory: [],
     discoveredRecipes: [],
+    completedQuests: [],
     settings: {},
   };
 }
